@@ -26,8 +26,8 @@ func (p *purse) put(originalKey Key, key uint32, value interface{}) error {
 }
 
 func (p *purse) get(originalKey Key, key uint32) (interface{}, error) {
-	p.flexibleKey = p.trolley.flexibleKey - purseDistance*uint32(p.key)
-	realKey := p.flexibleKey / boxDistance
+	realKey := p.trolley.flexibleKey / boxDistance
+	p.flexibleKey = p.trolley.flexibleKey - realKey*boxDistance
 	if p.existChild(realKey) {
 		return p.box[realKey].get(originalKey, key)
 	} else {
@@ -36,10 +36,7 @@ func (p *purse) get(originalKey Key, key uint32) (interface{}, error) {
 }
 
 func (p *purse) existChild(index uint32) bool {
-	if nil == p.box[index] {
-		return false
-	}
-	return true
+	return nil != p.box[index]
 }
 
 func (p *purse) createChild(index uint32) {

@@ -33,20 +33,17 @@ func (m *mall) put(originalKey Key, key uint32, value interface{}) error {
 }
 
 func (m *mall) get(originalKey Key, key uint32) (interface{}, error) {
-	realKey := key / mallDistance
-	m.flexibleKey = key - realKey*mallDistance
-	if m.existChild(realKey) {
-		return m.trolleys[realKey].get(originalKey, key)
+	m.realKey = m.city.flexibleKey / trolleyDistance
+	m.flexibleKey = m.city.flexibleKey - m.realKey*trolleyDistance
+	if m.existChild(m.realKey) {
+		return m.trolleys[m.realKey].get(originalKey, key)
 	} else {
 		return nil, errors.New(strings.Join([]string{"mall key", string(originalKey), "is nil"}, " "))
 	}
 }
 
 func (m *mall) existChild(index uint32) bool {
-	if nil == m.trolleys[index] {
-		return false
-	}
-	return true
+	return nil != m.trolleys[index]
 }
 
 func (m *mall) createChild(index uint32) {

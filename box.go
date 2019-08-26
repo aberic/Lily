@@ -29,10 +29,7 @@ func (b *box) get(originalKey Key, key uint32) (interface{}, error) {
 }
 
 func (b *box) existChild(key uint32) bool {
-	if nil == b.things[key] {
-		return false
-	}
-	return true
+	return nil != b.things[key]
 }
 
 func (b *box) createChild(originalKey Key, key uint32, value interface{}) {

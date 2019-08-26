@@ -34,9 +34,14 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 		),
 	)
 	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("path", path))
+	t.originalKey = originalKey
+	t.value = value
 	return errors.New(path)
 }
 
 func (t *thing) get(originalKey Key, key uint32) (interface{}, error) {
-	return nil, nil
+	if t.originalKey == originalKey {
+		return t.value, nil
+	}
+	return nil, errors.New(strings.Join([]string{"had no value for key ", string(originalKey)}, ""))
 }

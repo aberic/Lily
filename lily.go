@@ -37,6 +37,10 @@ func (l *lily) PutInt(key int, value interface{}) error {
 	return l.put(Key(key), uint32(key), value)
 }
 
+func (l *lily) GetInt(key int) (interface{}, error) {
+	return l.get(Key(key), uint32(key))
+}
+
 func (l *lily) Put(key Key, value interface{}) error {
 	if nil == l || nil == l.cities {
 		return errors.New("db is invalid")
@@ -59,17 +63,14 @@ func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
 	//realKey := key / cityDistance
 	realKey := uint32(0)
 	if l.existChild(realKey) {
-		return l.cities[key].get(originalKey, realKey)
+		return l.cities[realKey].get(originalKey, key-realKey*cityDistance)
 	} else {
 		return nil, errors.New(strings.Join([]string{"lily key", string(originalKey), "is nil"}, " "))
 	}
 }
 
 func (l *lily) existChild(index uint32) bool {
-	if nil == l.cities[index] {
-		return false
-	}
-	return true
+	return nil != l.cities[index]
 }
 
 func (l *lily) createChild(index uint32) {

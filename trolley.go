@@ -33,20 +33,17 @@ func (t *trolley) put(originalKey Key, key uint32, value interface{}) error {
 }
 
 func (t *trolley) get(originalKey Key, key uint32) (interface{}, error) {
-	t.flexibleKey = t.mall.flexibleKey - trolleyDistance*uint32(t.key)
-	realKey := t.flexibleKey / purseDistance
-	if t.existChild(realKey) {
-		return t.purses[realKey].get(originalKey, key)
+	t.realKey = t.mall.flexibleKey / purseDistance
+	t.flexibleKey = t.mall.flexibleKey - t.realKey*purseDistance
+	if t.existChild(t.realKey) {
+		return t.purses[t.realKey].get(originalKey, key)
 	} else {
 		return nil, errors.New(strings.Join([]string{"trolley key", string(originalKey), "is nil"}, " "))
 	}
 }
 
 func (t *trolley) existChild(index uint32) bool {
-	if nil == t.purses[index] {
-		return false
-	}
-	return true
+	return nil != t.purses[index]
 }
 
 func (t *trolley) createChild(index uint32) {

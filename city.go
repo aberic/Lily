@@ -33,19 +33,17 @@ func (c *city) put(originalKey Key, key uint32, value interface{}) error {
 }
 
 func (c *city) get(originalKey Key, key uint32) (interface{}, error) {
-	realKey := key / mallDistance
-	if c.existChild(realKey) {
-		return c.malls[key].get(originalKey, key)
+	c.realKey = key / mallDistance
+	c.flexibleKey = key - c.realKey*mallDistance
+	if c.existChild(c.realKey) {
+		return c.malls[c.realKey].get(originalKey, key)
 	} else {
 		return nil, errors.New(strings.Join([]string{"city key", string(originalKey), "is nil"}, " "))
 	}
 }
 
 func (c *city) existChild(index uint32) bool {
-	if nil == c.malls[index] {
-		return false
-	}
-	return true
+	return nil != c.malls[index]
 }
 
 func (c *city) createChild(index uint32) {

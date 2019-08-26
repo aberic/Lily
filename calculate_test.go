@@ -47,6 +47,41 @@ func TestPut(t *testing.T) {
 	_ = tmpLily.PutInt(1, 1)
 }
 
+func TestList(t *testing.T) {
+}
+
+func TestPutGet(t *testing.T) {
+	var data *Data
+	var tmpLily *lily
+	data = &Data{
+		name:   "data",
+		lilies: map[string]*lily{},
+	}
+	tmpLily = newLily("lily", data)
+	data.lilies[tmpLily.name] = tmpLily
+	_ = tmpLily.PutInt(198, 200)
+	i, err := tmpLily.GetInt(198)
+	t.Log("get 198 = ", i, "err = ", err)
+}
+
+func TestPutGets(t *testing.T) {
+	var data *Data
+	var tmpLily *lily
+	data = &Data{
+		name:   "data",
+		lilies: map[string]*lily{},
+	}
+	tmpLily = newLily("lily", data)
+	data.lilies[tmpLily.name] = tmpLily
+	for i := 1; i <= 255; i++ {
+		_ = tmpLily.PutInt(i, i+10)
+	}
+	for i := 1; i <= 255; i++ {
+		j, err := tmpLily.GetInt(i)
+		t.Log("get ", i, " = ", j, "err = ", err)
+	}
+}
+
 func TestPrint(t *testing.T) {
 	for i := 0; i < 100000; i++ {
 		//log.Self.Debug("print", log.Int("i = ", i))
