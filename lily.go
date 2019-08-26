@@ -42,36 +42,39 @@ type lily struct {
 	data    *Data
 	name    string
 	comment string
-	cities  []*city
+	indexes []uint8
+	cities  map[uint8]*city
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
-	//realKey := key / cityDistance
-	realKey := uint32(0)
-	l.createChild(realKey)
-	return l.cities[realKey].put(originalKey, key-realKey*cityDistance, value)
+	realKey := key / cityDistance
+	//realKey := uint32(0)
+	l.createChild(uint8(realKey))
+	return l.cities[uint8(realKey)].put(originalKey, key-realKey*cityDistance, value)
 }
 
 func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
-	//realKey := key / cityDistance
-	realKey := uint32(0)
-	if l.existChild(realKey) {
-		return l.cities[realKey].get(originalKey, key-realKey*cityDistance)
+	realKey := key / cityDistance
+	//realKey := uint32(0)
+	if l.existChild(uint8(realKey)) {
+		return l.cities[uint8(realKey)].get(originalKey, key-realKey*cityDistance)
 	} else {
 		return nil, errors.New(strings.Join([]string{"lily key", string(originalKey), "is nil"}, " "))
 	}
 }
 
-func (l *lily) existChild(index uint32) bool {
+func (l *lily) existChild(index uint8) bool {
 	return nil != l.cities[index]
 }
 
-func (l *lily) createChild(index uint32) {
+func (l *lily) createChild(index uint8) {
 	if !l.existChild(index) {
+		l.indexes = append(l.indexes, index)
 		l.cities[index] = &city{
-			key:   index*cityDistance + cityDistance,
-			lily:  l,
-			malls: make([]*mall, mallCount),
+			key:     uint32(index+1) * cityDistance,
+			lily:    l,
+			indexes: []uint8{},
+			malls:   map[uint8]*mall{},
 		}
 	}
 }
@@ -81,7 +84,8 @@ func newLily(name, comment string, data *Data) *lily {
 		name:    name,
 		comment: comment,
 		data:    data,
-		cities:  make([]*city, cityCount),
+		indexes: []uint8{},
+		cities:  map[uint8]*city{},
 	}
 	return lily
 }

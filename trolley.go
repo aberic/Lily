@@ -32,23 +32,24 @@ import (
 // tree 内范围控制数量 n*k=268435455
 type trolley struct {
 	key         uint32
-	realKey     uint32
+	realKey     uint8
 	flexibleKey uint32
 	mall        *mall
-	purses      []*purse
+	indexes     []uint8
+	purses      map[uint8]*purse
 }
 
 func (t *trolley) put(originalKey Key, key uint32, value interface{}) error {
-	t.realKey = t.mall.flexibleKey / purseDistance
-	t.flexibleKey = t.mall.flexibleKey - t.realKey*purseDistance
+	t.realKey = uint8(t.mall.flexibleKey / purseDistance)
+	t.flexibleKey = t.mall.flexibleKey - uint32(t.realKey)*purseDistance
 	//log.Self.Debug("trolley", log.Uint32("key", key), log.Uint32("realKey", realKey))
 	t.createChild(t.realKey)
 	return t.purses[t.realKey].put(originalKey, key, value)
 }
 
 func (t *trolley) get(originalKey Key, key uint32) (interface{}, error) {
-	t.realKey = t.mall.flexibleKey / purseDistance
-	t.flexibleKey = t.mall.flexibleKey - t.realKey*purseDistance
+	t.realKey = uint8(t.mall.flexibleKey / purseDistance)
+	t.flexibleKey = t.mall.flexibleKey - uint32(t.realKey)*purseDistance
 	if t.existChild(t.realKey) {
 		return t.purses[t.realKey].get(originalKey, key)
 	} else {
@@ -56,16 +57,18 @@ func (t *trolley) get(originalKey Key, key uint32) (interface{}, error) {
 	}
 }
 
-func (t *trolley) existChild(index uint32) bool {
-	return nil != t.purses[index]
+func (t *trolley) existChild(index uint8) bool {
+	return matchable(index, t.indexes)
 }
 
-func (t *trolley) createChild(index uint32) {
+func (t *trolley) createChild(index uint8) {
 	if !t.existChild(index) {
+		t.indexes = append(t.indexes, index)
 		t.purses[index] = &purse{
-			key:     t.mall.city.realKey*mallDistance + t.mall.realKey*trolleyDistance + index*purseDistance + purseDistance,
+			key:     uint32(t.mall.city.realKey)*mallDistance + uint32(t.mall.realKey)*trolleyDistance + uint32(index+1)*purseDistance,
 			trolley: t,
-			box:     make([]*box, boxCount),
+			indexes: []uint8{},
+			box:     map[uint8]*box{},
 		}
 	}
 }

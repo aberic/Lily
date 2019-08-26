@@ -32,23 +32,24 @@ import (
 // tree 内范围控制数量 n*k=268435455
 type mall struct {
 	key         uint32
-	realKey     uint32
+	realKey     uint8
 	flexibleKey uint32
 	city        *city
-	trolleys    []*trolley
+	indexes     []uint8
+	trolleys    map[uint8]*trolley
 }
 
 func (m *mall) put(originalKey Key, key uint32, value interface{}) error {
-	m.realKey = m.city.flexibleKey / trolleyDistance
-	m.flexibleKey = m.city.flexibleKey - m.realKey*trolleyDistance
+	m.realKey = uint8(m.city.flexibleKey / trolleyDistance)
+	m.flexibleKey = m.city.flexibleKey - uint32(m.realKey)*trolleyDistance
 	//log.Self.Debug("city", log.Uint32("key", key), log.Uint32("realKey", realKey))
 	m.createChild(m.realKey)
 	return m.trolleys[m.realKey].put(originalKey, key, value)
 }
 
 func (m *mall) get(originalKey Key, key uint32) (interface{}, error) {
-	m.realKey = m.city.flexibleKey / trolleyDistance
-	m.flexibleKey = m.city.flexibleKey - m.realKey*trolleyDistance
+	m.realKey = uint8(m.city.flexibleKey / trolleyDistance)
+	m.flexibleKey = m.city.flexibleKey - uint32(m.realKey)*trolleyDistance
 	if m.existChild(m.realKey) {
 		return m.trolleys[m.realKey].get(originalKey, key)
 	} else {
@@ -56,16 +57,18 @@ func (m *mall) get(originalKey Key, key uint32) (interface{}, error) {
 	}
 }
 
-func (m *mall) existChild(index uint32) bool {
+func (m *mall) existChild(index uint8) bool {
 	return nil != m.trolleys[index]
 }
 
-func (m *mall) createChild(index uint32) {
+func (m *mall) createChild(index uint8) {
 	if !m.existChild(index) {
+		m.indexes = append(m.indexes, index)
 		m.trolleys[index] = &trolley{
-			key:    m.city.realKey*mallDistance + index*trolleyDistance + trolleyDistance,
-			mall:   m,
-			purses: make([]*purse, purseCount),
+			key:     uint32(m.city.realKey)*mallDistance + uint32(index+1)*trolleyDistance,
+			mall:    m,
+			indexes: []uint8{},
+			purses:  map[uint8]*purse{},
 		}
 	}
 }

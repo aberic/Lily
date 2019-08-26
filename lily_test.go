@@ -47,8 +47,8 @@ func TestHashCode(t *testing.T) {
 
 func TestPut(t *testing.T) {
 	lilyName := "lily"
-	data := NewData("data")
-	_ = data.createGroup(lilyName, "")
+	data := NewData("data", true)
+	_ = data.createGroup(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
 		//_ = tmpLily.Put(Key(strconv.Itoa(i)), i)
 		_ = data.PutGInt(lilyName, i, i)
@@ -61,22 +61,35 @@ func TestList(t *testing.T) {
 
 func TestPutGet(t *testing.T) {
 	lilyName := "lily"
-	data := NewData("data")
-	_ = data.createGroup(lilyName, "")
+	data := NewData("data", true)
+	_ = data.createGroup(lilyName, "", true)
 	_ = data.PutGInt(lilyName, 198, 200)
 	i, err := data.GetGInt(lilyName, 198)
 	t.Log("get 198 = ", i, "err = ", err)
 }
 
-func TestPutGets(t *testing.T) {
+func TestPutGetInts(t *testing.T) {
 	lilyName := "lily"
-	data := NewData("data")
-	_ = data.createGroup(lilyName, "")
+	data := NewData("data", true)
+	_ = data.createGroup(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
 		_ = data.PutGInt(lilyName, i, i+10)
 	}
 	for i := 1; i <= 255; i++ {
 		j, err := data.GetGInt(lilyName, i)
+		t.Log("get ", i, " = ", j, "err = ", err)
+	}
+}
+
+func TestPutGets(t *testing.T) {
+	lilyName := "lily"
+	data := NewData("data", true)
+	_ = data.createGroup(lilyName, "", true)
+	for i := 1; i <= 255; i++ {
+		_ = data.PutG(lilyName, Key(i), i)
+	}
+	for i := 1; i <= 255; i++ {
+		j, err := data.GetG(lilyName, Key(i))
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
 }
