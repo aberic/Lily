@@ -17,16 +17,19 @@ import (
 //
 // tree 内范围控制数量 n*k=268435455
 type city struct {
-	key   int
-	lily  *lily
-	malls []*mall
+	key         uint32
+	realKey     uint32
+	flexibleKey uint32
+	lily        *lily
+	malls       []*mall
 }
 
 func (c *city) put(originalKey Key, key uint32, value interface{}) error {
-	realKey := key / mallDistance
+	c.realKey = key / mallDistance
+	c.flexibleKey = key - c.realKey*mallDistance
 	//log.Self.Debug("city", log.Uint32("key", key), log.Uint32("realKey", realKey))
-	c.createChild(realKey)
-	return c.malls[realKey].put(originalKey, key, value)
+	c.createChild(c.realKey)
+	return c.malls[c.realKey].put(originalKey, key, value)
 }
 
 func (c *city) get(originalKey Key, key uint32) (interface{}, error) {
@@ -47,14 +50,10 @@ func (c *city) existChild(index uint32) bool {
 
 func (c *city) createChild(index uint32) {
 	if !c.existChild(index) {
-		trolleys := make([]*trolley, trolleyCount)
-		for i := 0; i < trolleyCount; i++ {
-			trolleys = append(trolleys, nil)
-		}
 		c.malls[index] = &mall{
-			key:      int(index),
+			key:      index*mallDistance + mallDistance,
 			city:     c,
-			trolleys: trolleys,
+			trolleys: make([]*trolley, trolleyCount),
 		}
 	}
 }

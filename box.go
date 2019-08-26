@@ -9,7 +9,7 @@ import (
 //
 // 这里面存放的是具体物品
 type box struct {
-	key    int
+	key    uint32
 	purse  *purse // box 所属 purse
 	things map[uint32]*thing
 }

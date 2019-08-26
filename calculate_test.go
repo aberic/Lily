@@ -2,7 +2,6 @@ package Lily
 
 import (
 	"encoding/json"
-	"strconv"
 	"testing"
 )
 
@@ -41,9 +40,11 @@ func TestPut(t *testing.T) {
 	}
 	tmpLily = newLily("lily", data)
 	data.lilies[tmpLily.name] = tmpLily
-	for i := 0; i < 100000; i++ {
-		_ = tmpLily.Put(Key(strconv.Itoa(i)), i)
+	for i := 1; i <= 255; i++ {
+		//_ = tmpLily.Put(Key(strconv.Itoa(i)), i)
+		_ = tmpLily.PutInt(i, i)
 	}
+	_ = tmpLily.PutInt(1, 1)
 }
 
 func TestPrint(t *testing.T) {

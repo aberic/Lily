@@ -17,23 +17,24 @@ import (
 //
 // tree 内范围控制数量 n*k=268435455
 type mall struct {
-	key         int
+	key         uint32
+	realKey     uint32
 	flexibleKey uint32
 	city        *city
 	trolleys    []*trolley
 }
 
 func (m *mall) put(originalKey Key, key uint32, value interface{}) error {
-	m.flexibleKey = key - mallDistance*uint32(m.key)
-	realKey := m.flexibleKey / trolleyDistance
-	//log.Self.Debug("mall", log.Uint32("key", key), log.Uint32("realKey", realKey))
-	m.createChild(realKey)
-	return m.trolleys[realKey].put(originalKey, key, value)
+	m.realKey = m.city.flexibleKey / trolleyDistance
+	m.flexibleKey = m.city.flexibleKey - m.realKey*trolleyDistance
+	//log.Self.Debug("city", log.Uint32("key", key), log.Uint32("realKey", realKey))
+	m.createChild(m.realKey)
+	return m.trolleys[m.realKey].put(originalKey, key, value)
 }
 
 func (m *mall) get(originalKey Key, key uint32) (interface{}, error) {
-	m.flexibleKey = key - mallDistance*uint32(m.key)
-	realKey := m.flexibleKey / trolleyDistance
+	realKey := key / mallDistance
+	m.flexibleKey = key - realKey*mallDistance
 	if m.existChild(realKey) {
 		return m.trolleys[realKey].get(originalKey, key)
 	} else {
@@ -50,14 +51,10 @@ func (m *mall) existChild(index uint32) bool {
 
 func (m *mall) createChild(index uint32) {
 	if !m.existChild(index) {
-		purses := make([]*purse, purseCount)
-		for i := 0; i < purseCount; i++ {
-			purses = append(purses, nil)
-		}
 		m.trolleys[index] = &trolley{
-			key:    int(index),
+			key:    m.city.realKey*mallDistance + index*trolleyDistance + trolleyDistance,
 			mall:   m,
-			purses: purses,
+			purses: make([]*purse, purseCount),
 		}
 	}
 }

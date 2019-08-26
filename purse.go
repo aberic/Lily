@@ -11,15 +11,15 @@ import (
 //
 // box 包装盒集合
 type purse struct {
-	key         int
+	key         uint32
 	flexibleKey uint32
 	trolley     *trolley // purse 所属 trolley
 	box         []*box
 }
 
 func (p *purse) put(originalKey Key, key uint32, value interface{}) error {
-	p.flexibleKey = p.trolley.flexibleKey - purseDistance*uint32(p.key)
-	realKey := p.flexibleKey / boxDistance
+	realKey := p.trolley.flexibleKey / boxDistance
+	p.flexibleKey = p.trolley.flexibleKey - realKey*boxDistance
 	//log.Self.Debug("purse", log.Uint32("key", key), log.Uint32("realKey", realKey))
 	p.createChild(realKey)
 	return p.box[realKey].put(originalKey, key, value)
@@ -45,7 +45,7 @@ func (p *purse) existChild(index uint32) bool {
 func (p *purse) createChild(index uint32) {
 	if !p.existChild(index) {
 		p.box[index] = &box{
-			key:    int(index),
+			key:    p.trolley.mall.city.realKey*mallDistance + p.trolley.mall.realKey*trolleyDistance + p.trolley.realKey*purseDistance + index*boxDistance + boxDistance,
 			purse:  p,
 			things: map[uint32]*thing{},
 		}

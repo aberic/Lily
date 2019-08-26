@@ -30,6 +30,13 @@ type lily struct {
 	cities []*city
 }
 
+func (l *lily) PutInt(key int, value interface{}) error {
+	if nil == l || nil == l.cities {
+		return errors.New("db is invalid")
+	}
+	return l.put(Key(key), uint32(key), value)
+}
+
 func (l *lily) Put(key Key, value interface{}) error {
 	if nil == l || nil == l.cities {
 		return errors.New("db is invalid")
@@ -42,13 +49,15 @@ func (l *lily) Get(key Key) (interface{}, error) {
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
-	realKey := key / lilyDistance
+	//realKey := key / cityDistance
+	realKey := uint32(0)
 	l.createChild(realKey)
-	return l.cities[realKey].put(originalKey, key-realKey*lilyDistance, value)
+	return l.cities[realKey].put(originalKey, key-realKey*cityDistance, value)
 }
 
 func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
-	realKey := key / lilyDistance
+	//realKey := key / cityDistance
+	realKey := uint32(0)
 	if l.existChild(realKey) {
 		return l.cities[key].get(originalKey, realKey)
 	} else {
@@ -65,14 +74,10 @@ func (l *lily) existChild(index uint32) bool {
 
 func (l *lily) createChild(index uint32) {
 	if !l.existChild(index) {
-		malls := make([]*mall, cityCount)
-		for i := 0; i < 64; i++ {
-			malls = append(malls, nil)
-		}
 		l.cities[index] = &city{
-			key:   int(index),
+			key:   index*cityDistance + cityDistance,
 			lily:  l,
-			malls: malls,
+			malls: make([]*mall, mallCount),
 		}
 	}
 }
@@ -82,9 +87,6 @@ func newLily(name string, data *Data) *lily {
 		name:   name,
 		data:   data,
 		cities: make([]*city, cityCount),
-	}
-	for i := 0; i < lilyCount; i++ {
-		lily.cities = append(lily.cities, nil)
 	}
 	return lily
 }
