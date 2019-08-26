@@ -14,7 +14,28 @@
 
 package Lily
 
-type Data struct {
-	name   string
-	lilies map[string]*lily
+type query struct {
+	Scopes     []scope     `json:"scopes"`
+	Conditions []condition `json:"conditions"`
+	Matches    []match     `json:"matches"`
+	Skip       int32       `json:"skip"`
+	Limit      int32       `json:"limit"`
+}
+
+// 范围
+type scope struct {
+	Param string `json:"param"`
+	Start int32  `json:"start"`
+	End   int32  `json:"end"`
+}
+
+// 条件
+type condition struct {
+	Param string `json:"param"`
+	Cond  string `json:"cond"` // gt/lt/eq/dif
+}
+
+type match struct {
+	Param string `json:"param"`
+	Value string `json:"value"`
 }
