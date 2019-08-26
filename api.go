@@ -15,6 +15,7 @@
 package Lily
 
 import (
+	"errors"
 	"github.com/ennoo/rivet/utils/env"
 	"hash/crc32"
 )
@@ -81,4 +82,28 @@ func hash(key Key) uint32 {
 
 func init() {
 	dataDir = env.GetEnv(dataPath)
+}
+
+func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
+	var (
+		leftIndex   int
+		middleIndex int
+		rightIndex  int
+	)
+	leftIndex = 0
+	rightIndex = len(uintArr) - 1
+	for leftIndex <= rightIndex {
+		middleIndex = (leftIndex + rightIndex) / 2
+		// 如果要找的数比midVal大
+		if uintArr[middleIndex] > matchVal {
+			// 在arr数组的左边找
+			rightIndex = middleIndex - 1
+		} else if uintArr[middleIndex] < matchVal {
+			// 在arr数组的右边找
+			leftIndex = middleIndex + 1
+		} else if uintArr[middleIndex] == matchVal {
+			return middleIndex, nil
+		}
+	}
+	return 0, errors.New("index is nil")
 }

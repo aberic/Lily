@@ -39,31 +39,10 @@ import (
 //
 // level4间隔 ld3=(1*127+1)/128=1
 type lily struct {
-	data   *Data
-	name   string
-	cities []*city
-}
-
-func (l *lily) PutInt(key int, value interface{}) error {
-	if nil == l || nil == l.cities {
-		return errors.New("db is invalid")
-	}
-	return l.put(Key(key), uint32(key), value)
-}
-
-func (l *lily) GetInt(key int) (interface{}, error) {
-	return l.get(Key(key), uint32(key))
-}
-
-func (l *lily) Put(key Key, value interface{}) error {
-	if nil == l || nil == l.cities {
-		return errors.New("db is invalid")
-	}
-	return l.put(key, hash(key), value)
-}
-
-func (l *lily) Get(key Key) (interface{}, error) {
-	return l.get(key, hash(key))
+	data    *Data
+	name    string
+	comment string
+	cities  []*city
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
@@ -97,11 +76,12 @@ func (l *lily) createChild(index uint32) {
 	}
 }
 
-func newLily(name string, data *Data) *lily {
+func newLily(name, comment string, data *Data) *lily {
 	lily := &lily{
-		name:   name,
-		data:   data,
-		cities: make([]*city, cityCount),
+		name:    name,
+		comment: comment,
+		data:    data,
+		cities:  make([]*city, cityCount),
 	}
 	return lily
 }

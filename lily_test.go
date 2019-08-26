@@ -46,52 +46,37 @@ func TestHashCode(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
-	var data *Data
-	var tmpLily *lily
-	data = &Data{
-		name:   "data",
-		lilies: map[string]*lily{},
-	}
-	tmpLily = newLily("lily", data)
-	data.lilies[tmpLily.name] = tmpLily
+	lilyName := "lily"
+	data := NewData("data")
+	_ = data.createGroup(lilyName, "")
 	for i := 1; i <= 255; i++ {
 		//_ = tmpLily.Put(Key(strconv.Itoa(i)), i)
-		_ = tmpLily.PutInt(i, i)
+		_ = data.PutGInt(lilyName, i, i)
 	}
-	_ = tmpLily.PutInt(1, 1)
+	_ = data.PutGInt(lilyName, 1, 1)
 }
 
 func TestList(t *testing.T) {
 }
 
 func TestPutGet(t *testing.T) {
-	var data *Data
-	var tmpLily *lily
-	data = &Data{
-		name:   "data",
-		lilies: map[string]*lily{},
-	}
-	tmpLily = newLily("lily", data)
-	data.lilies[tmpLily.name] = tmpLily
-	_ = tmpLily.PutInt(198, 200)
-	i, err := tmpLily.GetInt(198)
+	lilyName := "lily"
+	data := NewData("data")
+	_ = data.createGroup(lilyName, "")
+	_ = data.PutGInt(lilyName, 198, 200)
+	i, err := data.GetGInt(lilyName, 198)
 	t.Log("get 198 = ", i, "err = ", err)
 }
 
 func TestPutGets(t *testing.T) {
-	var data *Data
-	var tmpLily *lily
-	data = &Data{
-		name:   "data",
-		lilies: map[string]*lily{},
-	}
-	tmpLily = newLily("lily", data)
-	data.lilies[tmpLily.name] = tmpLily
+	lilyName := "lily"
+	data := NewData("data")
+	_ = data.createGroup(lilyName, "")
 	for i := 1; i <= 255; i++ {
-		_ = tmpLily.PutInt(i, i+10)
+		_ = data.PutGInt(lilyName, i, i+10)
 	}
 	for i := 1; i <= 255; i++ {
-		j, err := tmpLily.GetInt(i)
+		j, err := data.GetGInt(lilyName, i)
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
 }
@@ -99,5 +84,37 @@ func TestPutGets(t *testing.T) {
 func TestPrint(t *testing.T) {
 	for i := 0; i < 100000; i++ {
 		//log.Self.Debug("print", log.Int("i = ", i))
+	}
+}
+
+func TestBinaryFind(t *testing.T) {
+	index, err := binaryMatch(150, []uint8{0, 8, 19, 49, 63, 80, 81, 98, 133, 150, 201, 250})
+	t.Log("index = ", index, " | err = ", err)
+}
+
+func TestBinaryFind2(t *testing.T) {
+	var (
+		left   int
+		middle int
+		right  int
+		is     []int
+	)
+	is = []int{0, 8, 19, 49, 163, 180, 281, 310, 333, 350, 401, 500}
+	left = 0
+	right = len(is) - 1
+	query := 281
+	for left <= right {
+		middle = (left + right) / 2
+		// 如果要找的数比midVal大
+		if is[middle] > query {
+			// 在arr数组的左边找
+			right = middle - 1
+		} else if is[middle] < query {
+			// 在arr数组的右边找
+			left = middle + 1
+		} else if is[middle] == query {
+			t.Log("找到下标", middle)
+			break
+		}
 	}
 }

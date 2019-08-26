@@ -14,7 +14,8 @@
 
 package Lily
 
-type query struct {
+type selector struct {
+	lily       *lily
 	Scopes     []scope     `json:"scopes"`
 	Conditions []condition `json:"conditions"`
 	Matches    []match     `json:"matches"`
@@ -39,3 +40,11 @@ type match struct {
 	Param string `json:"param"`
 	Value string `json:"value"`
 }
+
+//func (s *selector) leftQuery() []interface{} {
+//
+//}
+//
+//func (s *selector) leftRecursionQuery(is []interface{}) []interface{} {
+//
+//}
