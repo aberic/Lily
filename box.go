@@ -75,10 +75,10 @@ func (b *box) createChildSelf(originalKey Key, key uint32, value interface{}) {
 }
 
 func (b *box) childCount() int {
-	return len(b.things)
+	return -1
 }
 
-func (b *box) child(index int) nodeIndex {
+func (b *box) child(index int) nodal {
 	return nil
 }
 

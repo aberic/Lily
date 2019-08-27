@@ -20,18 +20,12 @@ import (
 	"hash/crc32"
 )
 
-// nodeIndex 树-度集合下标辅助接口
-type nodeIndex interface {
-	// getDegreeIndex 获取节点所在树中度集合中的数组下标
-	getDegreeIndex() uint8
-}
-
 // binaryMatcher 二分查询辅助接口
 type binaryMatcher interface {
 	// childCount 获取子节点集合数量
 	childCount() int
 	// child 根据子节点集合下标获取树-度对象
-	child(index int) nodeIndex
+	child(index int) nodal
 }
 
 // position 父子节点游标辅助接口
@@ -42,7 +36,6 @@ type position interface {
 
 // nodal 节点对象接口
 type nodal interface {
-	nodeIndex
 	binaryMatcher
 	position
 	// put 插入数据
@@ -65,6 +58,8 @@ type nodal interface {
 	createChild(index uint8) nodal
 	// getFlexibleKey 下一级最左最小树所对应真实key
 	getFlexibleKey() uint32
+	// getDegreeIndex 获取节点所在树中度集合中的数组下标
+	getDegreeIndex() uint8
 }
 
 const (

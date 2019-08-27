@@ -36,14 +36,10 @@ type Data struct {
 // 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
 //
 // name 数据库名称
-//
-// sequence 默认表是否启用自增ID索引
-func NewData(name string, sequence bool) *Data {
+func NewData(name string) *Data {
 	data := &Data{name: name, lilies: map[string]*lily{}}
-	data.lilies[defaultLily] = newLily2(defaultLily, "default data lily", data)
-	if sequence {
-		data.lilies[defaultSequenceLily] = newLily2(defaultSequenceLily, "default data lily", data)
-	}
+	data.lilies[defaultLily] = newLily(defaultLily, "default data lily", data)
+	data.lilies[defaultSequenceLily] = newLily(defaultSequenceLily, "default data lily", data)
 	return data
 }
 
@@ -58,10 +54,10 @@ func (d *Data) CreateLily(name, comment string, sequence bool) error {
 	if nil == d {
 		return errors.New("data had never been created")
 	}
-	d.lilies[name] = newLily2(name, comment, d)
+	d.lilies[name] = newLily(name, comment, d)
 	if sequence {
 		sequenceName := sequenceName(name)
-		d.lilies[sequenceName] = newLily2(sequenceName, comment, d)
+		d.lilies[sequenceName] = newLily(sequenceName, comment, d)
 	}
 	return nil
 }
@@ -99,13 +95,41 @@ func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
 	if nil == d {
 		return errors.New("data had never been created")
 	}
+	return d.insert(lilyName, key, hash(key), value)
+}
+
+// Query 获取数据
+//
+// 向指定表中查询一条数据并返回
+//
+// lilyName 表名
+//
+// key 插入数据唯一key
+func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
+	if nil == d {
+		return nil, errors.New("data had never been created")
+	}
+	//return l.get(key, hash(key))
+	return d.query(lilyName, key, hash(key))
+}
+
+// Insert 新增数据
+//
+// 向指定表中新增一条数据，key相同则覆盖
+//
+// lilyName 表名
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{}) error {
 	l := d.lilies[lilyName]
 	if nil == l || nil == l.purses {
 		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	sequenceName := sequenceName(lilyName)
 	if nil == d.lilies[sequenceName] {
-		return l.put(key, hash(key), value)
+		return l.put(key, hashKey, value)
 	} else {
 		var (
 			ls       *lily
@@ -117,14 +141,14 @@ func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
 		wg.Add(2)
 		go func(key Key, value interface{}) {
 			defer wg.Done()
-			err := l.put(key, hash(key), value)
+			err := l.put(key, hashKey, value)
 			if nil != err {
 				checkErr <- err
 			}
 		}(key, value)
 		go func(key Key, value interface{}) {
 			defer wg.Done()
-			err := ls.put(key, hash(key), value)
+			err := ls.put(key, hashKey, value)
 			if nil != err {
 				checkErr <- err
 			}
@@ -141,31 +165,37 @@ func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
 // lilyName 表名
 //
 // key 插入数据唯一key
-func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
+func (d *Data) query(lilyName string, key Key, hashKey uint32) (interface{}, error) {
+	l := d.lilies[lilyName]
+	if nil == l || nil == l.purses {
+		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
+	}
+	return l.get(key, hashKey)
+}
+
+func (d *Data) QuerySelector(lilyName string, selector *Selector) (interface{}, error) {
+	var l *lily
 	if nil == d {
 		return nil, errors.New("data had never been created")
 	}
-	l := d.lilies[lilyName]
+	if nil != selector.Indexes {
+
+	} else {
+		l = d.lilies[lilyName]
+	}
+	l = d.lilies[lilyName]
 	if nil == l || nil == l.purses {
 		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
-	return l.get(key, hash(key))
+	return selector.query(l), nil
 }
 
-func (d *Data) PutGInt(lilyName string, key int, value interface{}) error {
-	l := d.lilies[lilyName]
-	if nil == l || nil == l.purses {
-		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
-	}
-	return l.put(Key(key), uint32(key), value)
+func (d *Data) InsertGInt(lilyName string, key int, value interface{}) error {
+	return d.insert(lilyName, Key(key), uint32(key), value)
 }
 
-func (d *Data) GetGInt(lilyName string, key int) (interface{}, error) {
-	l := d.lilies[lilyName]
-	if nil == l || nil == l.purses {
-		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
-	}
-	return l.get(Key(key), uint32(key))
+func (d *Data) QueryGInt(lilyName string, key int) (interface{}, error) {
+	return d.query(lilyName, Key(key), uint32(key))
 }
 
 // sequenceName 开启自增主键索引后新的组合固定表明

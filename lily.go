@@ -101,7 +101,7 @@ func (l *lily) childCount() int {
 	return len(l.purses)
 }
 
-func (l *lily) child(index int) nodeIndex {
+func (l *lily) child(index int) nodal {
 	return l.purses[index]
 }
 
@@ -117,7 +117,7 @@ func (l *lily) getPreNodal() nodal {
 	return nil
 }
 
-func newLily2(name, comment string, data *Data) *lily {
+func newLily(name, comment string, data *Data) *lily {
 	lily := &lily{
 		name:    name,
 		comment: comment,

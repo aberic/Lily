@@ -132,7 +132,7 @@ func (p *purse) childCount() int {
 	return len(p.nodes)
 }
 
-func (p *purse) child(index int) nodeIndex {
+func (p *purse) child(index int) nodal {
 	return p.nodes[index]
 }
 
