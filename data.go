@@ -16,14 +16,19 @@ package Lily
 
 import (
 	"errors"
+	s "sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 const (
 	defaultLily         = "_default"
-	defaultSequenceLily = "_default_sequence"
+	defaultSequenceLily = "_default_id"
 )
+
+// errorDataIsNil 自定义error信息
+var errorDataIsNil = errors.New("data had never been created")
 
 // Data 数据库对象
 type Data struct {
@@ -52,7 +57,7 @@ func NewData(name string) *Data {
 // sequence 是否启用自增ID索引
 func (d *Data) CreateLily(name, comment string, sequence bool) error {
 	if nil == d {
-		return errors.New("data had never been created")
+		return errorDataIsNil
 	}
 	d.lilies[name] = newLily(name, comment, d)
 	if sequence {
@@ -69,7 +74,10 @@ func (d *Data) CreateLily(name, comment string, sequence bool) error {
 // key 插入数据唯一key
 //
 // value 插入数据对象
-func (d *Data) InsertD(key Key, value interface{}) error {
+func (d *Data) InsertD(key Key, value interface{}) (uint32, error) {
+	if nil == d {
+		return 0, errorDataIsNil
+	}
 	return d.Insert(defaultLily, key, value)
 }
 
@@ -79,7 +87,40 @@ func (d *Data) InsertD(key Key, value interface{}) error {
 //
 // key 插入数据唯一key
 func (d *Data) QueryD(key Key) (interface{}, error) {
+	if nil == d {
+		return nil, errorDataIsNil
+	}
 	return d.Query(defaultLily, key)
+}
+
+// InsertGInt 新增数据
+//
+// 向指定表中新增一条数据，key相同则覆盖
+//
+// lilyName 表名
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+func (d *Data) InsertGInt(lilyName string, key int, value interface{}) (uint32, error) {
+	if nil == d {
+		return 0, errorDataIsNil
+	}
+	return d.insert(lilyName, Key(key), uint32(key), value)
+}
+
+// QueryGInt 获取数据
+//
+// 向指定表中查询一条数据并返回
+//
+// lilyName 表名
+//
+// key 插入数据唯一key
+func (d *Data) QueryGInt(lilyName string, key int) (interface{}, error) {
+	if nil == d {
+		return nil, errorDataIsNil
+	}
+	return d.query(lilyName, Key(key), uint32(key))
 }
 
 // Insert 新增数据
@@ -91,9 +132,9 @@ func (d *Data) QueryD(key Key) (interface{}, error) {
 // key 插入数据唯一key
 //
 // value 插入数据对象
-func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
+func (d *Data) Insert(lilyName string, key Key, value interface{}) (uint32, error) {
 	if nil == d {
-		return errors.New("data had never been created")
+		return 0, errorDataIsNil
 	}
 	return d.insert(lilyName, key, hash(key), value)
 }
@@ -107,7 +148,7 @@ func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
 // key 插入数据唯一key
 func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
 	if nil == d {
-		return nil, errors.New("data had never been created")
+		return nil, errorDataIsNil
 	}
 	//return l.get(key, hash(key))
 	return d.query(lilyName, key, hash(key))
@@ -122,14 +163,15 @@ func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
 // key 插入数据唯一key
 //
 // value 插入数据对象
-func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{}) error {
+func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{}) (uint32, error) {
 	l := d.lilies[lilyName]
 	if nil == l || nil == l.purses {
-		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
+		return 0, groupIsInvalid(lilyName)
 	}
 	sequenceName := sequenceName(lilyName)
 	if nil == d.lilies[sequenceName] {
-		return l.put(key, hashKey, value)
+		atomic.AddUint32(&l.count, 1)
+		return hashKey, l.put(key, hashKey, value)
 	} else {
 		var (
 			ls       *lily
@@ -144,17 +186,33 @@ func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{
 			err := l.put(key, hashKey, value)
 			if nil != err {
 				checkErr <- err
+			} else {
+				checkErr <- nil
 			}
 		}(key, value)
 		go func(key Key, value interface{}) {
 			defer wg.Done()
-			err := ls.put(key, hashKey, value)
+			err := ls.put(key, atomic.AddUint32(&ls.autoID, 1), value)
 			if nil != err {
 				checkErr <- err
+			} else {
+				checkErr <- nil
 			}
 		}(key, value)
 		wg.Wait()
-		return <-checkErr
+		err := <-checkErr
+		// todo 回滚策略待完成
+		if nil == err {
+			err = <-checkErr
+		} else {
+			return 0, err
+		}
+		if nil != err {
+			return 0, err
+		}
+		atomic.AddUint32(&l.count, 1)
+		atomic.AddUint32(&ls.count, 1)
+		return hashKey, nil
 	}
 }
 
@@ -168,37 +226,44 @@ func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{
 func (d *Data) query(lilyName string, key Key, hashKey uint32) (interface{}, error) {
 	l := d.lilies[lilyName]
 	if nil == l || nil == l.purses {
-		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
+		return nil, groupIsInvalid(lilyName)
 	}
 	return l.get(key, hashKey)
 }
 
+// QuerySelector 根据条件检索
+//
+// lilyName 表名
+//
+// selector 条件选择器
 func (d *Data) QuerySelector(lilyName string, selector *Selector) (interface{}, error) {
 	var l *lily
 	if nil == d {
-		return nil, errors.New("data had never been created")
+		return nil, errorDataIsNil
 	}
 	if nil != selector.Indexes {
-
+		s.Stable(selector.Indexes)
+		indexStr := ""
+		for _, index := range selector.Indexes.IndexArr {
+			indexStr = strings.Join([]string{indexStr, index.param}, "")
+		}
+		lilyIndexName := strings.Join([]string{lilyName, indexStr}, "")
+		l = d.lilies[lilyIndexName]
 	} else {
 		l = d.lilies[lilyName]
 	}
-	l = d.lilies[lilyName]
 	if nil == l || nil == l.purses {
-		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
+		return nil, groupIsInvalid(lilyName)
 	}
 	return selector.query(l), nil
 }
 
-func (d *Data) InsertGInt(lilyName string, key int, value interface{}) error {
-	return d.insert(lilyName, Key(key), uint32(key), value)
-}
-
-func (d *Data) QueryGInt(lilyName string, key int) (interface{}, error) {
-	return d.query(lilyName, Key(key), uint32(key))
+// groupIsInvalid 自定义error信息
+func groupIsInvalid(lilyName string) error {
+	return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 }
 
 // sequenceName 开启自增主键索引后新的组合固定表明
 func sequenceName(name string) string {
-	return strings.Join([]string{name, "sequence"}, "_")
+	return strings.Join([]string{name, "id"}, "_")
 }

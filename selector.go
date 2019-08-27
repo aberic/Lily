@@ -19,7 +19,7 @@ import (
 )
 
 type Selector struct {
-	Indexes    []*index     `json:"index"`
+	Indexes    *indexes     `json:"indexes"`
 	Scopes     *scope       `json:"scopes"`
 	Conditions []*condition `json:"conditions"`
 	Matches    []*match     `json:"matches"`
@@ -29,10 +29,20 @@ type Selector struct {
 }
 
 // 索引，默认'_id'，可选自定义参数
+//
+// 索引将按照编号顺序拼接参数名字符串组合成唯一键
 type index struct {
-	param string
-	sort  uint8
+	param string // 参数名
+	order uint8  // 编号
 }
+
+type indexes struct {
+	IndexArr []*index `json:"indexArr"`
+}
+
+func (i indexes) Len() int           { return len(i.IndexArr) }
+func (i indexes) Swap(m, n int)      { i.IndexArr[m], i.IndexArr[n] = i.IndexArr[n], i.IndexArr[m] }
+func (i indexes) Less(m, n int) bool { return i.IndexArr[m].order < i.IndexArr[n].order }
 
 // scope 范围查询
 //

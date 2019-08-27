@@ -52,7 +52,7 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("path", path))
 	t.originalKey = originalKey
 	t.value = value
-	return errors.New(path)
+	return nil
 }
 
 func (t *thing) get(originalKey Key, key uint32) (interface{}, error) {

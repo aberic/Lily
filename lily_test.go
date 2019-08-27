@@ -16,6 +16,7 @@ package Lily
 
 import (
 	"encoding/json"
+	s "sort"
 	"testing"
 )
 
@@ -51,9 +52,9 @@ func TestPut(t *testing.T) {
 	_ = data.CreateLily(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
 		//_ = tmpLily.InsertD(Key(strconv.Itoa(i)), i)
-		_ = data.InsertGInt(lilyName, i, i)
+		_, _ = data.InsertGInt(lilyName, i, i)
 	}
-	_ = data.InsertGInt(lilyName, 1, 1)
+	_, _ = data.InsertGInt(lilyName, 1, 1)
 }
 
 func TestList(t *testing.T) {
@@ -63,7 +64,7 @@ func TestPutGet(t *testing.T) {
 	lilyName := "lily"
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
-	_ = data.InsertGInt(lilyName, 198, 200)
+	_, _ = data.InsertGInt(lilyName, 198, 200)
 	i, err := data.QueryGInt(lilyName, 198)
 	t.Log("get 198 = ", i, "err = ", err)
 }
@@ -73,7 +74,7 @@ func TestPutGetInts(t *testing.T) {
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
-		_ = data.InsertGInt(lilyName, i, i+10)
+		_, _ = data.InsertGInt(lilyName, i, i+10)
 	}
 	for i := 1; i <= 255; i++ {
 		j, err := data.QueryGInt(lilyName, i)
@@ -86,7 +87,7 @@ func TestPutGets(t *testing.T) {
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
-		_ = data.Insert(lilyName, Key(i), i)
+		_, _ = data.Insert(lilyName, Key(i), i)
 	}
 	for i := 1; i <= 255; i++ {
 		j, err := data.Query(lilyName, Key(i))
@@ -101,15 +102,26 @@ func TestQuerySelector(t *testing.T) {
 	//for i := 1; i <= 10; i++ {
 	//	_ = data.InsertGInt(lilyName, i, i+10)
 	//}
-	_ = data.InsertGInt(lilyName, 1000, 1000)
-	_ = data.InsertGInt(lilyName, 100, 100)
-	_ = data.InsertGInt(lilyName, 110000, 110000)
-	_ = data.InsertGInt(lilyName, 1100, 1100)
-	_ = data.InsertGInt(lilyName, 10000, 10000)
-	_ = data.InsertGInt(lilyName, 1, 1)
-	_ = data.InsertGInt(lilyName, 10, 10)
-	_ = data.InsertGInt(lilyName, 110, 110)
+	var err error
+	_, err = data.InsertGInt(lilyName, 1000, 1000)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 100, 100)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 110000, 110000)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 1100, 1100)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 10000, 10000)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 1, 1)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 10, 10)
+	t.Log("err = ", err)
+	_, err = data.InsertGInt(lilyName, 110, 110)
+	t.Log("err = ", err)
 	i, err := data.QuerySelector(lilyName, &Selector{})
+	t.Log("get ", i, " = ", i, "err = ", err)
+	i, err = data.QuerySelector(lilyName, &Selector{Indexes: &indexes{IndexArr: []*index{{param: "_id", order: 1}}}})
 	t.Log("get ", i, " = ", i, "err = ", err)
 }
 
@@ -159,4 +171,41 @@ func TestMatch2String(t *testing.T) {
 	t.Log("4 -", s.match2String("hello"))
 	t.Log("5 -", s.match2String(100.0101))
 	t.Log("6 -", s.match2String(100.010))
+}
+
+type person struct {
+	Name string
+	Age  int
+}
+type personSlice []person
+
+func (s personSlice) Len() int           { return len(s) }
+func (s personSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s personSlice) Less(i, j int) bool { return s[i].Age < s[j].Age }
+
+func TestSort(t *testing.T) {
+	a := personSlice{
+		{
+			Name: "AAA",
+			Age:  55,
+		},
+		{
+			Name: "BBB",
+			Age:  22,
+		},
+		{
+			Name: "CCC",
+			Age:  0,
+		},
+		{
+			Name: "DDD",
+			Age:  22,
+		},
+		{
+			Name: "EEE",
+			Age:  11,
+		},
+	}
+	s.Stable(a)
+	t.Log(a)
 }

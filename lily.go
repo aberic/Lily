@@ -39,10 +39,12 @@ import (
 //
 // level4间隔 ld3=(1*127+1)/128=1
 type lily struct {
-	data    *Data  // 数据库对象
-	name    string // 表明
-	comment string // 描述
-	purses  []*purse
+	autoID  uint32   // 自增id
+	data    *Data    // 数据库对象
+	name    string   // 表名
+	comment string   // 描述
+	purses  []*purse // 节点
+	count   uint32   // 表高度
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
@@ -119,6 +121,8 @@ func (l *lily) getPreNodal() nodal {
 
 func newLily(name, comment string, data *Data) *lily {
 	lily := &lily{
+		autoID:  0,
+		count:   0,
 		name:    name,
 		comment: comment,
 		data:    data,
