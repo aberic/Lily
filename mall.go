@@ -31,44 +31,72 @@ import (
 //
 // tree 内范围控制数量 n*k=268435455
 type mall struct {
-	key         uint32
-	realKey     uint8
-	flexibleKey uint32
+	index       uint8  // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
+	flexibleKey uint32 // 下一级最左最小树所对应真实key
 	city        *city
-	indexes     []uint8
-	trolleys    map[uint8]*trolley
+	trolleys    []*trolley
 }
 
 func (m *mall) put(originalKey Key, key uint32, value interface{}) error {
-	m.realKey = uint8(m.city.flexibleKey / trolleyDistance)
-	m.flexibleKey = m.city.flexibleKey - uint32(m.realKey)*trolleyDistance
-	//log.Self.Debug("city", log.Uint32("key", key), log.Uint32("realKey", realKey))
-	m.createChild(m.realKey)
-	return m.trolleys[m.realKey].put(originalKey, key, value)
+	index := uint8(m.city.flexibleKey / trolleyDistance)
+	m.flexibleKey = m.city.flexibleKey - uint32(index)*trolleyDistance
+	//log.Self.Debug("city", log.Uint32("key", key), log.Uint32("index", index))
+	data := m.createChild(uint8(index))
+	return data.put(originalKey, key, value)
 }
 
 func (m *mall) get(originalKey Key, key uint32) (interface{}, error) {
-	m.realKey = uint8(m.city.flexibleKey / trolleyDistance)
-	m.flexibleKey = m.city.flexibleKey - uint32(m.realKey)*trolleyDistance
-	if m.existChild(m.realKey) {
-		return m.trolleys[m.realKey].get(originalKey, key)
+	index := uint8(m.city.flexibleKey / trolleyDistance)
+	m.flexibleKey = m.city.flexibleKey - uint32(index)*trolleyDistance
+	if realIndex, err := binaryMatchData(uint8(index), m); nil == err {
+		return m.trolleys[realIndex].get(originalKey, key)
 	} else {
 		return nil, errors.New(strings.Join([]string{"mall key", string(originalKey), "is nil"}, " "))
 	}
 }
 
 func (m *mall) existChild(index uint8) bool {
-	return nil != m.trolleys[index]
+	return matchableData(index, m)
 }
 
-func (m *mall) createChild(index uint8) {
-	if !m.existChild(index) {
-		m.indexes = append(m.indexes, index)
-		m.trolleys[index] = &trolley{
-			key:     uint32(m.city.realKey)*mallDistance + uint32(index+1)*trolleyDistance,
-			mall:    m,
-			indexes: []uint8{},
-			purses:  map[uint8]*purse{},
+func (m *mall) createChild(index uint8) database {
+	if realIndex, err := binaryMatchData(index, m); nil != err {
+		t := &trolley{
+			index:  index,
+			mall:   m,
+			purses: []*purse{},
 		}
+		lenCity := len(m.trolleys)
+		if lenCity == 0 {
+			m.trolleys = append(m.trolleys, t)
+			return t
+		}
+		m.trolleys = append(m.trolleys, nil)
+		for i := len(m.trolleys) - 2; i >= 0; i-- {
+			if m.trolleys[i].index < index {
+				m.trolleys[i+1] = t
+				break
+			} else if m.trolleys[i].index > index {
+				m.trolleys[i+1] = m.trolleys[i]
+				m.trolleys[i] = t
+			} else {
+				return m.trolleys[i]
+			}
+		}
+		return t
+	} else {
+		return m.trolleys[realIndex]
 	}
+}
+
+func (m *mall) childCount() int {
+	return len(m.trolleys)
+}
+
+func (m *mall) child(index int) nodeIndex {
+	return m.trolleys[index]
+}
+
+func (m *mall) getIndex() uint8 {
+	return m.index
 }

@@ -39,44 +39,73 @@ import (
 //
 // level4间隔 ld3=(1*127+1)/128=1
 type lily struct {
-	data    *Data
-	name    string
-	comment string
-	indexes []uint8
-	cities  map[uint8]*city
+	data    *Data  // 数据库对象
+	name    string // 表明
+	comment string // 描述
+	cities  []*city
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
-	realKey := key / cityDistance
-	//realKey := uint32(0)
-	l.createChild(uint8(realKey))
-	return l.cities[uint8(realKey)].put(originalKey, key-realKey*cityDistance, value)
+	index := key / cityDistance
+	//index := uint32(0)
+	data := l.createChild(uint8(index))
+	return data.put(originalKey, key-index*cityDistance, value)
 }
 
 func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
-	realKey := key / cityDistance
-	//realKey := uint32(0)
-	if l.existChild(uint8(realKey)) {
-		return l.cities[uint8(realKey)].get(originalKey, key-realKey*cityDistance)
+	index := key / cityDistance
+	//index := uint32(0)
+	if realIndex, err := binaryMatchData(uint8(index), l); nil == err {
+		return l.cities[realIndex].get(originalKey, key-index*cityDistance)
 	} else {
 		return nil, errors.New(strings.Join([]string{"lily key", string(originalKey), "is nil"}, " "))
 	}
 }
 
 func (l *lily) existChild(index uint8) bool {
-	return nil != l.cities[index]
+	return matchableData(index, l)
 }
 
-func (l *lily) createChild(index uint8) {
-	if !l.existChild(index) {
-		l.indexes = append(l.indexes, index)
-		l.cities[index] = &city{
-			key:     uint32(index+1) * cityDistance,
-			lily:    l,
-			indexes: []uint8{},
-			malls:   map[uint8]*mall{},
+func (l *lily) createChild(index uint8) database {
+	if realIndex, err := binaryMatchData(index, l); nil != err {
+		c := &city{
+			index: index,
+			lily:  l,
+			malls: []*mall{},
 		}
+		lenCity := len(l.cities)
+		if lenCity == 0 {
+			l.cities = append(l.cities, c)
+			return c
+		}
+		l.cities = append(l.cities, nil)
+		for i := len(l.cities) - 2; i >= 0; i-- {
+			if l.cities[i].index < index {
+				l.cities[i+1] = c
+				break
+			} else if l.cities[i].index > index {
+				l.cities[i+1] = l.cities[i]
+				l.cities[i] = c
+			} else {
+				return l.cities[i]
+			}
+		}
+		return c
+	} else {
+		return l.cities[realIndex]
 	}
+}
+
+func (l *lily) childCount() int {
+	return len(l.cities)
+}
+
+func (l *lily) child(index int) nodeIndex {
+	return l.cities[index]
+}
+
+func (l *lily) getIndex() uint8 {
+	return 0
 }
 
 func newLily(name, comment string, data *Data) *lily {
@@ -84,8 +113,7 @@ func newLily(name, comment string, data *Data) *lily {
 		name:    name,
 		comment: comment,
 		data:    data,
-		indexes: []uint8{},
-		cities:  map[uint8]*city{},
+		cities:  []*city{},
 	}
 	return lily
 }

@@ -21,10 +21,24 @@ import (
 )
 
 type database interface {
+	nodeIndex
 	put(originalKey Key, key uint32, value interface{}) error
 	get(originalKey Key, key uint32) (interface{}, error)
 	existChild(index uint8) bool
-	createChild(index uint8)
+	createChild(index uint8) database
+}
+
+func appendData(database, []database) {
+
+}
+
+type nodeIndex interface {
+	getIndex() uint8
+}
+
+type binaryMatcher interface {
+	childCount() int
+	child(index int) nodeIndex
 }
 
 const (
@@ -84,9 +98,33 @@ func init() {
 	dataDir = env.GetEnv(dataPath)
 }
 
-func matchable(matchVal uint8, uintArr []uint8) bool {
-	_, err := binaryMatch(matchVal, uintArr)
+func matchableData(matchVal uint8, matcher binaryMatcher) bool {
+	_, err := binaryMatchData(matchVal, matcher)
 	return nil == err
+}
+
+func binaryMatchData(matchVal uint8, matcher binaryMatcher) (realIndex int, err error) {
+	var (
+		leftIndex   int
+		middleIndex int
+		rightIndex  int
+	)
+	leftIndex = 0
+	rightIndex = matcher.childCount() - 1
+	for leftIndex <= rightIndex {
+		middleIndex = (leftIndex + rightIndex) / 2
+		// 如果要找的数比midVal大
+		if matcher.child(middleIndex).getIndex() > matchVal {
+			// 在arr数组的左边找
+			rightIndex = middleIndex - 1
+		} else if matcher.child(middleIndex).getIndex() < matchVal {
+			// 在arr数组的右边找
+			leftIndex = middleIndex + 1
+		} else if matcher.child(middleIndex).getIndex() == matchVal {
+			return middleIndex, nil
+		}
+	}
+	return 0, errors.New("index is nil")
 }
 
 func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {

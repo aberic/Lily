@@ -37,13 +37,13 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	path = filepath.Join(dataDir,
 		t.box.purse.trolley.mall.city.lily.data.name,
 		t.box.purse.trolley.mall.city.lily.name,
-		strconv.Itoa(int(t.box.purse.trolley.mall.city.key)),
-		strconv.Itoa(int(t.box.purse.trolley.mall.key)),
-		strconv.Itoa(int(t.box.purse.trolley.key)),
+		strconv.Itoa(int(t.box.purse.trolley.mall.city.index)),
+		strconv.Itoa(int(t.box.purse.trolley.mall.index)),
+		strconv.Itoa(int(t.box.purse.trolley.index)),
 		strings.Join([]string{
-			strconv.Itoa(int(t.box.purse.key)),
+			strconv.Itoa(int(t.box.purse.index)),
 			"_",
-			strconv.Itoa(int(t.box.key)),
+			strconv.Itoa(int(t.box.index)),
 			".dat"}, "",
 		),
 	)

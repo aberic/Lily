@@ -25,11 +25,19 @@ const (
 	defaultSequenceLily = "_default_sequence"
 )
 
+// Data 数据库对象
 type Data struct {
-	name   string
-	lilies map[string]*lily
+	name   string           // 数据库名称
+	lilies map[string]*lily // 数据库表集合
 }
 
+// NewData 新建数据库
+//
+// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
+//
+// name 数据库名称
+//
+// sequence 默认表是否启用自增ID索引
 func NewData(name string, sequence bool) *Data {
 	data := &Data{name: name, lilies: map[string]*lily{}}
 	data.lilies[defaultLily] = newLily(defaultLily, "default data lily", data)
@@ -39,7 +47,14 @@ func NewData(name string, sequence bool) *Data {
 	return data
 }
 
-func (d *Data) createGroup(name, comment string, sequence bool) error {
+// CreateLily 创建表
+//
+// name 表名称
+//
+// comment 表描述
+//
+// sequence 是否启用自增ID索引
+func (d *Data) CreateLily(name, comment string, sequence bool) error {
 	if nil == d {
 		return errors.New("data had never been created")
 	}
@@ -51,23 +66,44 @@ func (d *Data) createGroup(name, comment string, sequence bool) error {
 	return nil
 }
 
-func (d *Data) Put(key Key, value interface{}) error {
-	return d.PutG(defaultLily, key, value)
+// InsertD 新增数据
+//
+// 向_default表中新增一条数据，key相同则覆盖
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+func (d *Data) InsertD(key Key, value interface{}) error {
+	return d.Insert(defaultLily, key, value)
 }
 
-func (d *Data) Get(key Key) (interface{}, error) {
-	return d.GetG(defaultLily, key)
+// QueryD 获取数据
+//
+// 向_default表中查询一条数据并返回
+//
+// key 插入数据唯一key
+func (d *Data) QueryD(key Key) (interface{}, error) {
+	return d.Query(defaultLily, key)
 }
 
-func (d *Data) PutG(groupName string, key Key, value interface{}) error {
+// Insert 新增数据
+//
+// 向指定表中新增一条数据，key相同则覆盖
+//
+// lilyName 表名
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
 	if nil == d {
 		return errors.New("data had never been created")
 	}
-	l := d.lilies[groupName]
+	l := d.lilies[lilyName]
 	if nil == l || nil == l.cities {
-		return errors.New(strings.Join([]string{"group is invalid with name ", groupName}, ""))
+		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
-	sequenceName := sequenceName(groupName)
+	sequenceName := sequenceName(lilyName)
 	if nil == d.lilies[sequenceName] {
 		return l.put(key, hash(key), value)
 	} else {
@@ -98,29 +134,36 @@ func (d *Data) PutG(groupName string, key Key, value interface{}) error {
 	}
 }
 
-func (d *Data) GetG(groupName string, key Key) (interface{}, error) {
+// Query 获取数据
+//
+// 向指定表中查询一条数据并返回
+//
+// lilyName 表名
+//
+// key 插入数据唯一key
+func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
 	if nil == d {
 		return nil, errors.New("data had never been created")
 	}
-	l := d.lilies[groupName]
+	l := d.lilies[lilyName]
 	if nil == l || nil == l.cities {
-		return nil, errors.New(strings.Join([]string{"group is invalid with name ", groupName}, ""))
+		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	return l.get(key, hash(key))
 }
 
-func (d *Data) PutGInt(groupName string, key int, value interface{}) error {
-	l := d.lilies[groupName]
+func (d *Data) PutGInt(lilyName string, key int, value interface{}) error {
+	l := d.lilies[lilyName]
 	if nil == l || nil == l.cities {
-		return errors.New(strings.Join([]string{"group is invalid with name ", groupName}, ""))
+		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	return l.put(Key(key), uint32(key), value)
 }
 
-func (d *Data) GetGInt(groupName string, key int) (interface{}, error) {
-	l := d.lilies[groupName]
+func (d *Data) GetGInt(lilyName string, key int) (interface{}, error) {
+	l := d.lilies[lilyName]
 	if nil == l || nil == l.cities {
-		return nil, errors.New(strings.Join([]string{"group is invalid with name ", groupName}, ""))
+		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	return l.get(Key(key), uint32(key))
 }
