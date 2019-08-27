@@ -24,7 +24,7 @@ import (
 )
 
 type thing struct {
-	box         *box
+	nodal       nodal // box 所属 purse
 	originalKey Key
 	value       interface{}
 	lock        sync.RWMutex
@@ -34,16 +34,18 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	var (
 		path string
 	)
+	l := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*lily)
 	path = filepath.Join(dataDir,
-		t.box.purse.trolley.mall.city.lily.data.name,
-		t.box.purse.trolley.mall.city.lily.name,
-		strconv.Itoa(int(t.box.purse.trolley.mall.city.index)),
-		strconv.Itoa(int(t.box.purse.trolley.mall.index)),
-		strconv.Itoa(int(t.box.purse.trolley.index)),
+		l.data.name,
+		l.name,
+		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())),
+		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())),
+		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getDegreeIndex())),
+		strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),
 		strings.Join([]string{
-			strconv.Itoa(int(t.box.purse.index)),
+			strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),
 			"_",
-			strconv.Itoa(int(t.box.index)),
+			strconv.Itoa(int(t.nodal.getDegreeIndex())),
 			".dat"}, "",
 		),
 	)

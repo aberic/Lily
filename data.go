@@ -40,9 +40,9 @@ type Data struct {
 // sequence 默认表是否启用自增ID索引
 func NewData(name string, sequence bool) *Data {
 	data := &Data{name: name, lilies: map[string]*lily{}}
-	data.lilies[defaultLily] = newLily(defaultLily, "default data lily", data)
+	data.lilies[defaultLily] = newLily2(defaultLily, "default data lily", data)
 	if sequence {
-		data.lilies[defaultSequenceLily] = newLily(defaultSequenceLily, "default data lily", data)
+		data.lilies[defaultSequenceLily] = newLily2(defaultSequenceLily, "default data lily", data)
 	}
 	return data
 }
@@ -58,10 +58,10 @@ func (d *Data) CreateLily(name, comment string, sequence bool) error {
 	if nil == d {
 		return errors.New("data had never been created")
 	}
-	d.lilies[name] = newLily(name, comment, d)
+	d.lilies[name] = newLily2(name, comment, d)
 	if sequence {
 		sequenceName := sequenceName(name)
-		d.lilies[sequenceName] = newLily(sequenceName, comment, d)
+		d.lilies[sequenceName] = newLily2(sequenceName, comment, d)
 	}
 	return nil
 }
@@ -100,7 +100,7 @@ func (d *Data) Insert(lilyName string, key Key, value interface{}) error {
 		return errors.New("data had never been created")
 	}
 	l := d.lilies[lilyName]
-	if nil == l || nil == l.cities {
+	if nil == l || nil == l.purses {
 		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	sequenceName := sequenceName(lilyName)
@@ -146,7 +146,7 @@ func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
 		return nil, errors.New("data had never been created")
 	}
 	l := d.lilies[lilyName]
-	if nil == l || nil == l.cities {
+	if nil == l || nil == l.purses {
 		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	return l.get(key, hash(key))
@@ -154,7 +154,7 @@ func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
 
 func (d *Data) PutGInt(lilyName string, key int, value interface{}) error {
 	l := d.lilies[lilyName]
-	if nil == l || nil == l.cities {
+	if nil == l || nil == l.purses {
 		return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	return l.put(Key(key), uint32(key), value)
@@ -162,12 +162,13 @@ func (d *Data) PutGInt(lilyName string, key int, value interface{}) error {
 
 func (d *Data) GetGInt(lilyName string, key int) (interface{}, error) {
 	l := d.lilies[lilyName]
-	if nil == l || nil == l.cities {
+	if nil == l || nil == l.purses {
 		return nil, errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
 	}
 	return l.get(Key(key), uint32(key))
 }
 
+// sequenceName 开启自增主键索引后新的组合固定表明
 func sequenceName(name string) string {
 	return strings.Join([]string{name, "sequence"}, "_")
 }

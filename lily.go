@@ -23,11 +23,11 @@ import (
 //
 // hash array 模型 [00, 01, 02, 03, 04, 05, 06, 07, 08, 09, a, b, c, d, e, f]
 //
-// b+tree 模型 degree=128;level=4;nodes=[degree^level]/(degree-1)=2113665;
+// b+tree 模型 degree=128;level=4;purses=[degree^level]/(degree-1)=2113665;
 //
-// node 内范围控制数量 key=127
+// purse 内范围控制数量 key=127
 //
-// tree 内范围控制数量 treeCount=nodes*key=268435455
+// tree 内范围控制数量 treeCount=purses*key=268435455
 //
 // hash array 内范围控制数量 t*16=4294967280
 //
@@ -42,7 +42,7 @@ type lily struct {
 	data    *Data  // 数据库对象
 	name    string // 表明
 	comment string // 描述
-	cities  []*city
+	purses  []*purse
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
@@ -56,7 +56,7 @@ func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
 	index := key / cityDistance
 	//index := uint32(0)
 	if realIndex, err := binaryMatchData(uint8(index), l); nil == err {
-		return l.cities[realIndex].get(originalKey, key-index*cityDistance)
+		return l.purses[realIndex].get(originalKey, key-index*cityDistance)
 	} else {
 		return nil, errors.New(strings.Join([]string{"lily key", string(originalKey), "is nil"}, " "))
 	}
@@ -66,54 +66,63 @@ func (l *lily) existChild(index uint8) bool {
 	return matchableData(index, l)
 }
 
-func (l *lily) createChild(index uint8) database {
+func (l *lily) createChild(index uint8) nodal {
 	if realIndex, err := binaryMatchData(index, l); nil != err {
-		c := &city{
-			index: index,
-			lily:  l,
-			malls: []*mall{},
+		nd := &purse{
+			level:       0,
+			degreeIndex: index,
+			nodal:       l,
+			nodes:       []nodal{},
 		}
-		lenCity := len(l.cities)
-		if lenCity == 0 {
-			l.cities = append(l.cities, c)
-			return c
+		lenData := len(l.purses)
+		if lenData == 0 {
+			l.purses = append(l.purses, nd)
+			return nd
 		}
-		l.cities = append(l.cities, nil)
-		for i := len(l.cities) - 2; i >= 0; i-- {
-			if l.cities[i].index < index {
-				l.cities[i+1] = c
+		l.purses = append(l.purses, nil)
+		for i := len(l.purses) - 2; i >= 0; i-- {
+			if l.purses[i].getDegreeIndex() < index {
+				l.purses[i+1] = nd
 				break
-			} else if l.cities[i].index > index {
-				l.cities[i+1] = l.cities[i]
-				l.cities[i] = c
+			} else if l.purses[i].getDegreeIndex() > index {
+				l.purses[i+1] = l.purses[i]
+				l.purses[i] = nd
 			} else {
-				return l.cities[i]
+				return l.purses[i]
 			}
 		}
-		return c
+		return nd
 	} else {
-		return l.cities[realIndex]
+		return l.purses[realIndex]
 	}
 }
 
 func (l *lily) childCount() int {
-	return len(l.cities)
+	return len(l.purses)
 }
 
 func (l *lily) child(index int) nodeIndex {
-	return l.cities[index]
+	return l.purses[index]
 }
 
-func (l *lily) getIndex() uint8 {
+func (l *lily) getDegreeIndex() uint8 {
 	return 0
 }
 
-func newLily(name, comment string, data *Data) *lily {
+func (l *lily) getFlexibleKey() uint32 {
+	return 0
+}
+
+func (l *lily) getPreNodal() nodal {
+	return nil
+}
+
+func newLily2(name, comment string, data *Data) *lily {
 	lily := &lily{
 		name:    name,
 		comment: comment,
 		data:    data,
-		cities:  []*city{},
+		purses:  []*purse{},
 	}
 	return lily
 }

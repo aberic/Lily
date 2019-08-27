@@ -20,25 +20,51 @@ import (
 	"hash/crc32"
 )
 
-type database interface {
-	nodeIndex
-	put(originalKey Key, key uint32, value interface{}) error
-	get(originalKey Key, key uint32) (interface{}, error)
-	existChild(index uint8) bool
-	createChild(index uint8) database
-}
-
-func appendData(database, []database) {
-
-}
-
+// nodeIndex 树-度集合下标辅助接口
 type nodeIndex interface {
-	getIndex() uint8
+	// getDegreeIndex 获取节点所在树中度集合中的数组下标
+	getDegreeIndex() uint8
 }
 
+// binaryMatcher 二分查询辅助接口
 type binaryMatcher interface {
+	// childCount 获取子节点集合数量
 	childCount() int
+	// child 根据子节点集合下标获取树-度对象
 	child(index int) nodeIndex
+}
+
+// position 父子节点游标辅助接口
+type position interface {
+	// getPreNodal 获取父节点对象
+	getPreNodal() nodal
+}
+
+// nodal 节点对象接口
+type nodal interface {
+	nodeIndex
+	binaryMatcher
+	position
+	// put 插入数据
+	//
+	// originalKey 真实key，必须string类型
+	//
+	// key 索引key，可通过hash转换string生成
+	//
+	// value 存储对象
+	put(originalKey Key, key uint32, value interface{}) error
+	// get 获取数据，返回存储对象
+	//
+	// originalKey 真实key，必须string类型
+	//
+	// key 索引key，可通过hash转换string生成
+	get(originalKey Key, key uint32) (interface{}, error)
+	// existChild 根据下标判定是否存在子节点
+	existChild(index uint8) bool
+	// createChild 根据下标创建新的子节点
+	createChild(index uint8) nodal
+	// getFlexibleKey 下一级最左最小树所对应真实key
+	getFlexibleKey() uint32
 }
 
 const (
@@ -48,6 +74,8 @@ const (
 	//purseCount   = 128
 	//boxCount     = 128
 
+	levelMax uint8 = 4
+	//degreeMax uint8 = 128
 	// 最大存储数，超过次数一律做新值换算
 	//lilyMax      uint32 = 4294967280
 	cityDistance uint32 = 268435455
@@ -89,6 +117,20 @@ var (
 
 type Key string
 
+func distance(level uint8) uint32 {
+	switch level {
+	case 0:
+		return mallDistance
+	case 1:
+		return trolleyDistance
+	case 2:
+		return purseDistance
+	case 3:
+		return boxDistance
+	}
+	return 0
+}
+
 // String hashes a string to a unique hashcode.
 func hash(key Key) uint32 {
 	return crc32.ChecksumIEEE([]byte(key))
@@ -103,7 +145,7 @@ func matchableData(matchVal uint8, matcher binaryMatcher) bool {
 	return nil == err
 }
 
-func binaryMatchData(matchVal uint8, matcher binaryMatcher) (realIndex int, err error) {
+func binaryMatchData(matchIndex uint8, matcher binaryMatcher) (realIndex int, err error) {
 	var (
 		leftIndex   int
 		middleIndex int
@@ -114,13 +156,13 @@ func binaryMatchData(matchVal uint8, matcher binaryMatcher) (realIndex int, err 
 	for leftIndex <= rightIndex {
 		middleIndex = (leftIndex + rightIndex) / 2
 		// 如果要找的数比midVal大
-		if matcher.child(middleIndex).getIndex() > matchVal {
+		if matcher.child(middleIndex).getDegreeIndex() > matchIndex {
 			// 在arr数组的左边找
 			rightIndex = middleIndex - 1
-		} else if matcher.child(middleIndex).getIndex() < matchVal {
+		} else if matcher.child(middleIndex).getDegreeIndex() < matchIndex {
 			// 在arr数组的右边找
 			leftIndex = middleIndex + 1
-		} else if matcher.child(middleIndex).getIndex() == matchVal {
+		} else if matcher.child(middleIndex).getDegreeIndex() == matchIndex {
 			return middleIndex, nil
 		}
 	}
