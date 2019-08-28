@@ -20,45 +20,32 @@ import (
 
 // Selector 检索选择器
 type Selector struct {
-	Scope      *scope       `json:"scopes"`     // Scope 范围查询
+	Scope      []*scope     `json:"scopes"`     // Scope 范围查询
 	Conditions []*condition `json:"conditions"` // Conditions 条件查询
 	Matches    []*match     `json:"matches"`    // Matches 匹配查询
 	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
 	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
 	Sort       *sort        `json:"sort"`       // Sort 排序方式
+	data       *Data        // 数据库对象
+	lilyName   string       // 表名
 }
-
-// 索引，默认'_id'，可选自定义参数
-//
-// 索引将按照编号顺序拼接参数名字符串组合成唯一键
-type index struct {
-	param string // 参数名
-	order uint8  // 编号
-}
-
-// indexes 索引对象，封装一个可排序的索引数组
-type indexes struct {
-	IndexArr []*index `json:"indexArr"`
-}
-
-func (i indexes) Len() int           { return len(i.IndexArr) }
-func (i indexes) Swap(m, n int)      { i.IndexArr[m], i.IndexArr[n] = i.IndexArr[n], i.IndexArr[m] }
-func (i indexes) Less(m, n int) bool { return i.IndexArr[m].order < i.IndexArr[n].order }
 
 // scope 范围查询
 //
 // 查询出来结果集合的起止位置
 type scope struct {
-	Start int32 `json:"start"` // 起始位置
-	End   int32 `json:"end"`   // 终止位置
+	Param string `json:"param"` // 参数名
+	Start int32  `json:"start"` // 起始位置
+	End   int32  `json:"end"`   // 终止位置
 }
 
 // condition 条件查询
 //
 // 查询过程中不满足条件的记录将被移除出结果集
 type condition struct {
-	Param string `json:"param"` // 参数名
-	Cond  string `json:"cond"`  // 条件 gt/lt/eq/dif 大于/小于/等于/不等
+	Param string      `json:"param"` // 参数名
+	Cond  string      `json:"cond"`  // 条件 gt/lt/eq/dif 大于/小于/等于/不等
+	Value interface{} `json:"value"` // 比较对象，支持int、string、float和bool
 }
 
 // match 匹配查询
@@ -71,8 +58,8 @@ type match struct {
 
 // sort 排序方式
 type sort struct {
-	Indexes *indexes `json:"indexes"` // Indexes 索引对象，封装一个可排序的索引数组
-	ASC     bool     `json:"asc"`     // 是否升序
+	Param string `json:"param"` // 参数名
+	ASC   bool   `json:"asc"`   // 是否升序
 }
 
 //func (s *Selector) lilyName(lilyName string) string {
@@ -93,11 +80,17 @@ func (s *Selector) match2String(inter interface{}) string {
 	return ""
 }
 
-func (s *Selector) query(node nodal, asc bool) []interface{} {
-	if asc {
-		return s.leftQuery(node)
+func (s *Selector) query() ([]interface{}, error) {
+	if len(s.Scope) == 0 && len(s.Conditions) == 0 && len(s.Matches) == 0 && s.Sort == nil {
+		if l := s.data.lilies[s.lilyName]; nil != l {
+			// todo skip & limit 限定
+			return s.leftQuery(l), nil
+		}
+		return nil, lilyIsInvalid(s.lilyName)
+	} else {
+		// todo 条件全开检索
+		return s.rightQuery(s.data.lilies[s.lilyName]), nil
 	}
-	return s.rightQuery(node)
 }
 
 func (s *Selector) leftQuery(node nodal) []interface{} {

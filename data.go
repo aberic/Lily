@@ -16,7 +16,6 @@ package Lily
 
 import (
 	"errors"
-	s "sort"
 	"strings"
 )
 
@@ -164,7 +163,7 @@ func (d *Data) Query(lilyName string, key Key) (interface{}, error) {
 func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{}) (uint32, error) {
 	l := d.lilies[lilyName]
 	if nil == l || nil == l.purses {
-		return 0, groupIsInvalid(lilyName)
+		return 0, lilyIsInvalid(lilyName)
 	}
 	sequenceName := sequenceName(lilyName)
 	if nil == d.lilies[sequenceName] {
@@ -236,7 +235,7 @@ func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{
 func (d *Data) query(lilyName string, key Key, hashKey uint32) (interface{}, error) {
 	l := d.lilies[lilyName]
 	if nil == l || nil == l.purses {
-		return nil, groupIsInvalid(lilyName)
+		return nil, lilyIsInvalid(lilyName)
 	}
 	return l.get(key, hashKey)
 }
@@ -247,35 +246,17 @@ func (d *Data) query(lilyName string, key Key, hashKey uint32) (interface{}, err
 //
 // selector 条件选择器
 func (d *Data) QuerySelector(lilyName string, selector *Selector) (interface{}, error) {
-	var (
-		l   *lily
-		asc bool
-	)
 	if nil == d {
 		return nil, errorDataIsNil
 	}
-	if nil != selector.Sort && nil != selector.Sort.Indexes {
-		s.Stable(selector.Sort.Indexes)
-		indexStr := ""
-		for _, index := range selector.Sort.Indexes.IndexArr {
-			indexStr = strings.Join([]string{indexStr, index.param}, "")
-		}
-		lilyIndexName := strings.Join([]string{lilyName, indexStr}, "")
-		l = d.lilies[lilyIndexName]
-		asc = selector.Sort.ASC
-	} else {
-		l = d.lilies[lilyName]
-		asc = true
-	}
-	if nil == l || nil == l.purses {
-		return nil, groupIsInvalid(lilyName)
-	}
-	return selector.query(l, asc), nil
+	selector.lilyName = lilyName
+	selector.data = d
+	return selector.query()
 }
 
-// groupIsInvalid 自定义error信息
-func groupIsInvalid(lilyName string) error {
-	return errors.New(strings.Join([]string{"group is invalid with name ", lilyName}, ""))
+// lilyIsInvalid 自定义error信息
+func lilyIsInvalid(lilyName string) error {
+	return errors.New(strings.Join([]string{"invalid name ", lilyName}, ""))
 }
 
 // sequenceName 开启自增主键索引后新的组合固定表明

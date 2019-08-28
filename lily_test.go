@@ -126,7 +126,7 @@ func TestQuerySelector(t *testing.T) {
 	t.Log("err = ", err)
 	i, err := data.QuerySelector(lilyName, &Selector{})
 	t.Log("get ", i, " = ", i, "err = ", err)
-	i, err = data.QuerySelector(lilyName, &Selector{Sort: &sort{Indexes: &indexes{IndexArr: []*index{{param: "_id", order: 1}}}, ASC: false}})
+	i, err = data.QuerySelector(lilyName, &Selector{Sort: &sort{}})
 	t.Log("get ", i, " = ", i, "err = ", err)
 }
 
