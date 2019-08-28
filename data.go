@@ -18,8 +18,6 @@ import (
 	"errors"
 	s "sort"
 	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 const (
@@ -93,7 +91,7 @@ func (d *Data) QueryD(key Key) (interface{}, error) {
 	return d.Query(defaultLily, key)
 }
 
-// InsertGInt 新增数据
+// InsertInt 新增数据
 //
 // 向指定表中新增一条数据，key相同则覆盖
 //
@@ -102,21 +100,21 @@ func (d *Data) QueryD(key Key) (interface{}, error) {
 // key 插入数据唯一key
 //
 // value 插入数据对象
-func (d *Data) InsertGInt(lilyName string, key int, value interface{}) (uint32, error) {
+func (d *Data) InsertInt(lilyName string, key int, value interface{}) (uint32, error) {
 	if nil == d {
 		return 0, errorDataIsNil
 	}
 	return d.insert(lilyName, Key(key), uint32(key), value)
 }
 
-// QueryGInt 获取数据
+// QueryInt 获取数据
 //
 // 向指定表中查询一条数据并返回
 //
 // lilyName 表名
 //
 // key 插入数据唯一key
-func (d *Data) QueryGInt(lilyName string, key int) (interface{}, error) {
+func (d *Data) QueryInt(lilyName string, key int) (interface{}, error) {
 	if nil == d {
 		return nil, errorDataIsNil
 	}
@@ -170,48 +168,60 @@ func (d *Data) insert(lilyName string, key Key, hashKey uint32, value interface{
 	}
 	sequenceName := sequenceName(lilyName)
 	if nil == d.lilies[sequenceName] {
-		atomic.AddUint32(&l.count, 1)
 		return hashKey, l.put(key, hashKey, value)
 	} else {
 		var (
-			ls       *lily
-			wg       sync.WaitGroup
-			checkErr chan error
+			ls  *lily
+			err error
+			//wg       sync.WaitGroup
+			//checkErr chan error
 		)
 		ls = d.lilies[sequenceName]
-		checkErr = make(chan error, 2)
-		wg.Add(2)
-		go func(key Key, value interface{}) {
-			defer wg.Done()
-			err := l.put(key, hashKey, value)
-			if nil != err {
-				checkErr <- err
-			} else {
-				checkErr <- nil
-			}
-		}(key, value)
-		go func(key Key, value interface{}) {
-			defer wg.Done()
-			err := ls.put(key, atomic.AddUint32(&ls.autoID, 1), value)
-			if nil != err {
-				checkErr <- err
-			} else {
-				checkErr <- nil
-			}
-		}(key, value)
-		wg.Wait()
-		err := <-checkErr
-		// todo 回滚策略待完成
-		if nil == err {
-			err = <-checkErr
-		} else {
-			return 0, err
-		}
+		//checkErr = make(chan error, 2)
+		//wg.Add(2)
+		//err = pool().submit(func() {
+		//	defer wg.Done()
+		//	err := l.put(key, hashKey, value)
+		//	if nil != err {
+		//		checkErr <- err
+		//	} else {
+		//		checkErr <- nil
+		//	}
+		//})
+		//if nil != err {
+		//	return 0, err
+		//}
+		//err = pool().submit(func() {
+		//	defer wg.Done()
+		//	err := ls.put(key, atomic.AddUint32(&ls.autoID, 1), value)
+		//	if nil != err {
+		//		checkErr <- err
+		//	} else {
+		//		checkErr <- nil
+		//	}
+		//})
+		//if nil != err {
+		//	return 0, err
+		//}
+		//wg.Wait()
+		//err = <-checkErr
+		//if nil == err {
+		//	err = <-checkErr
+		//} else {
+		//	return 0, err
+		//}
+		//if nil != err {
+		//	return 0, err
+		//}
+		err = l.put(key, hashKey, value)
 		if nil != err {
 			return 0, err
 		}
-		atomic.AddUint32(&l.count, 1)
-		atomic.AddUint32(&ls.count, 1)
+		err = ls.put(key, hashKey, value)
+		if nil != err {
+			return 0, err
+		}
+		// todo 回滚策略待完成
 		return hashKey, nil
 	}
 }
@@ -237,25 +247,30 @@ func (d *Data) query(lilyName string, key Key, hashKey uint32) (interface{}, err
 //
 // selector 条件选择器
 func (d *Data) QuerySelector(lilyName string, selector *Selector) (interface{}, error) {
-	var l *lily
+	var (
+		l   *lily
+		asc bool
+	)
 	if nil == d {
 		return nil, errorDataIsNil
 	}
-	if nil != selector.Indexes {
-		s.Stable(selector.Indexes)
+	if nil != selector.Sort && nil != selector.Sort.Indexes {
+		s.Stable(selector.Sort.Indexes)
 		indexStr := ""
-		for _, index := range selector.Indexes.IndexArr {
+		for _, index := range selector.Sort.Indexes.IndexArr {
 			indexStr = strings.Join([]string{indexStr, index.param}, "")
 		}
 		lilyIndexName := strings.Join([]string{lilyName, indexStr}, "")
 		l = d.lilies[lilyIndexName]
+		asc = selector.Sort.ASC
 	} else {
 		l = d.lilies[lilyName]
+		asc = true
 	}
 	if nil == l || nil == l.purses {
 		return nil, groupIsInvalid(lilyName)
 	}
-	return selector.query(l), nil
+	return selector.query(l, asc), nil
 }
 
 // groupIsInvalid 自定义error信息

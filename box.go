@@ -89,3 +89,19 @@ func (b *box) getDegreeIndex() uint8 {
 func (b *box) getPreNodal() nodal {
 	return b.nodal
 }
+
+func (b *box) lock() {
+
+}
+
+func (b *box) unLock() {
+
+}
+
+func (b *box) rLock() {
+
+}
+
+func (b *box) rUnLock() {
+
+}

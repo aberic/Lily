@@ -20,28 +20,26 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type thing struct {
 	nodal       nodal // box 所属 purse
 	originalKey Key
 	value       interface{}
-	lock        sync.RWMutex
 }
 
 func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	var (
 		path string
 	)
-	l := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*lily)
+	l := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*lily)
 	path = filepath.Join(dataDir,
 		l.data.name,
 		l.name,
-		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())),
 		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())),
 		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getDegreeIndex())),
 		strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),
+		//strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),
 		strings.Join([]string{
 			strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),
 			"_",
@@ -49,9 +47,12 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 			".dat"}, "",
 		),
 	)
+	t.nodal.getPreNodal().lock()
 	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("path", path))
 	t.originalKey = originalKey
 	t.value = value
+	t.save(path)
+	t.nodal.getPreNodal().unLock()
 	return nil
 }
 
@@ -60,4 +61,8 @@ func (t *thing) get(originalKey Key, key uint32) (interface{}, error) {
 		return t.value, nil
 	}
 	return nil, errors.New(strings.Join([]string{"had no value for key ", string(originalKey)}, ""))
+}
+
+func (t *thing) save(path string) {
+
 }

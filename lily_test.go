@@ -15,9 +15,15 @@
 package Lily
 
 import (
+	"container/heap"
+	"container/list"
 	"encoding/json"
+	"fmt"
+	"github.com/ennoo/rivet/utils/log"
 	s "sort"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestCalculate(t *testing.T) {
@@ -46,26 +52,25 @@ func TestHashCode(t *testing.T) {
 	t.Log("2147483650 = ", hash(Key("2147483650")))
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func TestPut(t *testing.T) {
 	lilyName := "lily"
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
 		//_ = tmpLily.InsertD(Key(strconv.Itoa(i)), i)
-		_, _ = data.InsertGInt(lilyName, i, i)
+		_, _ = data.InsertInt(lilyName, i, i)
 	}
-	_, _ = data.InsertGInt(lilyName, 1, 1)
-}
-
-func TestList(t *testing.T) {
+	_, _ = data.InsertInt(lilyName, 1, 1)
 }
 
 func TestPutGet(t *testing.T) {
 	lilyName := "lily"
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
-	_, _ = data.InsertGInt(lilyName, 198, 200)
-	i, err := data.QueryGInt(lilyName, 198)
+	_, _ = data.InsertInt(lilyName, 198, 200)
+	i, err := data.QueryInt(lilyName, 198)
 	t.Log("get 198 = ", i, "err = ", err)
 }
 
@@ -74,10 +79,10 @@ func TestPutGetInts(t *testing.T) {
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
 	for i := 1; i <= 255; i++ {
-		_, _ = data.InsertGInt(lilyName, i, i+10)
+		_, _ = data.InsertInt(lilyName, i, i+10)
 	}
 	for i := 1; i <= 255; i++ {
-		j, err := data.QueryGInt(lilyName, i)
+		j, err := data.QueryInt(lilyName, i)
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
 }
@@ -100,28 +105,28 @@ func TestQuerySelector(t *testing.T) {
 	data := NewData("data")
 	_ = data.CreateLily(lilyName, "", true)
 	//for i := 1; i <= 10; i++ {
-	//	_ = data.InsertGInt(lilyName, i, i+10)
+	//	_ = data.InsertInt(lilyName, i, i+10)
 	//}
 	var err error
-	_, err = data.InsertGInt(lilyName, 1000, 1000)
+	_, err = data.InsertInt(lilyName, 1000, 1000)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 100, 100)
+	_, err = data.InsertInt(lilyName, 100, 100)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 110000, 110000)
+	_, err = data.InsertInt(lilyName, 110000, 110000)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 1100, 1100)
+	_, err = data.InsertInt(lilyName, 1100, 1100)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 10000, 10000)
+	_, err = data.InsertInt(lilyName, 10000, 10000)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 1, 1)
+	_, err = data.InsertInt(lilyName, 1, 1)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 10, 10)
+	_, err = data.InsertInt(lilyName, 10, 10)
 	t.Log("err = ", err)
-	_, err = data.InsertGInt(lilyName, 110, 110)
+	_, err = data.InsertInt(lilyName, 110, 110)
 	t.Log("err = ", err)
 	i, err := data.QuerySelector(lilyName, &Selector{})
 	t.Log("get ", i, " = ", i, "err = ", err)
-	i, err = data.QuerySelector(lilyName, &Selector{Indexes: &indexes{IndexArr: []*index{{param: "_id", order: 1}}}})
+	i, err = data.QuerySelector(lilyName, &Selector{Sort: &sort{Indexes: &indexes{IndexArr: []*index{{param: "_id", order: 1}}}, ASC: false}})
 	t.Log("get ", i, " = ", i, "err = ", err)
 }
 
@@ -130,6 +135,8 @@ func TestPrint(t *testing.T) {
 		//log.Self.Debug("print", log.Int("i = ", i))
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func TestBinaryFind(t *testing.T) {
 	index, err := binaryMatch(150, []uint8{0, 8, 19, 49, 63, 80, 81, 98, 133, 150, 201, 250})
@@ -163,6 +170,8 @@ func TestBinaryFind2(t *testing.T) {
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func TestMatch2String(t *testing.T) {
 	s := Selector{}
 	t.Log("1 -", s.match2String(100))
@@ -172,6 +181,8 @@ func TestMatch2String(t *testing.T) {
 	t.Log("5 -", s.match2String(100.0101))
 	t.Log("6 -", s.match2String(100.010))
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type person struct {
 	Name string
@@ -209,3 +220,170 @@ func TestSort(t *testing.T) {
 	s.Stable(a)
 	t.Log(a)
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type submiter struct {
+}
+
+func (s *submiter) doing(key uint32, value interface{}) {
+	fmt.Println("key =", key, "value =", value)
+}
+
+func (d *dataPool) submitTest(submiter *submiter, key uint32, value interface{}) error {
+	return d.pool.Submit(func() {
+		submiter.doing(key, value)
+	})
+}
+
+func TestPoolSubmit(t *testing.T) {
+	_ = pool().submitTest(&submiter{}, 1, "1")
+	time.Sleep(10 * time.Second)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type IntHeap []int
+
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *IntHeap) Push(x interface{}) {
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	*h = append(*h, x.(int))
+}
+
+func (h *IntHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+func TestHeap(t *testing.T) {
+	h := &IntHeap{100, 16, 4, 8, 70, 2, 36, 22, 5, 12}
+
+	fmt.Println("\nHeap:")
+	heap.Init(h)
+
+	fmt.Printf("最小值: %d\n", (*h)[0])
+
+	//for(Pop)依次输出最小值,则相当于执行了HeapSort
+	fmt.Println("\nHeap sort:")
+	for h.Len() > 0 {
+		fmt.Printf("%d ", heap.Pop(h))
+	}
+
+	//增加一个新值,然后输出看看
+	fmt.Println("\nPush(h, 3),然后输出堆看看:")
+	heap.Push(h, 3)
+	for h.Len() > 0 {
+		fmt.Printf("%d ", heap.Pop(h))
+	}
+
+	fmt.Println("\n使用sort.Sort排序:")
+	h2 := IntHeap{100, 16, 4, 8, 70, 2, 36, 22, 5, 12}
+	s.Sort(h2)
+	for _, v := range h2 {
+		fmt.Printf("%d ", v)
+	}
+	fmt.Println("\n二次打印:")
+	for _, v := range h2 {
+		fmt.Printf("%d ", v)
+	}
+	fmt.Println("")
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func TestList(t *testing.T) {
+	// 生成队列
+	l := list.New()
+	// 入队, 压栈
+	l.PushBack(1)
+	l.PushBack(2)
+	l.PushBack(3)
+	l.PushBack(4)
+	//for l.Len() > 0 {
+	//	fmt.Printf("%d ", l.Front())
+	//}
+	// 出队
+	i1 := l.Front()
+	l.Remove(i1)
+	fmt.Println(i1.Value, "len = ", l.Len())
+	// 出栈
+	i4 := l.Back()
+	l.Remove(i4)
+	fmt.Println(i4.Value, "len = ", l.Len())
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var lock sync.RWMutex
+
+func TestRLock1(t *testing.T) {
+	go func() {
+		defer lock.RUnlock()
+		lock.RLock()
+		for i := 1; i <= 10; i++ {
+			log.Self.Debug("持有", log.Int("i = ", i))
+			time.Sleep(1 * time.Second)
+		}
+	}()
+	time.Sleep(1 * time.Second)
+	go func() {
+		defer lock.Unlock()
+		lock.Lock()
+		log.Self.Debug("获取锁")
+	}()
+	time.Sleep(12 * time.Second)
+}
+
+func TestRLock2(t *testing.T) {
+	go func() {
+		defer lock.RUnlock()
+		lock.RLock()
+		for i := 1; i <= 10; i++ {
+			log.Self.Debug("1持有", log.Int("i = ", i))
+			time.Sleep(1 * time.Second)
+		}
+	}()
+	go func() {
+		defer lock.RUnlock()
+		lock.RLock()
+		for i := 1; i <= 10; i++ {
+			log.Self.Debug("2持有", log.Int("i = ", i))
+			time.Sleep(1 * time.Second)
+		}
+	}()
+	time.Sleep(1 * time.Second)
+	go func() {
+		defer lock.Unlock()
+		lock.Lock()
+		log.Self.Debug("获取锁")
+	}()
+	time.Sleep(12 * time.Second)
+}
+
+func TestLock(t *testing.T) {
+	go func() {
+		defer lock.Unlock()
+		lock.Lock()
+		for i := 1; i <= 10; i++ {
+			log.Self.Debug("持有", log.Int("i = ", i))
+			time.Sleep(1 * time.Second)
+		}
+	}()
+	time.Sleep(1 * time.Second)
+	go func() {
+		defer lock.RUnlock()
+		lock.RLock()
+		log.Self.Debug("获取锁")
+	}()
+	time.Sleep(12 * time.Second)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

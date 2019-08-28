@@ -17,6 +17,7 @@ package Lily
 import (
 	"errors"
 	"strings"
+	"sync"
 )
 
 // purse 手提袋
@@ -25,11 +26,12 @@ import (
 //
 // box 包装盒集合
 type purse struct {
-	level       uint8
+	level       uint8  // 当前节点所在树层级
 	degreeIndex uint8  // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
 	flexibleKey uint32 // 下一级最左最小树所对应真实key
 	nodal       nodal  // purse 所属 trolley
 	nodes       []nodal
+	pLock       sync.RWMutex
 }
 
 func (p *purse) getFlexibleKey() uint32 {
@@ -45,6 +47,9 @@ func (p *purse) put(originalKey Key, key uint32, value interface{}) error {
 		index = uint8(p.nodal.getFlexibleKey() / distance(p.level))
 		p.flexibleKey = p.nodal.getFlexibleKey() - uint32(index)*distance(p.level)
 	}
+	//if p.level == 2 {
+	//
+	//}
 	//log.Self.Debug("purse", log.Uint32("key", key), log.Uint32("index", index))
 	data := p.createChild(uint8(index))
 	return data.put(originalKey, key, value)
@@ -71,61 +76,50 @@ func (p *purse) existChild(index uint8) bool {
 }
 
 func (p *purse) createChild(index uint8) nodal {
+	defer p.pLock.Unlock()
+	p.pLock.Lock()
 	if realIndex, err := binaryMatchData(index, p); nil != err {
 		level := p.level + 1
 		if level < levelMax {
-			nd := &purse{
+			n := &purse{
 				level:       level,
 				degreeIndex: index,
 				nodal:       p,
 				nodes:       []nodal{},
 			}
-			lenData := len(p.nodes)
-			if lenData == 0 {
-				p.nodes = append(p.nodes, nd)
-				return nd
-			}
-			p.nodes = append(p.nodes, nil)
-			for i := len(p.nodes) - 2; i >= 0; i-- {
-				if p.nodes[i].getDegreeIndex() < index {
-					p.nodes[i+1] = nd
-					break
-				} else if p.nodes[i].getDegreeIndex() > index {
-					p.nodes[i+1] = p.nodes[i]
-					p.nodes[i] = nd
-				} else {
-					return p.nodes[i]
-				}
-			}
-			return nd
+			return p.appendNodal(index, n)
 		} else {
-			l := &box{
+			n := &box{
 				degreeIndex: index,
 				nodal:       p,
 				things:      []*thing{},
 			}
-			lenCity := len(p.nodes)
-			if lenCity == 0 {
-				p.nodes = append(p.nodes, l)
-				return l
-			}
-			p.nodes = append(p.nodes, nil)
-			for i := len(p.nodes) - 2; i >= 0; i-- {
-				if p.nodes[i].getDegreeIndex() < index {
-					p.nodes[i+1] = l
-					break
-				} else if p.nodes[i].getDegreeIndex() > index {
-					p.nodes[i+1] = p.nodes[i]
-					p.nodes[i] = l
-				} else {
-					return p.nodes[i]
-				}
-			}
-			return l
+			return p.appendNodal(index, n)
 		}
 	} else {
 		return p.nodes[realIndex]
 	}
+}
+
+func (p *purse) appendNodal(index uint8, n nodal) nodal {
+	lenData := len(p.nodes)
+	if lenData == 0 {
+		p.nodes = append(p.nodes, n)
+		return n
+	}
+	p.nodes = append(p.nodes, nil)
+	for i := len(p.nodes) - 2; i >= 0; i-- {
+		if p.nodes[i].getDegreeIndex() < index {
+			p.nodes[i+1] = n
+			break
+		} else if p.nodes[i].getDegreeIndex() > index {
+			p.nodes[i+1] = p.nodes[i]
+			p.nodes[i] = n
+		} else {
+			return p.nodes[i]
+		}
+	}
+	return n
 }
 
 func (p *purse) childCount() int {
@@ -142,4 +136,20 @@ func (p *purse) getDegreeIndex() uint8 {
 
 func (p *purse) getPreNodal() nodal {
 	return p.nodal
+}
+
+func (p *purse) lock() {
+	p.pLock.Lock()
+}
+
+func (p *purse) unLock() {
+	p.pLock.Unlock()
+}
+
+func (p *purse) rLock() {
+	p.pLock.RLock()
+}
+
+func (p *purse) rUnLock() {
+	p.pLock.RUnlock()
 }

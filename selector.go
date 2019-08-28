@@ -18,14 +18,14 @@ import (
 	"strconv"
 )
 
+// Selector 检索选择器
 type Selector struct {
-	Indexes    *indexes     `json:"indexes"`
-	Scopes     *scope       `json:"scopes"`
-	Conditions []*condition `json:"conditions"`
-	Matches    []*match     `json:"matches"`
-	Skip       int32        `json:"skip"`
-	Limit      int32        `json:"limit"`
-	Sort       *sort        `json:"sort"`
+	Scope      *scope       `json:"scopes"`     // Scope 范围查询
+	Conditions []*condition `json:"conditions"` // Conditions 条件查询
+	Matches    []*match     `json:"matches"`    // Matches 匹配查询
+	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
+	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
+	Sort       *sort        `json:"sort"`       // Sort 排序方式
 }
 
 // 索引，默认'_id'，可选自定义参数
@@ -36,6 +36,7 @@ type index struct {
 	order uint8  // 编号
 }
 
+// indexes 索引对象，封装一个可排序的索引数组
 type indexes struct {
 	IndexArr []*index `json:"indexArr"`
 }
@@ -70,8 +71,8 @@ type match struct {
 
 // sort 排序方式
 type sort struct {
-	Param string `json:"param"` // 参数名 默认 _id
-	ASC   bool   `json:"asc"`   // 是否升序
+	Indexes *indexes `json:"indexes"` // Indexes 索引对象，封装一个可排序的索引数组
+	ASC     bool     `json:"asc"`     // 是否升序
 }
 
 //func (s *Selector) lilyName(lilyName string) string {
@@ -92,11 +93,11 @@ func (s *Selector) match2String(inter interface{}) string {
 	return ""
 }
 
-func (s *Selector) query(node nodal) []interface{} {
-	if nil != s.Sort && s.Sort.Param == "_id" && !s.Sort.ASC {
-		return s.rightQuery(node)
+func (s *Selector) query(node nodal, asc bool) []interface{} {
+	if asc {
+		return s.leftQuery(node)
 	}
-	return s.leftQuery(node)
+	return s.rightQuery(node)
 }
 
 func (s *Selector) leftQuery(node nodal) []interface{} {

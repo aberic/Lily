@@ -44,19 +44,18 @@ type lily struct {
 	name    string   // 表名
 	comment string   // 描述
 	purses  []*purse // 节点
-	count   uint32   // 表高度
 }
 
 func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
-	index := key / cityDistance
-	//index := uint32(0)
+	//index := key / cityDistance
+	index := uint32(0)
 	data := l.createChild(uint8(index))
 	return data.put(originalKey, key-index*cityDistance, value)
 }
 
 func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
-	index := key / cityDistance
-	//index := uint32(0)
+	//index := key / cityDistance
+	index := uint32(0)
 	if realIndex, err := binaryMatchData(uint8(index), l); nil == err {
 		return l.purses[realIndex].get(originalKey, key-index*cityDistance)
 	} else {
@@ -122,11 +121,26 @@ func (l *lily) getPreNodal() nodal {
 func newLily(name, comment string, data *Data) *lily {
 	lily := &lily{
 		autoID:  0,
-		count:   0,
 		name:    name,
 		comment: comment,
 		data:    data,
 		purses:  []*purse{},
 	}
 	return lily
+}
+
+func (l *lily) lock() {
+
+}
+
+func (l *lily) unLock() {
+
+}
+
+func (l *lily) rLock() {
+
+}
+
+func (l *lily) rUnLock() {
+
 }

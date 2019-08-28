@@ -60,6 +60,10 @@ type nodal interface {
 	getFlexibleKey() uint32
 	// getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getDegreeIndex() uint8
+	lock()
+	unLock()
+	rLock()
+	rUnLock()
 }
 
 const (
@@ -69,7 +73,7 @@ const (
 	//purseCount   = 128
 	//boxCount     = 128
 
-	levelMax uint8 = 4
+	levelMax uint8 = 3
 	//degreeMax uint8 = 128
 	// 最大存储数，超过次数一律做新值换算
 	//lilyMax      uint32 = 4294967280
@@ -93,6 +97,7 @@ const (
 //	//purseCount   = 4
 //	//boxCount     = 4
 //
+//	levelMax uint8 = 3
 //	cityDistance uint32 = 0
 //	// mallDistance level1间隔 ld1=(treeCount+1)/128=2097152 128^3
 //	mallDistance uint32 = 64
@@ -132,7 +137,7 @@ func hash(key Key) uint32 {
 }
 
 func init() {
-	dataDir = env.GetEnv(dataPath)
+	dataDir = env.GetEnvDefault(dataPath, "/Users/aberic/Documents/tmp/lily/t1")
 }
 
 func matchableData(matchVal uint8, matcher binaryMatcher) bool {
