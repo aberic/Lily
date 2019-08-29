@@ -25,6 +25,8 @@ import (
 // 这里面能存放很多个包装盒
 //
 // box 包装盒集合
+//
+// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}.shopper...
 type purse struct {
 	level       uint8  // 当前节点所在树层级
 	degreeIndex uint8  // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的

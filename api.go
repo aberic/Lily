@@ -66,6 +66,25 @@ type nodal interface {
 	rUnLock()
 }
 
+type KV interface {
+	// InsertD 新增数据
+	//
+	// 向_default表中新增一条数据，key相同则覆盖
+	//
+	// key 插入数据唯一key
+	//
+	// value 插入数据对象
+	//
+	// 返回 hashKey
+	Put(key Key, value interface{}) (uint32, error)
+	// QueryD 获取数据
+	//
+	// 向_default表中查询一条数据并返回
+	//
+	// key 插入数据唯一key
+	Get(key Key) (interface{}, error)
+}
+
 const (
 	//cityCount = 16
 	//mallCount    = 128
@@ -137,7 +156,7 @@ func hash(key Key) uint32 {
 }
 
 func init() {
-	dataDir = env.GetEnvDefault(dataPath, "/Users/aberic/Documents/tmp/lily/t1")
+	dataDir = env.GetEnvDefault(dataPath, "/Users/aberic/Documents/tmp/Lily/t1")
 }
 
 func matchableData(matchVal uint8, matcher binaryMatcher) bool {

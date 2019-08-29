@@ -32,9 +32,9 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	var (
 		path string
 	)
-	l := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*lily)
+	l := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
 	path = filepath.Join(dataDir,
-		l.data.name,
+		l.checkbook.name,
 		l.name,
 		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())),
 		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getDegreeIndex())),

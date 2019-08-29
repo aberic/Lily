@@ -20,16 +20,21 @@ import (
 )
 
 func BenchmarkInsert(b *testing.B) {
-	lilyName := "lily"
-	data := NewData("data")
-	_ = data.CreateLily(lilyName, "", true)
+	l := ObtainLily()
+	l.Start()
+	lilyName := "shopper"
+	data, err := l.CreateCheckbook("checkbook")
+	if nil != err {
+		b.Error(err)
+	}
+	_ = data.createShopper(lilyName, "", true)
 	now := time.Now().UnixNano()
 	for i := 1; i <= b.N; i++ {
 		go func(lilyName string, i int) {
-			//_, _ = data.InsertInt(lilyName, i, i+10)
+			//_, _ = checkbook.InsertInt(shopperName, i, i+10)
 			_, _ = data.Insert(lilyName, Key(i), i+10)
 		}(lilyName, i)
-		//_, _ = data.InsertInt(lilyName, i, i+10)
+		//_, _ = checkbook.InsertInt(shopperName, i, i+10)
 	}
 	b.Log("time =", (time.Now().UnixNano()-now)/1e6)
 }

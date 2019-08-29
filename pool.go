@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	dp   *dataPool
-	once sync.Once
+	dp       *dataPool
+	oncePool sync.Once
 )
 
 type dataPool struct {
@@ -30,7 +30,7 @@ type dataPool struct {
 }
 
 func pool() *dataPool {
-	once.Do(func() {
+	oncePool.Do(func() {
 		if nil == dp {
 			p, _ := ants.NewPool(100)
 			dp = &dataPool{

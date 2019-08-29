@@ -20,14 +20,14 @@ import (
 
 // Selector 检索选择器
 type Selector struct {
-	Scope      []*scope     `json:"scopes"`     // Scope 范围查询
-	Conditions []*condition `json:"conditions"` // Conditions 条件查询
-	Matches    []*match     `json:"matches"`    // Matches 匹配查询
-	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
-	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
-	Sort       *sort        `json:"sort"`       // Sort 排序方式
-	data       *Data        // 数据库对象
-	lilyName   string       // 表名
+	Scope       []*scope     `json:"scopes"`     // Scope 范围查询
+	Conditions  []*condition `json:"conditions"` // Conditions 条件查询
+	Matches     []*match     `json:"matches"`    // Matches 匹配查询
+	Skip        int32        `json:"skip"`       // Skip 结果集跳过数量
+	Limit       int32        `json:"limit"`      // Limit 结果集顺序数量
+	Sort        *sort        `json:"sort"`       // Sort 排序方式
+	checkbook   *checkbook   // 数据库对象
+	shopperName string       // 表名
 }
 
 // scope 范围查询
@@ -35,7 +35,7 @@ type Selector struct {
 // 查询出来结果集合的起止位置
 type scope struct {
 	Param string `json:"param"` // 参数名
-	Start int32  `json:"start"` // 起始位置
+	Start int32  `json:"Start"` // 起始位置
 	End   int32  `json:"end"`   // 终止位置
 }
 
@@ -62,7 +62,7 @@ type sort struct {
 	ASC   bool   `json:"asc"`   // 是否升序
 }
 
-//func (s *Selector) lilyName(lilyName string) string {
+//func (s *Selector) shopperName(shopperName string) string {
 //
 //}
 
@@ -82,14 +82,14 @@ func (s *Selector) match2String(inter interface{}) string {
 
 func (s *Selector) query() ([]interface{}, error) {
 	if len(s.Scope) == 0 && len(s.Conditions) == 0 && len(s.Matches) == 0 && s.Sort == nil {
-		if l := s.data.lilies[s.lilyName]; nil != l {
+		if l := s.checkbook.shoppers[s.shopperName]; nil != l {
 			// todo skip & limit 限定
 			return s.leftQuery(l), nil
 		}
-		return nil, lilyIsInvalid(s.lilyName)
+		return nil, shopperIsInvalid(s.shopperName)
 	} else {
 		// todo 条件全开检索
-		return s.rightQuery(s.data.lilies[s.lilyName]), nil
+		return s.rightQuery(s.checkbook.shoppers[s.shopperName]), nil
 	}
 }
 

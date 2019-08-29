@@ -16,131 +16,176 @@ package Lily
 
 import (
 	"errors"
+	"github.com/ennoo/rivet/utils/cryptos"
+	str "github.com/ennoo/rivet/utils/string"
 	"strings"
+	"sync"
 )
 
-// lily The Shopper
+const (
+	sysCheckbook           = "lily"
+	userShopper            = "_user"
+	userSequenceShopper    = "_user_id"
+	cardShopper            = "_card"
+	cardSequenceShopper    = "_card_id"
+	defaultShopper         = "_default"
+	defaultSequenceShopper = "_default_id"
+)
+
+var (
+	lilyInstance      *Lily
+	onceLily          sync.Once
+	checkbookExistErr = errors.New("checkbook(database) already exist")          // checkbookExistErr 自定义error信息
+	shopperExistErr   = errors.New("shopper(form) already exist")                // shopperExistErr 自定义error信息
+	errorDataIsNil    = errors.New("checkbook(database) had never been created") // errorDataIsNil 自定义error信息
+)
+
+// Lily 祖宗！
 //
-// hash array 模型 [00, 01, 02, 03, 04, 05, 06, 07, 08, 09, a, b, c, d, e, f]
+// 全库唯一常住内存对象，并持有所有库的句柄
 //
-// b+tree 模型 degree=128;level=4;purses=[degree^level]/(degree-1)=2113665;
+// API 入口
 //
-// purse 内范围控制数量 key=127
-//
-// tree 内范围控制数量 treeCount=purses*key=268435455
-//
-// hash array 内范围控制数量 t*16=4294967280
-//
-// level1间隔 ld1=(treeCount+1)/128=2097152
-//
-// level2间隔 ld2=(16513*127+1)/128=16384
-//
-// level3间隔 ld3=(129*127+1)/128=128
-//
-// level4间隔 ld3=(1*127+1)/128=1
-type lily struct {
-	autoID  uint32   // 自增id
-	data    *Data    // 数据库对象
-	name    string   // 表名
-	comment string   // 描述
-	purses  []*purse // 节点
+// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}/{shopperName}.dat/idx...
+type Lily struct {
+	defaultCheckbook *checkbook
+	checkbooks       map[string]*checkbook
+	once             sync.Once
 }
 
-func (l *lily) put(originalKey Key, key uint32, value interface{}) error {
-	//index := key / cityDistance
-	index := uint32(0)
-	data := l.createChild(uint8(index))
-	return data.put(originalKey, key-index*cityDistance, value)
-}
-
-func (l *lily) get(originalKey Key, key uint32) (interface{}, error) {
-	//index := key / cityDistance
-	index := uint32(0)
-	if realIndex, err := binaryMatchData(uint8(index), l); nil == err {
-		return l.purses[realIndex].get(originalKey, key-index*cityDistance)
-	} else {
-		return nil, errors.New(strings.Join([]string{"lily key", string(originalKey), "is nil"}, " "))
-	}
-}
-
-func (l *lily) existChild(index uint8) bool {
-	return matchableData(index, l)
-}
-
-func (l *lily) createChild(index uint8) nodal {
-	if realIndex, err := binaryMatchData(index, l); nil != err {
-		nd := &purse{
-			level:       0,
-			degreeIndex: index,
-			nodal:       l,
-			nodes:       []nodal{},
+// ObtainLily 获取 Lily 对象
+//
+// 会初始化一个空 Lily，如果是第一次调用的话
+//
+// 首次调用后需要执行 initialize() 初始化方法
+//
+// 或者通过外部调用 Start() 来执行初始化操作
+//
+// 调用 Restart() 会恢复 Lily 的索引，如果 Lily 索引存在，则 Restart() 什么也不会做
+//
+// 会返回一个已创建的 Lily，如果非第一次调用的话
+func ObtainLily() *Lily {
+	onceLily.Do(func() {
+		lilyInstance = &Lily{
+			checkbooks: map[string]*checkbook{},
 		}
-		lenData := len(l.purses)
-		if lenData == 0 {
-			l.purses = append(l.purses, nd)
-			return nd
-		}
-		l.purses = append(l.purses, nil)
-		for i := len(l.purses) - 2; i >= 0; i-- {
-			if l.purses[i].getDegreeIndex() < index {
-				l.purses[i+1] = nd
-				break
-			} else if l.purses[i].getDegreeIndex() > index {
-				l.purses[i+1] = l.purses[i]
-				l.purses[i] = nd
+	})
+	return lilyInstance
+}
+
+// Start 启动lily
+//
+// 调用后执行 initialize() 初始化方法
+func (l *Lily) Start() {
+	l.initialize()
+}
+
+// Restart 重新启动lily
+//
+// 调用 Restart() 会恢复 Lily 的索引，如果 Lily 索引存在，则 Restart() 什么也不会做
+func (l *Lily) Restart() {
+
+}
+
+// initialize 初始化默认库及默认表
+func (l *Lily) initialize() {
+	l.once.Do(func() {
+		data, err := l.CreateCheckbook(sysCheckbook)
+		if nil != err {
+			if err == fileExistErr {
+				l.Restart()
+				return
 			} else {
-				return l.purses[i]
+				panic(err)
 			}
 		}
-		return nd
-	} else {
-		return l.purses[realIndex]
+		if err = data.createShopper(userShopper, "default checkbook shopper", true); nil != err {
+			_ = rmDataPath(sysCheckbook)
+			return
+		}
+		if err = data.createShopper(cardShopper, "default checkbook shopper", true); nil != err {
+			_ = rmDataPath(sysCheckbook)
+			return
+		}
+		if err = data.createShopper(defaultShopper, "default checkbook shopper", true); nil != err {
+			_ = rmDataPath(sysCheckbook)
+			return
+		}
+		l.defaultCheckbook = data
+	})
+}
+
+// CreateCheckbook 新建数据库
+//
+// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
+//
+// name 数据库名称
+func (l *Lily) CreateCheckbook(name string) (*checkbook, error) {
+	// 确定库名不重复
+	for k := range l.checkbooks {
+		if k == name {
+			return nil, checkbookExistErr
+		}
 	}
-}
-
-func (l *lily) childCount() int {
-	return len(l.purses)
-}
-
-func (l *lily) child(index int) nodal {
-	return l.purses[index]
-}
-
-func (l *lily) getDegreeIndex() uint8 {
-	return 0
-}
-
-func (l *lily) getFlexibleKey() uint32 {
-	return 0
-}
-
-func (l *lily) getPreNodal() nodal {
-	return nil
-}
-
-func newLily(name, comment string, data *Data) *lily {
-	lily := &lily{
-		autoID:  0,
-		name:    name,
-		comment: comment,
-		data:    data,
-		purses:  []*purse{},
+	// 确保数据库唯一ID不重复
+	id := l.name2id(name)
+	if err := mkDataPath(id); nil != err {
+		return nil, err
 	}
-	return lily
+	data := &checkbook{name: name, id: id, shoppers: map[string]*shopper{}}
+	l.checkbooks[name] = data
+	return data, nil
 }
 
-func (l *lily) lock() {
-
+// CreateShopper 创建表
+//
+// name 表名称
+//
+// comment 表描述
+//
+// sequence 是否启用自增ID索引
+func (l *Lily) CreateShopper(checkbookName, shopperName, comment string, sequence bool) error {
+	if cb := l.checkbooks[checkbookName]; nil != cb {
+		return cb.createShopper(shopperName, comment, sequence)
+	}
+	return errorDataIsNil
 }
 
-func (l *lily) unLock() {
-
+// Put 新增数据
+//
+// 向_default表中新增一条数据，key相同则覆盖
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+//
+// 返回 hashKey
+func (l *Lily) Put(key Key, value interface{}) (uint32, error) {
+	return l.defaultCheckbook.Insert(defaultShopper, key, value)
 }
 
-func (l *lily) rLock() {
-
+// Get 获取数据
+//
+// 向_default表中查询一条数据并返回
+//
+// key 插入数据唯一key
+func (l *Lily) Get(key Key) (interface{}, error) {
+	return l.defaultCheckbook.Query(defaultShopper, key)
 }
 
-func (l *lily) rUnLock() {
-
+// name2id 确保数据库唯一ID不重复
+func (l *Lily) name2id(name string) string {
+	id := cryptos.MD516(name)
+	have := true
+	for have {
+		have = false
+		for _, v := range l.checkbooks {
+			if v.id == id {
+				have = true
+				id = cryptos.MD516(strings.Join([]string{id, str.RandSeq(3)}, ""))
+				break
+			}
+		}
+	}
+	return id
 }
