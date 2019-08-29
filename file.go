@@ -24,7 +24,7 @@ var fileExistErr = errors.New("checkbook already exist")
 
 // mkDataPath 创建库存储目录
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}/{shopperName}.dat/idx...
+// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
 func mkDataPath(dataName string) (err error) {
 	dataPath := filepath.Join(dataDir, "checkbook", dataName)
 	if exist, err := pathExist(dataPath); nil != err {
@@ -48,7 +48,7 @@ func rmDataPath(dataName string) (err error) {
 
 // mkFormPath 创建库存储目录
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}/{shopperName}.dat/idx...
+// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
 func mkFormPath(dataName, formName string) (err error) {
 	dataPath := filepath.Join(dataDir, "checkbook", dataName, formName)
 	if exist, err := pathExist(dataPath); nil != err {

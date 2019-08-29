@@ -19,22 +19,26 @@ import (
 	"time"
 )
 
+var (
+	databaseName = "checkbook"
+	formName     = "shopper"
+)
+
 func BenchmarkInsert(b *testing.B) {
 	l := ObtainLily()
 	l.Start()
-	lilyName := "shopper"
-	data, err := l.CreateCheckbook("checkbook")
+	data, err := l.CreateDatabase(databaseName)
 	if nil != err {
 		b.Error(err)
 	}
-	_ = data.createShopper(lilyName, "", true)
+	_ = data.createForm(formName, "", true)
 	now := time.Now().UnixNano()
 	for i := 1; i <= b.N; i++ {
-		go func(lilyName string, i int) {
-			//_, _ = checkbook.InsertInt(shopperName, i, i+10)
-			_, _ = data.Insert(lilyName, Key(i), i+10)
-		}(lilyName, i)
-		//_, _ = checkbook.InsertInt(shopperName, i, i+10)
+		go func(formName string, i int) {
+			//_, _ = checkbook.InsertInt(formName, i, i+10)
+			_, _ = l.Insert(databaseName, formName, Key(i), i+10)
+		}(formName, i)
+		//_, _ = checkbook.InsertInt(formName, i, i+10)
 	}
 	b.Log("time =", (time.Now().UnixNano()-now)/1e6)
 }

@@ -17,27 +17,35 @@ package Lily
 import (
 	"errors"
 	"github.com/ennoo/rivet/utils/cryptos"
-	str "github.com/ennoo/rivet/utils/string"
+	"github.com/ennoo/rivet/utils/string"
 	"strings"
 )
 
 // checkbook 数据库对象
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}/{shopperName}.dat/idx...
+// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
 type checkbook struct {
-	name     string              // 数据库名称，根据需求可以随时变化
-	id       string              // 数据库唯一ID，不能改变
-	shoppers map[string]*shopper // 表集合
+	name     string          // 数据库名称，根据需求可以随时变化
+	id       string          // 数据库唯一ID，不能改变
+	shoppers map[string]Form // 表集合
 }
 
-// CreateShopper 创建表
+func (c *checkbook) getID() string {
+	return c.id
+}
+
+func (c *checkbook) getName() string {
+	return c.name
+}
+
+// createForm 创建表
 //
 // name 表名称
 //
 // comment 表描述
 //
 // sequence 是否启用自增ID索引
-func (c *checkbook) createShopper(shopperName, comment string, sequence bool) error {
+func (c *checkbook) createForm(shopperName, comment string, sequence bool) error {
 	// 确定库名不重复
 	for k := range c.shoppers {
 		if k == shopperName {
@@ -49,108 +57,62 @@ func (c *checkbook) createShopper(shopperName, comment string, sequence bool) er
 	if err := mkFormPath(c.id, id); nil != err {
 		return err
 	}
-	c.shoppers[shopperName] = newShopper(shopperName, id, comment, c)
+	c.shoppers[shopperName] = &shopper{
+		autoID:   0,
+		name:     shopperName,
+		id:       id,
+		comment:  comment,
+		database: c,
+		nodes:    []nodal{},
+	}
 	if sequence {
 		sequenceName := c.sequenceName(shopperName)
 		sequenceId := c.name2id(sequenceName)
-		c.shoppers[sequenceName] = newShopper(sequenceName, sequenceId, comment, c)
+		c.shoppers[sequenceName] = &shopper{
+			autoID:   0,
+			name:     sequenceName,
+			id:       sequenceId,
+			comment:  comment,
+			database: c,
+			nodes:    []nodal{},
+		}
+
 	}
 	return nil
 }
 
-// InsertInt 新增数据
-//
-// 向指定表中新增一条数据，key相同则覆盖
-//
-// shopperName 表名
-//
-// key 插入数据唯一key
-//
-// value 插入数据对象
-func (c *checkbook) InsertInt(shopperName string, key int, value interface{}) (uint32, error) {
-	if nil == c {
-		return 0, errorDataIsNil
-	}
-	return c.insert(shopperName, Key(key), uint32(key), value)
-}
-
-// QueryInt 获取数据
-//
-// 向指定表中查询一条数据并返回
-//
-// shopperName 表名
-//
-// key 插入数据唯一key
-func (c *checkbook) QueryInt(shopperName string, key int) (interface{}, error) {
-	if nil == c {
-		return nil, errorDataIsNil
-	}
-	return c.query(shopperName, Key(key), uint32(key))
-}
-
 // Insert 新增数据
 //
 // 向指定表中新增一条数据，key相同则覆盖
 //
-// shopperName 表名
-//
-// key 插入数据唯一key
-//
-// value 插入数据对象
-func (c *checkbook) Insert(shopperName string, key Key, value interface{}) (uint32, error) {
-	if nil == c {
-		return 0, errorDataIsNil
-	}
-	return c.insert(shopperName, key, hash(key), value)
-}
-
-// Query 获取数据
-//
-// 向指定表中查询一条数据并返回
-//
-// shopperName 表名
-//
-// key 插入数据唯一key
-func (c *checkbook) Query(shopperName string, key Key) (interface{}, error) {
-	if nil == c {
-		return nil, errorDataIsNil
-	}
-	//return l.get(key, hash(key))
-	return c.query(shopperName, key, hash(key))
-}
-
-// Insert 新增数据
-//
-// 向指定表中新增一条数据，key相同则覆盖
-//
-// shopperName 表名
+// formName 表名
 //
 // key 插入数据唯一key
 //
 // value 插入数据对象
 //
 // 返回 hashKey
-func (c *checkbook) insert(shopperName string, key Key, hashKey uint32, value interface{}) (uint32, error) {
-	l := c.shoppers[shopperName]
-	if nil == l || nil == l.purses {
-		return 0, shopperIsInvalid(shopperName)
+func (c *checkbook) insert(formName string, key Key, hashKey uint32, value interface{}) (uint32, error) {
+	form := c.shoppers[formName]
+	if nil == form {
+		return 0, shopperIsInvalid(formName)
 	}
-	sequenceName := c.sequenceName(shopperName)
+	sequenceName := c.sequenceName(formName)
 	if nil == c.shoppers[sequenceName] {
-		return hashKey, l.put(key, hashKey, value)
+		return hashKey, form.put(key, hashKey, value)
 	} else {
 		var (
-			ls  *shopper
-			err error
+			formSequence Form
+			err          error
 			//wg       sync.WaitGroup
 			//checkErr chan error
 		)
-		ls = c.shoppers[sequenceName]
+		formSequence = c.shoppers[sequenceName]
 		//checkErr = make(chan error, 2)
 		//wg.Add(2)
 		//err = pool().submit(func() {
 		//	defer wg.Done()
-		//	err := l.put(key, hashKey, value)
+		//	err := form.put(key, hashKey, value)
 		//	if nil != err {
 		//		checkErr <- err
 		//	} else {
@@ -162,7 +124,7 @@ func (c *checkbook) insert(shopperName string, key Key, hashKey uint32, value in
 		//}
 		//err = pool().submit(func() {
 		//	defer wg.Done()
-		//	err := ls.put(key, atomic.AddUint32(&ls.autoID, 1), value)
+		//	err := formSequence.put(key, atomic.AddUint32(&formSequence.autoID, 1), value)
 		//	if nil != err {
 		//		checkErr <- err
 		//	} else {
@@ -182,11 +144,11 @@ func (c *checkbook) insert(shopperName string, key Key, hashKey uint32, value in
 		//if nil != err {
 		//	return 0, err
 		//}
-		err = l.put(key, hashKey, value)
+		err = form.put(key, hashKey, value)
 		if nil != err {
 			return 0, err
 		}
-		err = ls.put(key, hashKey, value)
+		err = formSequence.put(key, hashKey, value)
 		if nil != err {
 			return 0, err
 		}
@@ -199,34 +161,34 @@ func (c *checkbook) insert(shopperName string, key Key, hashKey uint32, value in
 //
 // 向指定表中查询一条数据并返回
 //
-// shopperName 表名
+// formName 表名
 //
 // key 插入数据唯一key
-func (c *checkbook) query(shopperName string, key Key, hashKey uint32) (interface{}, error) {
-	l := c.shoppers[shopperName]
-	if nil == l || nil == l.purses {
-		return nil, shopperIsInvalid(shopperName)
+func (c *checkbook) query(formName string, key Key, hashKey uint32) (interface{}, error) {
+	form := c.shoppers[formName]
+	if nil == form {
+		return nil, shopperIsInvalid(formName)
 	}
-	return l.get(key, hashKey)
+	return form.get(key, hashKey)
 }
 
-// QuerySelector 根据条件检索
+// querySelector 根据条件检索
 //
-// shopperName 表名
+// formName 表名
 //
 // selector 条件选择器
-func (c *checkbook) QuerySelector(shopperName string, selector *Selector) (interface{}, error) {
+func (c *checkbook) querySelector(formName string, selector *Selector) (interface{}, error) {
 	if nil == c {
 		return nil, errorDataIsNil
 	}
-	selector.shopperName = shopperName
+	selector.formName = formName
 	selector.checkbook = c
 	return selector.query()
 }
 
 // shopperIsInvalid 自定义error信息
-func shopperIsInvalid(shopperName string) error {
-	return errors.New(strings.Join([]string{"invalid name ", shopperName}, ""))
+func shopperIsInvalid(formName string) error {
+	return errors.New(strings.Join([]string{"invalid name ", formName}, ""))
 }
 
 // sequenceName 开启自增主键索引后新的组合固定表明
@@ -241,7 +203,7 @@ func (c *checkbook) name2id(name string) string {
 	for have {
 		have = false
 		for _, v := range c.shoppers {
-			if v.id == id {
+			if v.getID() == id {
 				have = true
 				id = cryptos.MD516(strings.Join([]string{id, str.RandSeq(3)}, ""))
 				break

@@ -69,11 +69,11 @@ var (
 func TestLilyPutGet(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateCheckbook(checkbookName)
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateShopper(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "", true)
 	hashKey, err := l.Put(Key("young"), 101)
 	t.Log("put young = 101 | hashKey =", hashKey, "| err = ", err)
 	i, err := l.Get(Key("young"))
@@ -83,44 +83,44 @@ func TestLilyPutGet(t *testing.T) {
 func TestPut(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateCheckbook(checkbookName)
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateShopper(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "", true)
 	for i := 1; i <= 255; i++ {
 		//_ = tmpLily.InsertD(Key(strconv.Itoa(i)), i)
-		_, _ = data.InsertInt(shopperName, i, i)
+		_, _ = l.InsertInt(checkbookName, shopperName, i, i)
 	}
-	_, _ = data.InsertInt(shopperName, 1, 1)
+	_, _ = l.InsertInt(checkbookName, shopperName, 1, 1)
 }
 
 func TestPutGet(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateCheckbook(checkbookName)
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateShopper(checkbookName, shopperName, "", true)
-	_, _ = data.InsertInt(shopperName, 198, 200)
-	i, err := data.QueryInt(shopperName, 198)
+	_ = l.CreateForm(checkbookName, shopperName, "", true)
+	_, _ = l.InsertInt(checkbookName, shopperName, 198, 200)
+	i, err := l.QueryInt(checkbookName, shopperName, 198)
 	t.Log("get 198 = ", i, "err = ", err)
 }
 
 func TestPutGetInts(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateCheckbook(checkbookName)
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateShopper(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "", true)
 	for i := 1; i <= 255; i++ {
-		_, _ = data.InsertInt(shopperName, i, i+10)
+		_, _ = l.InsertInt(checkbookName, shopperName, i, i+10)
 	}
 	for i := 1; i <= 255; i++ {
-		j, err := data.QueryInt(shopperName, i)
+		j, err := l.QueryInt(checkbookName, shopperName, i)
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
 }
@@ -128,16 +128,16 @@ func TestPutGetInts(t *testing.T) {
 func TestPutGets(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateCheckbook(checkbookName)
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateShopper(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "", true)
 	for i := 1; i <= 255; i++ {
-		_, _ = data.Insert(shopperName, Key(i), i)
+		_, _ = l.Insert(checkbookName, shopperName, Key(i), i)
 	}
 	for i := 1; i <= 255; i++ {
-		j, err := data.Query(shopperName, Key(i))
+		j, err := l.Query(checkbookName, shopperName, Key(i))
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
 }
@@ -145,33 +145,33 @@ func TestPutGets(t *testing.T) {
 func TestQuerySelector(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateCheckbook(checkbookName)
+	data, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateShopper(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "", true)
 	//for i := 1; i <= 10; i++ {
-	//	_ = checkbook.InsertInt(shopperName, i, i+10)
+	//	_ = checkbook.InsertInt(formName, i, i+10)
 	//}
-	_, err = data.InsertInt(shopperName, 1000, 1000)
+	_, err = l.InsertInt(checkbookName, shopperName, 1000, 1000)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 100, 100)
+	_, err = l.InsertInt(checkbookName, shopperName, 100, 100)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 110000, 110000)
+	_, err = l.InsertInt(checkbookName, shopperName, 110000, 110000)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 1100, 1100)
+	_, err = l.InsertInt(checkbookName, shopperName, 1100, 1100)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 10000, 10000)
+	_, err = l.InsertInt(checkbookName, shopperName, 10000, 10000)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 1, 1)
+	_, err = l.InsertInt(checkbookName, shopperName, 1, 1)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 10, 10)
+	_, err = l.InsertInt(checkbookName, shopperName, 10, 10)
 	t.Log("err = ", err)
-	_, err = data.InsertInt(shopperName, 110, 110)
+	_, err = l.InsertInt(checkbookName, shopperName, 110, 110)
 	t.Log("err = ", err)
-	i, err := data.QuerySelector(shopperName, &Selector{})
+	i, err := data.querySelector(shopperName, &Selector{})
 	t.Log("get ", i, " = ", i, "err = ", err)
-	i, err = data.QuerySelector(shopperName, &Selector{Sort: &sort{}})
+	i, err = data.querySelector(shopperName, &Selector{Sort: &sort{}})
 	t.Log("get ", i, " = ", i, "err = ", err)
 }
 

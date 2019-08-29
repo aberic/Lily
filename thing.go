@@ -34,8 +34,8 @@ func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	)
 	l := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
 	path = filepath.Join(dataDir,
-		l.checkbook.name,
-		l.name,
+		l.database.getID(),
+		l.id,
 		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())),
 		strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getDegreeIndex())),
 		strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),

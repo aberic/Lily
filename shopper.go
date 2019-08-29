@@ -23,11 +23,11 @@ import (
 //
 // hash array 模型 [00, 01, 02, 03, 04, 05, 06, 07, 08, 09, a, b, c, d, e, f]
 //
-// b+tree 模型 degree=128;level=4;purses=[degree^level]/(degree-1)=2113665;
+// b+tree 模型 degree=128;level=4;nodes=[degree^level]/(degree-1)=2113665;
 //
 // purse 内范围控制数量 key=127
 //
-// tree 内范围控制数量 treeCount=purses*key=268435455
+// tree 内范围控制数量 treeCount=nodes*key=268435455
 //
 // hash array 内范围控制数量 t*16=4294967280
 //
@@ -39,30 +39,38 @@ import (
 //
 // level4间隔 ld3=(1*127+1)/128=1
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}/{shopperName}.dat/idx...
+// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
 //
 // 索引格式
 type shopper struct {
-	autoID    uint32     // 自增id
-	checkbook *checkbook // 数据库对象
-	name      string     // 表名，根据需求可以随时变化
-	id        string     // 表唯一ID，不能改变
-	comment   string     // 描述
-	purses    []*purse   // 节点
+	autoID   uint32   // 自增id
+	database Database // 数据库对象
+	name     string   // 表名，根据需求可以随时变化
+	id       string   // 表唯一ID，不能改变
+	comment  string   // 描述
+	nodes    []nodal  // 节点
+}
+
+func (s *shopper) getID() string {
+	return s.id
+}
+
+func (s *shopper) getName() string {
+	return s.name
 }
 
 func (s *shopper) put(originalKey Key, key uint32, value interface{}) error {
-	//index := key / cityDistance
-	index := uint32(0)
+	index := key / cityDistance
+	//index := uint32(0)
 	data := s.createChild(uint8(index))
 	return data.put(originalKey, key-index*cityDistance, value)
 }
 
 func (s *shopper) get(originalKey Key, key uint32) (interface{}, error) {
-	//index := key / cityDistance
-	index := uint32(0)
+	index := key / cityDistance
+	//index := uint32(0)
 	if realIndex, err := binaryMatchData(uint8(index), s); nil == err {
-		return s.purses[realIndex].get(originalKey, key-index*cityDistance)
+		return s.nodes[realIndex].get(originalKey, key-index*cityDistance)
 	} else {
 		return nil, errors.New(strings.Join([]string{"shopper key", string(originalKey), "is nil"}, " "))
 	}
@@ -80,35 +88,35 @@ func (s *shopper) createChild(index uint8) nodal {
 			nodal:       s,
 			nodes:       []nodal{},
 		}
-		lenData := len(s.purses)
+		lenData := len(s.nodes)
 		if lenData == 0 {
-			s.purses = append(s.purses, nd)
+			s.nodes = append(s.nodes, nd)
 			return nd
 		}
-		s.purses = append(s.purses, nil)
-		for i := len(s.purses) - 2; i >= 0; i-- {
-			if s.purses[i].getDegreeIndex() < index {
-				s.purses[i+1] = nd
+		s.nodes = append(s.nodes, nil)
+		for i := len(s.nodes) - 2; i >= 0; i-- {
+			if s.nodes[i].getDegreeIndex() < index {
+				s.nodes[i+1] = nd
 				break
-			} else if s.purses[i].getDegreeIndex() > index {
-				s.purses[i+1] = s.purses[i]
-				s.purses[i] = nd
+			} else if s.nodes[i].getDegreeIndex() > index {
+				s.nodes[i+1] = s.nodes[i]
+				s.nodes[i] = nd
 			} else {
-				return s.purses[i]
+				return s.nodes[i]
 			}
 		}
 		return nd
 	} else {
-		return s.purses[realIndex]
+		return s.nodes[realIndex]
 	}
 }
 
 func (s *shopper) childCount() int {
-	return len(s.purses)
+	return len(s.nodes)
 }
 
 func (s *shopper) child(index int) nodal {
-	return s.purses[index]
+	return s.nodes[index]
 }
 
 func (s *shopper) getDegreeIndex() uint8 {
@@ -121,18 +129,6 @@ func (s *shopper) getFlexibleKey() uint32 {
 
 func (s *shopper) getPreNodal() nodal {
 	return nil
-}
-
-func newShopper(name, id, comment string, checkbook *checkbook) *shopper {
-	lily := &shopper{
-		autoID:    0,
-		name:      name,
-		id:        id,
-		comment:   comment,
-		checkbook: checkbook,
-		purses:    []*purse{},
-	}
-	return lily
 }
 
 func (s *shopper) lock() {

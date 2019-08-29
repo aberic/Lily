@@ -14,59 +14,34 @@
 
 package Lily
 
-import (
-	"errors"
-	"github.com/ennoo/rivet/utils/env"
-	"hash/crc32"
-)
+type Key string
 
-// binaryMatcher 二分查询辅助接口
-type binaryMatcher interface {
-	// childCount 获取子节点集合数量
-	childCount() int
-	// child 根据子节点集合下标获取树-度对象
-	child(index int) nodal
-}
-
-// position 父子节点游标辅助接口
-type position interface {
-	// getPreNodal 获取父节点对象
-	getPreNodal() nodal
-}
-
-// nodal 节点对象接口
-type nodal interface {
-	binaryMatcher
-	position
-	// put 插入数据
+// API 暴露公共API接口
+//
+// 提供通用 k-v 方法，无需创建新的数据库和表等对象
+//
+// 在创建 Lily 服务的时候，会默认创建‘sysDatabase’库，同时在该库中创建‘defaultForm’表
+//
+// 该接口的数据默认在上表中进行操作
+type API interface {
+	// Start 启动lily
+	Start()
+	// Restart 重新启动lily
+	Restart()
+	// CreateDatabase 新建数据库
 	//
-	// originalKey 真实key，必须string类型
+	// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
 	//
-	// key 索引key，可通过hash转换string生成
+	// name 数据库名称
+	CreateDatabase(name string) (*checkbook, error)
+	// CreateForm 创建表
 	//
-	// value 存储对象
-	put(originalKey Key, key uint32, value interface{}) error
-	// get 获取数据，返回存储对象
+	// name 表名称
 	//
-	// originalKey 真实key，必须string类型
+	// comment 表描述
 	//
-	// key 索引key，可通过hash转换string生成
-	get(originalKey Key, key uint32) (interface{}, error)
-	// existChild 根据下标判定是否存在子节点
-	existChild(index uint8) bool
-	// createChild 根据下标创建新的子节点
-	createChild(index uint8) nodal
-	// getFlexibleKey 下一级最左最小树所对应真实key
-	getFlexibleKey() uint32
-	// getDegreeIndex 获取节点所在树中度集合中的数组下标
-	getDegreeIndex() uint8
-	lock()
-	unLock()
-	rLock()
-	rUnLock()
-}
-
-type KV interface {
+	// sequence 是否启用自增ID索引
+	CreateForm(databaseName, formName, comment string, sequence bool) error
 	// InsertD 新增数据
 	//
 	// 向_default表中新增一条数据，key相同则覆盖
@@ -83,131 +58,131 @@ type KV interface {
 	//
 	// key 插入数据唯一key
 	Get(key Key) (interface{}, error)
+	// InsertInt 新增数据
+	//
+	// 向指定表中新增一条数据，key相同则覆盖
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	//
+	// value 插入数据对象
+	InsertInt(databaseName, formName string, key int, value interface{}) (uint32, error)
+	// QueryInt 获取数据
+	//
+	// 向指定表中查询一条数据并返回
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	QueryInt(databaseName, formName string, key int) (interface{}, error)
+	// Insert 新增数据
+	//
+	// 向指定表中新增一条数据，key相同则覆盖
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	//
+	// value 插入数据对象
+	Insert(databaseName, formName string, key Key, value interface{}) (uint32, error)
+	// Query 获取数据
+	//
+	// 向指定表中查询一条数据并返回
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	Query(databaseName, formName string, key Key) (interface{}, error)
 }
 
-const (
-	//cityCount = 16
-	//mallCount    = 128
-	//trolleyCount = 128
-	//purseCount   = 128
-	//boxCount     = 128
-
-	levelMax uint8 = 3
-	//degreeMax uint8 = 128
-	// 最大存储数，超过次数一律做新值换算
-	//lilyMax      uint32 = 4294967280
-	cityDistance uint32 = 268435455
-	// mallDistance level1间隔 ld1=(treeCount+1)/128=2097152 128^3
-	mallDistance uint32 = 2097152
-	// trolleyDistance level2间隔 ld2=(16513*127+1)/128=16384 128^2
-	trolleyDistance uint32 = 16384
-	// purseDistance level3间隔 ld3=(129*127+1)/128=128 128^1
-	purseDistance uint32 = 128
-	// boxDistance level4间隔 ld3=(1*127+1)/128=1 128^0
-	boxDistance uint32 = 1
-
-	dataPath = "DATA_PATH"
-)
-
-//const (
-//	//cityCount    = 1
-//	//mallCount    = 4
-//	//trolleyCount = 4
-//	//purseCount   = 4
-//	//boxCount     = 4
+// Database 数据库接口
 //
-//	levelMax uint8 = 3
-//	cityDistance uint32 = 0
-//	// mallDistance level1间隔 ld1=(treeCount+1)/128=2097152 128^3
-//	mallDistance uint32 = 64
-//	// trolleyDistance level2间隔 ld2=(16513*127+1)/128=16384 128^2
-//	trolleyDistance uint32 = 16
-//	// purseDistance level3间隔 ld3=(129*127+1)/128=128 128^1
-//	purseDistance uint32 = 4
-//	// boxDistance level4间隔 ld3=(1*127+1)/128=1 128^0
-//	boxDistance uint32 = 1
+// 提供数据库基本操作方法
+type Database interface {
+	// getID 返回数据库唯一ID
+	getID() string
+	// getName 返回数据库名称
+	getName() string
+	// createForm 新建表方法
+	//
+	// name 表名称
+	//
+	// comment 表描述
+	//
+	// sequence 是否启用自增ID索引
+	createForm(formName, comment string, sequence bool) error
+	// Insert 新增数据
+	//
+	// 向指定表中新增一条数据，key相同则覆盖
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	//
+	// value 插入数据对象
+	//
+	// 返回 hashKey
+	insert(formName string, key Key, hashKey uint32, value interface{}) (uint32, error)
+	// Query 获取数据
+	//
+	// 向指定表中查询一条数据并返回
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	query(formName string, key Key, hashKey uint32) (interface{}, error)
+	// querySelector 根据条件检索
+	//
+	// formName 表名
+	//
+	// selector 条件选择器
+	querySelector(formName string, selector *Selector) (interface{}, error)
+}
+
+// Form 表接口
 //
-//	dataPath = "DATA_PATH"
-//)
-
-var (
-	dataDir string
-)
-
-type Key string
-
-func distance(level uint8) uint32 {
-	switch level {
-	case 0:
-		return mallDistance
-	case 1:
-		return trolleyDistance
-	case 2:
-		return purseDistance
-	case 3:
-		return boxDistance
-	}
-	return 0
+// 提供表基本操作方法
+type Form interface {
+	data // 表内数据操作接口
+	// getID 返回数据库唯一ID
+	getID() string
+	// getName 返回数据库名称
+	getName() string
 }
 
-// String hashes a string to a unique hashcode.
-func hash(key Key) uint32 {
-	return crc32.ChecksumIEEE([]byte(key))
+// nodal 节点对象接口
+type nodal interface {
+	data                           // 表内数据操作接口
+	existChild(index uint8) bool   // existChild 根据下标判定是否存在子节点
+	createChild(index uint8) nodal // createChild 根据下标创建新的子节点
+	getFlexibleKey() uint32        // getFlexibleKey 下一级最左最小树所对应真实key
+	getDegreeIndex() uint8         // getDegreeIndex 获取节点所在树中度集合中的数组下标
+	getPreNodal() nodal            // getPreNodal 获取父节点对象
+	lock()                         // 节点写锁
+	unLock()                       // 节点写解锁
+	rLock()                        // 节点读锁
+	rUnLock()                      // 节点读解锁
 }
 
-func init() {
-	dataDir = env.GetEnvDefault(dataPath, "/Users/aberic/Documents/tmp/Lily/t1")
-}
-
-func matchableData(matchVal uint8, matcher binaryMatcher) bool {
-	_, err := binaryMatchData(matchVal, matcher)
-	return nil == err
-}
-
-func binaryMatchData(matchIndex uint8, matcher binaryMatcher) (realIndex int, err error) {
-	var (
-		leftIndex   int
-		middleIndex int
-		rightIndex  int
-	)
-	leftIndex = 0
-	rightIndex = matcher.childCount() - 1
-	for leftIndex <= rightIndex {
-		middleIndex = (leftIndex + rightIndex) / 2
-		// 如果要找的数比midVal大
-		if matcher.child(middleIndex).getDegreeIndex() > matchIndex {
-			// 在arr数组的左边找
-			rightIndex = middleIndex - 1
-		} else if matcher.child(middleIndex).getDegreeIndex() < matchIndex {
-			// 在arr数组的右边找
-			leftIndex = middleIndex + 1
-		} else if matcher.child(middleIndex).getDegreeIndex() == matchIndex {
-			return middleIndex, nil
-		}
-	}
-	return 0, errors.New("index is nil")
-}
-
-func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
-	var (
-		leftIndex   int
-		middleIndex int
-		rightIndex  int
-	)
-	leftIndex = 0
-	rightIndex = len(uintArr) - 1
-	for leftIndex <= rightIndex {
-		middleIndex = (leftIndex + rightIndex) / 2
-		// 如果要找的数比midVal大
-		if uintArr[middleIndex] > matchVal {
-			// 在arr数组的左边找
-			rightIndex = middleIndex - 1
-		} else if uintArr[middleIndex] < matchVal {
-			// 在arr数组的右边找
-			leftIndex = middleIndex + 1
-		} else if uintArr[middleIndex] == matchVal {
-			return middleIndex, nil
-		}
-	}
-	return 0, errors.New("index is nil")
+// data 表内数据操作接口
+//
+// 表对象、节点对象、叶子结点对象以及存储节点对象都会实现该接口
+type data interface {
+	// put 插入数据
+	//
+	// originalKey 真实key，必须string类型
+	//
+	// key 索引key，可通过hash转换string生成
+	//
+	// value 存储对象
+	put(originalKey Key, key uint32, value interface{}) error
+	// get 获取数据，返回存储对象
+	//
+	// originalKey 真实key，必须string类型
+	//
+	// key 索引key，可通过hash转换string生成
+	get(originalKey Key, key uint32) (interface{}, error)
+	childCount() int       // childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
+	child(index int) nodal // child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
 }

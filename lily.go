@@ -17,19 +17,16 @@ package Lily
 import (
 	"errors"
 	"github.com/ennoo/rivet/utils/cryptos"
-	str "github.com/ennoo/rivet/utils/string"
+	"github.com/ennoo/rivet/utils/string"
 	"strings"
 	"sync"
 )
 
 const (
-	sysCheckbook           = "lily"
-	userShopper            = "_user"
-	userSequenceShopper    = "_user_id"
-	cardShopper            = "_card"
-	cardSequenceShopper    = "_card_id"
-	defaultShopper         = "_default"
-	defaultSequenceShopper = "_default_id"
+	sysDatabase  = "lily"      // 跟随‘Lily’创建的默认库
+	userForm     = "_user"     // 跟随‘sysDatabase’库创建的‘Lily’用户管理表
+	databaseForm = "_database" // 跟随‘sysDatabase’库创建的‘Lily’数据库管理表
+	defaultForm  = "_default"  // 跟随‘sysDatabase’库创建的‘Lily’k-v表
 )
 
 var (
@@ -46,7 +43,7 @@ var (
 //
 // API 入口
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{shopperName}/{shopperName}.dat/idx...
+// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
 type Lily struct {
 	defaultCheckbook *checkbook
 	checkbooks       map[string]*checkbook
@@ -90,7 +87,7 @@ func (l *Lily) Restart() {
 // initialize 初始化默认库及默认表
 func (l *Lily) initialize() {
 	l.once.Do(func() {
-		data, err := l.CreateCheckbook(sysCheckbook)
+		data, err := l.CreateDatabase(sysDatabase)
 		if nil != err {
 			if err == fileExistErr {
 				l.Restart()
@@ -99,28 +96,23 @@ func (l *Lily) initialize() {
 				panic(err)
 			}
 		}
-		if err = data.createShopper(userShopper, "default checkbook shopper", true); nil != err {
-			_ = rmDataPath(sysCheckbook)
+		if err = data.createForm(userForm, "default checkbook shopper", false); nil != err {
+			_ = rmDataPath(sysDatabase)
 			return
 		}
-		if err = data.createShopper(cardShopper, "default checkbook shopper", true); nil != err {
-			_ = rmDataPath(sysCheckbook)
+		if err = data.createForm(databaseForm, "default checkbook shopper", false); nil != err {
+			_ = rmDataPath(sysDatabase)
 			return
 		}
-		if err = data.createShopper(defaultShopper, "default checkbook shopper", true); nil != err {
-			_ = rmDataPath(sysCheckbook)
+		if err = data.createForm(defaultForm, "default checkbook shopper", false); nil != err {
+			_ = rmDataPath(sysDatabase)
 			return
 		}
 		l.defaultCheckbook = data
 	})
 }
 
-// CreateCheckbook 新建数据库
-//
-// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
-//
-// name 数据库名称
-func (l *Lily) CreateCheckbook(name string) (*checkbook, error) {
+func (l *Lily) CreateDatabase(name string) (*checkbook, error) {
 	// 确定库名不重复
 	for k := range l.checkbooks {
 		if k == name {
@@ -132,45 +124,52 @@ func (l *Lily) CreateCheckbook(name string) (*checkbook, error) {
 	if err := mkDataPath(id); nil != err {
 		return nil, err
 	}
-	data := &checkbook{name: name, id: id, shoppers: map[string]*shopper{}}
+	data := &checkbook{name: name, id: id, shoppers: map[string]Form{}}
 	l.checkbooks[name] = data
 	return data, nil
 }
 
-// CreateShopper 创建表
-//
-// name 表名称
-//
-// comment 表描述
-//
-// sequence 是否启用自增ID索引
-func (l *Lily) CreateShopper(checkbookName, shopperName, comment string, sequence bool) error {
+func (l *Lily) CreateForm(checkbookName, shopperName, comment string, sequence bool) error {
 	if cb := l.checkbooks[checkbookName]; nil != cb {
-		return cb.createShopper(shopperName, comment, sequence)
+		return cb.createForm(shopperName, comment, sequence)
 	}
 	return errorDataIsNil
 }
 
-// Put 新增数据
-//
-// 向_default表中新增一条数据，key相同则覆盖
-//
-// key 插入数据唯一key
-//
-// value 插入数据对象
-//
-// 返回 hashKey
 func (l *Lily) Put(key Key, value interface{}) (uint32, error) {
-	return l.defaultCheckbook.Insert(defaultShopper, key, value)
+	return l.Insert(sysDatabase, defaultForm, key, value)
 }
 
-// Get 获取数据
-//
-// 向_default表中查询一条数据并返回
-//
-// key 插入数据唯一key
 func (l *Lily) Get(key Key) (interface{}, error) {
-	return l.defaultCheckbook.Query(defaultShopper, key)
+	return l.Query(sysDatabase, defaultForm, key)
+}
+
+func (l *Lily) InsertInt(databaseName, formName string, key int, value interface{}) (uint32, error) {
+	if nil == l {
+		return 0, errorDataIsNil
+	}
+	return l.checkbooks[databaseName].insert(formName, Key(key), uint32(key), value)
+}
+
+func (l *Lily) QueryInt(databaseName, formName string, key int) (interface{}, error) {
+	if nil == l {
+		return nil, errorDataIsNil
+	}
+	return l.checkbooks[databaseName].query(formName, Key(key), uint32(key))
+}
+
+func (l *Lily) Insert(databaseName, formName string, key Key, value interface{}) (uint32, error) {
+	if nil == l {
+		return 0, errorDataIsNil
+	}
+	return l.checkbooks[databaseName].insert(formName, key, hash(key), value)
+}
+
+func (l *Lily) Query(databaseName, formName string, key Key) (interface{}, error) {
+	if nil == l {
+		return nil, errorDataIsNil
+	}
+	return l.checkbooks[databaseName].query(formName, key, hash(key))
 }
 
 // name2id 确保数据库唯一ID不重复

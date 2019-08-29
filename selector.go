@@ -20,14 +20,14 @@ import (
 
 // Selector 检索选择器
 type Selector struct {
-	Scope       []*scope     `json:"scopes"`     // Scope 范围查询
-	Conditions  []*condition `json:"conditions"` // Conditions 条件查询
-	Matches     []*match     `json:"matches"`    // Matches 匹配查询
-	Skip        int32        `json:"skip"`       // Skip 结果集跳过数量
-	Limit       int32        `json:"limit"`      // Limit 结果集顺序数量
-	Sort        *sort        `json:"sort"`       // Sort 排序方式
-	checkbook   *checkbook   // 数据库对象
-	shopperName string       // 表名
+	Scope      []*scope     `json:"scopes"`     // Scope 范围查询
+	Conditions []*condition `json:"conditions"` // Conditions 条件查询
+	Matches    []*match     `json:"matches"`    // Matches 匹配查询
+	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
+	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
+	Sort       *sort        `json:"sort"`       // Sort 排序方式
+	checkbook  *checkbook   // 数据库对象
+	formName   string       // 表名
 }
 
 // scope 范围查询
@@ -62,7 +62,7 @@ type sort struct {
 	ASC   bool   `json:"asc"`   // 是否升序
 }
 
-//func (s *Selector) shopperName(shopperName string) string {
+//func (s *Selector) formName(formName string) string {
 //
 //}
 
@@ -82,22 +82,22 @@ func (s *Selector) match2String(inter interface{}) string {
 
 func (s *Selector) query() ([]interface{}, error) {
 	if len(s.Scope) == 0 && len(s.Conditions) == 0 && len(s.Matches) == 0 && s.Sort == nil {
-		if l := s.checkbook.shoppers[s.shopperName]; nil != l {
+		if l := s.checkbook.shoppers[s.formName]; nil != l {
 			// todo skip & limit 限定
 			return s.leftQuery(l), nil
 		}
-		return nil, shopperIsInvalid(s.shopperName)
+		return nil, shopperIsInvalid(s.formName)
 	} else {
 		// todo 条件全开检索
-		return s.rightQuery(s.checkbook.shoppers[s.shopperName]), nil
+		return s.rightQuery(s.checkbook.shoppers[s.formName]), nil
 	}
 }
 
-func (s *Selector) leftQuery(node nodal) []interface{} {
+func (s *Selector) leftQuery(data data) []interface{} {
 	is := make([]interface{}, 0)
-	count := node.childCount()
+	count := data.childCount()
 	for i := 0; i < count; i++ {
-		child := node.child(i)
+		child := data.child(i)
 		if child.childCount() > 0 {
 			is = append(is, s.leftQuery(child)...)
 		} else if child.childCount() == -1 {
@@ -111,11 +111,11 @@ func (s *Selector) leftQuery(node nodal) []interface{} {
 	return is
 }
 
-func (s *Selector) rightQuery(node nodal) []interface{} {
+func (s *Selector) rightQuery(data data) []interface{} {
 	is := make([]interface{}, 0)
-	count := node.childCount()
+	count := data.childCount()
 	for i := count - 1; i >= 0; i-- {
-		child := node.child(i)
+		child := data.child(i)
 		if child.childCount() > 0 {
 			is = append(is, s.rightQuery(child)...)
 		} else if child.childCount() == -1 {
