@@ -15,6 +15,9 @@
 package Lily
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -41,4 +44,54 @@ func BenchmarkInsert(b *testing.B) {
 		//_, _ = checkbook.InsertInt(formName, i, i+10)
 	}
 	b.Log("time =", (time.Now().UnixNano()-now)/1e6)
+}
+
+func BenchmarkFileWrite1G1(b *testing.B) {
+	f, err := os.OpenFile(filepath.Join(dataDir, "a.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	if err != nil {
+		b.Error(err)
+	}
+	strIn := ""
+	appendStr := "document"
+	for i := 0; i < 128; i++ {
+		strIn = strings.Join([]string{strIn, appendStr}, "")
+	}
+	//t.Log("128 mem complete")
+	//for i := 0; i < 1024; i++ {
+	//	strIn = strings.Join([]string{strIn, strIn}, "")
+	//}
+	//t.Log("1024 mem complete")
+	for i := 0; i < 1048576; i++ {
+		_, _ = f.WriteString(strIn)
+	}
+	b.Log("1024 disk complete")
+	err = f.Close()
+	if err != nil {
+		b.Error(err)
+	}
+}
+
+func BenchmarkFileWrite1G2(b *testing.B) {
+	strIn := ""
+	appendStr := "document"
+	for i := 0; i < 128; i++ {
+		strIn = strings.Join([]string{strIn, appendStr}, "")
+	}
+	//t.Log("128 mem complete")
+	//for i := 0; i < 1024; i++ {
+	//	strIn = strings.Join([]string{strIn, strIn}, "")
+	//}
+	//t.Log("1024 mem complete")
+	for i := 0; i < 1048576; i++ {
+		f, err := os.OpenFile(filepath.Join(dataDir, "b.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+		if err != nil {
+			b.Error(err)
+		}
+		_, _ = f.WriteString(strIn)
+		err = f.Close()
+		if err != nil {
+			b.Error(err)
+		}
+	}
+	b.Log("1024 disk complete")
 }

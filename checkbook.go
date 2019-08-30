@@ -19,15 +19,17 @@ import (
 	"github.com/ennoo/rivet/utils/cryptos"
 	"github.com/ennoo/rivet/utils/string"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 // checkbook 数据库对象
 //
 // 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
 type checkbook struct {
-	name     string          // 数据库名称，根据需求可以随时变化
-	id       string          // 数据库唯一ID，不能改变
-	shoppers map[string]Form // 表集合
+	name  string          // 数据库名称，根据需求可以随时变化
+	id    string          // 数据库唯一ID，不能改变
+	forms map[string]Form // 表集合
 }
 
 func (c *checkbook) getID() string {
@@ -45,30 +47,30 @@ func (c *checkbook) getName() string {
 // comment 表描述
 //
 // sequence 是否启用自增ID索引
-func (c *checkbook) createForm(shopperName, comment string, sequence bool) error {
+func (c *checkbook) createForm(formName, comment string, sequence bool) error {
 	// 确定库名不重复
-	for k := range c.shoppers {
-		if k == shopperName {
-			return shopperExistErr
+	for k := range c.forms {
+		if k == formName {
+			return formExistErr
 		}
 	}
 	// 确保表唯一ID不重复
-	id := c.name2id(shopperName)
-	if err := mkFormPath(c.id, id); nil != err {
+	id := c.name2id(formName)
+	if err := mkFormResource(c.id, id); nil != err {
 		return err
 	}
-	c.shoppers[shopperName] = &shopper{
+	c.forms[formName] = &shopper{
 		autoID:   0,
-		name:     shopperName,
+		name:     formName,
 		id:       id,
 		comment:  comment,
 		database: c,
 		nodes:    []nodal{},
 	}
 	if sequence {
-		sequenceName := c.sequenceName(shopperName)
+		sequenceName := c.sequenceName(formName)
 		sequenceId := c.name2id(sequenceName)
-		c.shoppers[sequenceName] = &shopper{
+		c.forms[sequenceName] = &shopper{
 			autoID:   0,
 			name:     sequenceName,
 			id:       sequenceId,
@@ -93,65 +95,65 @@ func (c *checkbook) createForm(shopperName, comment string, sequence bool) error
 //
 // 返回 hashKey
 func (c *checkbook) insert(formName string, key Key, hashKey uint32, value interface{}) (uint32, error) {
-	form := c.shoppers[formName]
+	form := c.forms[formName]
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
 	}
 	sequenceName := c.sequenceName(formName)
-	if nil == c.shoppers[sequenceName] {
+	if nil == c.forms[sequenceName] {
 		return hashKey, form.put(key, hashKey, value)
 	} else {
 		var (
 			formSequence Form
 			err          error
-			//wg       sync.WaitGroup
-			//checkErr chan error
+			wg           sync.WaitGroup
+			checkErr     chan error
 		)
-		formSequence = c.shoppers[sequenceName]
-		//checkErr = make(chan error, 2)
-		//wg.Add(2)
-		//err = pool().submit(func() {
-		//	defer wg.Done()
-		//	err := form.put(key, hashKey, value)
-		//	if nil != err {
-		//		checkErr <- err
-		//	} else {
-		//		checkErr <- nil
-		//	}
-		//})
-		//if nil != err {
-		//	return 0, err
-		//}
-		//err = pool().submit(func() {
-		//	defer wg.Done()
-		//	err := formSequence.put(key, atomic.AddUint32(&formSequence.autoID, 1), value)
-		//	if nil != err {
-		//		checkErr <- err
-		//	} else {
-		//		checkErr <- nil
-		//	}
-		//})
-		//if nil != err {
-		//	return 0, err
-		//}
-		//wg.Wait()
-		//err = <-checkErr
-		//if nil == err {
-		//	err = <-checkErr
-		//} else {
-		//	return 0, err
-		//}
-		//if nil != err {
-		//	return 0, err
-		//}
-		err = form.put(key, hashKey, value)
+		formSequence = c.forms[sequenceName]
+		checkErr = make(chan error, 2)
+		wg.Add(2)
+		err = pool().submit(func() {
+			defer wg.Done()
+			err := form.put(key, hashKey, value)
+			if nil != err {
+				checkErr <- err
+			} else {
+				checkErr <- nil
+			}
+		})
 		if nil != err {
 			return 0, err
 		}
-		err = formSequence.put(key, hashKey, value)
+		err = pool().submit(func() {
+			defer wg.Done()
+			err := formSequence.put(key, atomic.AddUint32(formSequence.getAutoID(), 1), value)
+			if nil != err {
+				checkErr <- err
+			} else {
+				checkErr <- nil
+			}
+		})
 		if nil != err {
 			return 0, err
 		}
+		wg.Wait()
+		err = <-checkErr
+		if nil == err {
+			err = <-checkErr
+		} else {
+			return 0, err
+		}
+		if nil != err {
+			return 0, err
+		}
+		//err = form.put(key, hashKey, value)
+		//if nil != err {
+		//	return 0, err
+		//}
+		//err = formSequence.put(key, hashKey, value)
+		//if nil != err {
+		//	return 0, err
+		//}
 		// todo 回滚策略待完成
 		return hashKey, nil
 	}
@@ -165,7 +167,7 @@ func (c *checkbook) insert(formName string, key Key, hashKey uint32, value inter
 //
 // key 插入数据唯一key
 func (c *checkbook) query(formName string, key Key, hashKey uint32) (interface{}, error) {
-	form := c.shoppers[formName]
+	form := c.forms[formName]
 	if nil == form {
 		return nil, shopperIsInvalid(formName)
 	}
@@ -202,7 +204,7 @@ func (c *checkbook) name2id(name string) string {
 	have := true
 	for have {
 		have = false
-		for _, v := range c.shoppers {
+		for _, v := range c.forms {
 			if v.getID() == id {
 				have = true
 				id = cryptos.MD516(strings.Join([]string{id, str.RandSeq(3)}, ""))

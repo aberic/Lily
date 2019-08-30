@@ -17,6 +17,7 @@ package Lily
 import (
 	"errors"
 	"strings"
+	"sync"
 )
 
 // shopper The Shopper
@@ -49,6 +50,11 @@ type shopper struct {
 	id       string   // 表唯一ID，不能改变
 	comment  string   // 描述
 	nodes    []nodal  // 节点
+	fLock    sync.RWMutex
+}
+
+func (s *shopper) getAutoID() *uint32 {
+	return &s.autoID
 }
 
 func (s *shopper) getID() string {
@@ -57,6 +63,10 @@ func (s *shopper) getID() string {
 
 func (s *shopper) getName() string {
 	return s.name
+}
+
+func (s *shopper) getDatabaseID() string {
+	return s.database.getID()
 }
 
 func (s *shopper) put(originalKey Key, key uint32, value interface{}) error {
@@ -132,17 +142,17 @@ func (s *shopper) getPreNodal() nodal {
 }
 
 func (s *shopper) lock() {
-
+	s.fLock.Lock()
 }
 
 func (s *shopper) unLock() {
-
+	s.fLock.Unlock()
 }
 
 func (s *shopper) rLock() {
-
+	s.fLock.RLock()
 }
 
 func (s *shopper) rUnLock() {
-
+	s.fLock.RUnlock()
 }

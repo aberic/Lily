@@ -33,7 +33,7 @@ type API interface {
 	// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
 	//
 	// name 数据库名称
-	CreateDatabase(name string) (*checkbook, error)
+	CreateDatabase(name string) (Database, error)
 	// CreateForm 创建表
 	//
 	// name 表名称
@@ -144,11 +144,10 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	data // 表内数据操作接口
-	// getID 返回数据库唯一ID
-	getID() string
-	// getName 返回数据库名称
-	getName() string
+	data                // 表内数据操作接口
+	getAutoID() *uint32 // getAutoID 返回表当前自增ID值
+	getID() string      // getID 返回表唯一ID
+	getName() string    // getName 返回表名称
 }
 
 // nodal 节点对象接口
@@ -159,10 +158,6 @@ type nodal interface {
 	getFlexibleKey() uint32        // getFlexibleKey 下一级最左最小树所对应真实key
 	getDegreeIndex() uint8         // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNodal() nodal            // getPreNodal 获取父节点对象
-	lock()                         // 节点写锁
-	unLock()                       // 节点写解锁
-	rLock()                        // 节点读锁
-	rUnLock()                      // 节点读解锁
 }
 
 // data 表内数据操作接口
@@ -185,4 +180,8 @@ type data interface {
 	get(originalKey Key, key uint32) (interface{}, error)
 	childCount() int       // childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
 	child(index int) nodal // child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
+	lock()                 // 写锁
+	unLock()               // 写解锁
+	rLock()                // 读锁
+	rUnLock()              // 读解锁
 }

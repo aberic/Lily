@@ -17,7 +17,7 @@ package Lily
 import "github.com/ennoo/rivet/utils/env"
 
 const (
-	//cityCount = 16
+	cityCount = 16
 	//mallCount    = 128
 	//trolleyCount = 128
 	//purseCount   = 128

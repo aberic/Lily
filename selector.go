@@ -82,14 +82,14 @@ func (s *Selector) match2String(inter interface{}) string {
 
 func (s *Selector) query() ([]interface{}, error) {
 	if len(s.Scope) == 0 && len(s.Conditions) == 0 && len(s.Matches) == 0 && s.Sort == nil {
-		if l := s.checkbook.shoppers[s.formName]; nil != l {
+		if l := s.checkbook.forms[s.formName]; nil != l {
 			// todo skip & limit 限定
 			return s.leftQuery(l), nil
 		}
 		return nil, shopperIsInvalid(s.formName)
 	} else {
 		// todo 条件全开检索
-		return s.rightQuery(s.checkbook.shoppers[s.formName]), nil
+		return s.rightQuery(s.checkbook.forms[s.formName]), nil
 	}
 }
 

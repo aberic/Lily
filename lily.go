@@ -18,6 +18,7 @@ import (
 	"errors"
 	"github.com/ennoo/rivet/utils/cryptos"
 	"github.com/ennoo/rivet/utils/string"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -30,11 +31,11 @@ const (
 )
 
 var (
-	lilyInstance      *Lily
-	onceLily          sync.Once
-	checkbookExistErr = errors.New("checkbook(database) already exist")          // checkbookExistErr 自定义error信息
-	shopperExistErr   = errors.New("shopper(form) already exist")                // shopperExistErr 自定义error信息
-	errorDataIsNil    = errors.New("checkbook(database) had never been created") // errorDataIsNil 自定义error信息
+	lilyInstance     *Lily
+	onceLily         sync.Once
+	databaseExistErr = errors.New("database already exist")          // databaseExistErr 自定义error信息
+	formExistErr     = errors.New("form already exist")              // formExistErr 自定义error信息
+	errorDataIsNil   = errors.New("database had never been created") // errorDataIsNil 自定义error信息
 )
 
 // Lily 祖宗！
@@ -43,11 +44,11 @@ var (
 //
 // API 入口
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
+// 存储格式 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
 type Lily struct {
-	defaultCheckbook *checkbook
-	checkbooks       map[string]*checkbook
-	once             sync.Once
+	defaultDatabase Database
+	databases       map[string]Database
+	once            sync.Once
 }
 
 // ObtainLily 获取 Lily 对象
@@ -64,7 +65,7 @@ type Lily struct {
 func ObtainLily() *Lily {
 	onceLily.Do(func() {
 		lilyInstance = &Lily{
-			checkbooks: map[string]*checkbook{},
+			databases: map[string]Database{},
 		}
 	})
 	return lilyInstance
@@ -89,34 +90,34 @@ func (l *Lily) initialize() {
 	l.once.Do(func() {
 		data, err := l.CreateDatabase(sysDatabase)
 		if nil != err {
-			if err == fileExistErr {
+			if err == databaseExistErr {
 				l.Restart()
 				return
 			} else {
 				panic(err)
 			}
 		}
-		if err = data.createForm(userForm, "default checkbook shopper", false); nil != err {
+		if err = data.createForm(userForm, "default user form", false); nil != err {
 			_ = rmDataPath(sysDatabase)
 			return
 		}
-		if err = data.createForm(databaseForm, "default checkbook shopper", false); nil != err {
+		if err = data.createForm(databaseForm, "default database form", false); nil != err {
 			_ = rmDataPath(sysDatabase)
 			return
 		}
-		if err = data.createForm(defaultForm, "default checkbook shopper", false); nil != err {
+		if err = data.createForm(defaultForm, "default data form", false); nil != err {
 			_ = rmDataPath(sysDatabase)
 			return
 		}
-		l.defaultCheckbook = data
+		l.defaultDatabase = data
 	})
 }
 
-func (l *Lily) CreateDatabase(name string) (*checkbook, error) {
+func (l *Lily) CreateDatabase(name string) (Database, error) {
 	// 确定库名不重复
-	for k := range l.checkbooks {
+	for k := range l.databases {
 		if k == name {
-			return nil, checkbookExistErr
+			return nil, databaseExistErr
 		}
 	}
 	// 确保数据库唯一ID不重复
@@ -124,14 +125,14 @@ func (l *Lily) CreateDatabase(name string) (*checkbook, error) {
 	if err := mkDataPath(id); nil != err {
 		return nil, err
 	}
-	data := &checkbook{name: name, id: id, shoppers: map[string]Form{}}
-	l.checkbooks[name] = data
+	data := &checkbook{name: name, id: id, forms: map[string]Form{}}
+	l.databases[name] = data
 	return data, nil
 }
 
-func (l *Lily) CreateForm(checkbookName, shopperName, comment string, sequence bool) error {
-	if cb := l.checkbooks[checkbookName]; nil != cb {
-		return cb.createForm(shopperName, comment, sequence)
+func (l *Lily) CreateForm(databaseName, formName, comment string, sequence bool) error {
+	if cb := l.databases[databaseName]; nil != cb {
+		return cb.createForm(formName, comment, sequence)
 	}
 	return errorDataIsNil
 }
@@ -148,28 +149,28 @@ func (l *Lily) InsertInt(databaseName, formName string, key int, value interface
 	if nil == l {
 		return 0, errorDataIsNil
 	}
-	return l.checkbooks[databaseName].insert(formName, Key(key), uint32(key), value)
+	return l.databases[databaseName].insert(formName, Key(strconv.Itoa(key)), uint32(key), value)
 }
 
 func (l *Lily) QueryInt(databaseName, formName string, key int) (interface{}, error) {
 	if nil == l {
 		return nil, errorDataIsNil
 	}
-	return l.checkbooks[databaseName].query(formName, Key(key), uint32(key))
+	return l.databases[databaseName].query(formName, Key(strconv.Itoa(key)), uint32(key))
 }
 
 func (l *Lily) Insert(databaseName, formName string, key Key, value interface{}) (uint32, error) {
 	if nil == l {
 		return 0, errorDataIsNil
 	}
-	return l.checkbooks[databaseName].insert(formName, key, hash(key), value)
+	return l.databases[databaseName].insert(formName, key, hash(key), value)
 }
 
 func (l *Lily) Query(databaseName, formName string, key Key) (interface{}, error) {
 	if nil == l {
 		return nil, errorDataIsNil
 	}
-	return l.checkbooks[databaseName].query(formName, key, hash(key))
+	return l.databases[databaseName].query(formName, key, hash(key))
 }
 
 // name2id 确保数据库唯一ID不重复
@@ -178,8 +179,8 @@ func (l *Lily) name2id(name string) string {
 	have := true
 	for have {
 		have = false
-		for _, v := range l.checkbooks {
-			if v.id == id {
+		for _, v := range l.databases {
+			if v.getID() == id {
 				have = true
 				id = cryptos.MD516(strings.Join([]string{id, str.RandSeq(3)}, ""))
 				break

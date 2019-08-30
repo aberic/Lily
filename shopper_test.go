@@ -18,10 +18,8 @@ import (
 	"bufio"
 	"container/heap"
 	"container/list"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ennoo/rivet/utils/bytes"
 	"github.com/ennoo/rivet/utils/log"
 	"io"
 	"os"
@@ -433,10 +431,8 @@ func TestLock(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var rootFilePath = "/Users/aberic/Documents/tmp/shopper"
-
 func TestFileRandomWrite(t *testing.T) {
-	f, err := os.OpenFile(filepath.Join(rootFilePath, "a.txt"), os.O_CREATE|os.O_RDWR, 0644)
+	f, err := os.OpenFile(filepath.Join(dataDir, "a.txt"), os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		t.Error(err)
 	}
@@ -462,20 +458,42 @@ func TestFileRandomWrite(t *testing.T) {
 }
 
 func TestFileAppendWrite(t *testing.T) {
-	f, err := os.OpenFile(filepath.Join(rootFilePath, "b.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	var (
+		f       *os.File
+		seekNow int64
+		err     error
+	)
+	f, err = os.OpenFile(filepath.Join(dataDir, "b.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		t.Error(err)
 	}
+	seekNow, err = f.Seek(0, io.SeekEnd)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("seekNow = ", seekNow)
 	seek1, err := f.WriteString("document")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log("seek1 = ", seek1)
+
+	seekNow, err = f.Seek(0, io.SeekEnd)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("seekNow = ", seekNow)
 	seek2, err := f.WriteString("$$$$")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log("seek2 = ", seek2)
+
+	seekNow, err = f.Seek(0, io.SeekEnd)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("seekNow = ", seekNow)
 	seek3, err := f.WriteString("document")
 	if err != nil {
 		t.Error(err)
@@ -488,7 +506,7 @@ func TestFileAppendWrite(t *testing.T) {
 }
 
 func TestFileWrite1G(t *testing.T) {
-	f, err := os.OpenFile(filepath.Join(rootFilePath, "b.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	f, err := os.OpenFile(filepath.Join(dataDir, "a.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		t.Error(err)
 	}
@@ -513,7 +531,7 @@ func TestFileWrite1G(t *testing.T) {
 }
 
 func TestFileRandomRead(t *testing.T) {
-	f, err := os.OpenFile(filepath.Join(rootFilePath, "b.txt"), os.O_RDONLY, 0644)
+	f, err := os.OpenFile(filepath.Join(dataDir, "b.txt"), os.O_RDONLY, 0644)
 	if err != nil {
 		t.Error(err)
 	}
@@ -527,20 +545,8 @@ func TestFileRandomRead(t *testing.T) {
 	t.Log("bs string = ", string(bs))
 }
 
-func TestHex(t *testing.T) {
-	var i = 4110011001
-	bs, err := bytes.IntToBytes(i)
-	t.Log("bs =", bs)
-	t.Error(err)
-	str := hex.Dump(bs)
-	t.Log("str =", str)
-	bs2, err := hex.DecodeString(str)
-	t.Log("bs2 =", bs2)
-	t.Error(err)
-}
-
 func TestFileWriteInt(t *testing.T) {
-	f, err := os.OpenFile(filepath.Join(rootFilePath, "c.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	f, err := os.OpenFile(filepath.Join(dataDir, "c.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		t.Error(err)
 	}
@@ -567,6 +573,33 @@ func TestFileWriteInt(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func TestHex(t *testing.T) {
+	var i int64
+	i = 10997
+	t.Log("i =", i)
+	hexStr := int64ToHexString(i)
+	t.Log("int64ToHexString =", hexStr, " |", hexStr[0:1], " |", hexStr[1:2], " |", hexStr[2:3], " |", hexStr[7:8])
+	j, err := hexStringToInt64(hexStr)
+	if nil != err {
+		t.Error(err)
+	}
+	t.Log("j =", j)
+}
+
+func TestMap(t *testing.T) {
+	var mp = make(map[string]int)
+	t.Log("len =", len(mp))
+	mp["yes"] = 1
+	t.Log("len =", len(mp))
+	mp["no"] = 2
+	t.Log("len =", len(mp))
+	mp["ok"] = 3
+	t.Log("len =", len(mp))
+	delete(mp, "no")
+	t.Log("len =", len(mp))
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
