@@ -15,6 +15,7 @@
 package Lily
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"io"
@@ -45,6 +46,11 @@ type writeResult struct {
 	seekStart int64
 	seekLast  int
 	err       error
+}
+
+type readResult struct {
+	value interface{}
+	err   error
 }
 
 type indexTask struct {
@@ -95,14 +101,25 @@ func (f *filed) running() {
 			}
 			switch task.getMold() {
 			case moldIndex:
+				//log.Self.Debug("moldIndex")
 				it := task.(*indexTask)
 				wr := <-it.accept
+				if nil != wr.err {
+					task.getChanResult() <- &writeResult{err: err}
+					continue
+				}
 				// 写入10位key及16位起始seek和16位终止seek
 				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(), int64ToHexString(wr.seekStart), intToHexString(wr.seekLast)}, ""))
-				task.getChanResult() <- &writeResult{err: err}
-				continue
+				//log.Self.Debug("moldIndex", log.Error(err))
+				task.getChanResult() <- &writeResult{
+					seekStart: wr.seekStart,
+					seekLast:  wr.seekLast,
+					err:       err,
+				}
 			case moldForm:
+				//log.Self.Debug("moldForm")
 				seekLast, err = f.file.WriteString(task.getAppendContent())
+				//log.Self.Debug("moldForm", log.Error(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: seekStart,
 					seekLast:  seekLast,
@@ -111,6 +128,7 @@ func (f *filed) running() {
 			}
 		case <-to.C:
 			// todo 需要优雅关闭，暂时暴力操作
+			//log.Self.Debug("timeout")
 			_ = f.file.Close()
 		}
 	}
@@ -137,10 +155,12 @@ type storage struct {
 }
 
 func (s *storage) appendIndex(node nodal, path, key string, wr chan *writeResult) *writeResult {
+	//log.Self.Debug("appendIndex", log.String("path", path))
 	return s.write(node, path, key, wr, moldIndex)
 }
 
 func (s *storage) appendForm(form Form, path string, value interface{}, wr chan *writeResult) *writeResult {
+	//log.Self.Debug("appendForm", log.String("path", path))
 	if data, err := json.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	} else {
@@ -159,17 +179,53 @@ func (s *storage) write(data data, filePath, appendStr string, wr chan *writeRes
 	result := make(chan *writeResult, 1)
 	switch mold {
 	default:
+		//log.Self.Debug("default")
 		return &writeResult{err: moldTypeInvalidErr}
 	case moldIndex:
+		//log.Self.Debug("index")
 		fd.tasks <- &indexTask{key: appendStr, result: result, accept: wr}
 		return <-result
 	case moldForm:
+		//log.Self.Debug("form")
 		fd.tasks <- &formTask{key: appendStr, result: result}
 		wrOut := <-result
+		//log.Self.Debug("form", log.Reflect("wrOut", wrOut))
 		if nil == wrOut.err {
 			wr <- wrOut
 		}
 		return wrOut
+	}
+}
+
+func (s *storage) read(filePath string, seekStart int64, seekLast int, rr chan *readResult) {
+	//log.Self.Debug("read", log.Int64("seekStart", seekStart), log.Int("seekLast", seekLast))
+	f, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
+	if err != nil {
+		//log.Self.Debug("read", log.Error(err))
+		rr <- &readResult{err: err}
+		return
+	}
+	_, err = f.Seek(seekStart, io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
+	if err != nil {
+		//log.Self.Debug("read", log.Error(err))
+		rr <- &readResult{err: err}
+		return
+	}
+	//log.Self.Debug("read", log.Int64("seek", seek))
+	inputReader := bufio.NewReader(f)
+	if bytes, err := inputReader.Peek(seekLast); nil != err {
+		//log.Self.Debug("read", log.Error(err))
+		rr <- &readResult{err: err}
+		return
+	} else {
+		//log.Self.Debug("read", log.String("data", string(bytes)))
+		var value interface{}
+		if err = json.Unmarshal(bytes, &value); nil != err {
+			//log.Self.Debug("read", log.Error(err))
+			rr <- &readResult{err: err}
+			return
+		}
+		rr <- &readResult{err: err, value: value}
 	}
 }
 

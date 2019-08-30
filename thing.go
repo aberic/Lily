@@ -15,9 +15,6 @@
 package Lily
 
 import (
-	"errors"
-	"github.com/ennoo/rivet/utils/log"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -25,38 +22,63 @@ import (
 type thing struct {
 	nodal       nodal // box 所属 purse
 	originalKey Key
-	seek        int64 // value最终存储在文件中的位置
+	seekStart   int64 // value最终存储在文件中的起始位置
+	seekLast    int   // value最终存储在文件中的持续长度
 	value       interface{}
 }
 
 func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
 	indexPath, formPath, form := t.getPath()
-	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("indexPath", indexPath), log.String("pathForm", formPath))
-	wr := make(chan *writeResult, 1)
-	go store().appendForm(form, formPath, value, wr)
-	go store().appendIndex(t.nodal.getPreNodal().getPreNodal(), indexPath, t.uint32toFullState(key), wr)
-	return nil
+	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("indexPath", indexPath), log.String("formPath", formPath))
+	wrTo := make(chan *writeResult, 1)
+	wrIndexBack := make(chan *writeResult, 1)
+	wrFormBack := make(chan *writeResult, 1)
+	go func() {
+		wrFormBack <- store().appendForm(form, formPath, value, wrTo)
+	}()
+	go func() {
+		wrIndexBack <- store().appendIndex(t.nodal.getPreNodal().getPreNodal(), indexPath, t.uint32toFullState(key), wrTo)
+	}()
+	for {
+		select {
+		case wrForm := <-wrFormBack:
+			if nil != wrForm.err {
+				return wrForm.err
+			}
+		case wrIndex := <-wrIndexBack:
+			if nil != wrIndex.err {
+				return wrIndex.err
+			}
+			t.seekStart = wrIndex.seekStart
+			t.seekLast = wrIndex.seekLast
+			// todo 测试留用，必须删除这两个结构体字段 originalKey & value
+			t.originalKey = originalKey
+			t.value = value
+			return nil
+		}
+	}
 }
 
 func (t *thing) get(originalKey Key, key uint32) (interface{}, error) {
-	if t.originalKey == originalKey {
-		return t.value, nil
-	}
-	return nil, errors.New(strings.Join([]string{"had no value for key ", string(originalKey)}, ""))
-}
-
-func (t *thing) saveIndex(form Form, indexPath string, key uint32) error {
-	defer form.unLock()
-	form.lock()
-	return nil
-}
-
-func (t *thing) saveForm(formPath string, originalKey Key, key uint32, value interface{}) error {
-	defer t.nodal.getPreNodal().getPreNodal().unLock() // level 2
-	t.nodal.getPreNodal().getPreNodal().lock()         // level 2
-	t.originalKey = originalKey
-	t.value = value
-	return nil
+	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
+	dataID := spr.database.getID()
+	formID := spr.id
+	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
+	pathFormNodeFile := pathFormNodeFile(
+		dataID,
+		formID,
+		strings.Join([]string{
+			t.uint8toFullState(t.nodal.getPreNodal().getPreNodal().getDegreeIndex()), // level 2
+			t.uint8toFullState(t.nodal.getPreNodal().getDegreeIndex()),               // level 3
+			t.uint8toFullState(t.nodal.getDegreeIndex()),                             // level 4
+			".dat"}, "",
+		),
+		rootNodeDegreeIndex,
+	)
+	rrFormBack := make(chan *readResult, 1)
+	go store().read(pathFormNodeFile, t.seekStart, t.seekLast, rrFormBack)
+	rr := <-rrFormBack
+	return rr.value, rr.err
 }
 
 // getFormPath 获取表存储文件路径
@@ -64,18 +86,18 @@ func (t *thing) getPath() (indexPath, formPath string, form Form) {
 	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
 	dataID := spr.database.getID()
 	formID := spr.id
-	return pathIndex(dataID, formID, t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()),
-		filepath.Join(dataDir,
+	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
+	return pathFormIndexFile(dataID, formID, rootNodeDegreeIndex),
+		pathFormNodeFile(
 			dataID,
 			formID,
-			strconv.Itoa(int(t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex())), // level 1
-			//strconv.Itoa(int(t.nodal.getPreNodal().getDegreeIndex())),
 			strings.Join([]string{
 				t.uint8toFullState(t.nodal.getPreNodal().getPreNodal().getDegreeIndex()), // level 2
 				t.uint8toFullState(t.nodal.getPreNodal().getDegreeIndex()),               // level 3
 				t.uint8toFullState(t.nodal.getDegreeIndex()),                             // level 4
 				".dat"}, "",
 			),
+			rootNodeDegreeIndex,
 		),
 		spr
 }

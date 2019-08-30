@@ -130,7 +130,7 @@ func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
 //
 // 存储格式 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
 func mkDataPath(dataName string) (err error) {
-	dataPath := filepath.Join(dataDir, "data", dataName)
+	dataPath := filepath.Join(dataDir, dataName)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
@@ -141,7 +141,7 @@ func mkDataPath(dataName string) (err error) {
 
 // rmDataPath 删除库存储目录
 func rmDataPath(dataName string) (err error) {
-	dataPath := filepath.Join(dataDir, "data", dataName)
+	dataPath := filepath.Join(dataDir, dataName)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
@@ -154,7 +154,7 @@ func rmDataPath(dataName string) (err error) {
 //
 // 存储格式 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
 func mkFormResource(dataID, formID string) (err error) {
-	dataPath := pathForm(dataID, formID)
+	dataPath := pathFormDir(dataID, formID)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
@@ -163,8 +163,14 @@ func mkFormResource(dataID, formID string) (err error) {
 	if err = os.MkdirAll(dataPath, os.ModePerm); nil != err {
 		return
 	}
-	for i := 0; i < cityCount; i++ {
-		if _, err = os.Create(pathIndex(dataID, formID, uint8(i))); nil != err {
+	for i := 0; i < hashCount; i++ {
+		if _, err = os.Create(pathFormIndexFile(dataID, formID, uint8(i))); nil != err {
+			_ = rmFormPath(dataID, formID)
+			return
+		}
+	}
+	for i := 0; i < nodalCount; i++ {
+		if err = os.Mkdir(pathFormNodeDir(dataID, formID, i), os.ModePerm); nil != err {
 			_ = rmFormPath(dataID, formID)
 			return
 		}
@@ -174,7 +180,7 @@ func mkFormResource(dataID, formID string) (err error) {
 
 // rmFormPath 删除表存储目录
 func rmFormPath(dataID, formID string) (err error) {
-	dataPath := pathForm(dataID, formID)
+	dataPath := pathFormDir(dataID, formID)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
@@ -183,24 +189,32 @@ func rmFormPath(dataID, formID string) (err error) {
 	return nil
 }
 
-// pathForm 表目录
+// pathFormDir 表目录
 //
 // dataID 数据库唯一id
 //
 // formID 表唯一id
-func pathForm(dataID, formID string) string {
-	return filepath.Join(dataDir, "data", dataID, formID)
+func pathFormDir(dataID, formID string) string {
+	return filepath.Join(dataDir, dataID, formID)
 }
 
-// pathIndex 表索引文件路径
+// pathFormIndexFile 表索引文件路径
 //
 // dataID 数据库唯一id
 //
 // formID 表唯一id
 //
 // index 所在表顶层数组中下标
-func pathIndex(dataID, formID string, index uint8) string {
-	return strings.Join([]string{pathForm(dataID, formID), string(filepath.Separator), strconv.Itoa(int(index)), ".idx"}, "")
+func pathFormIndexFile(dataID, formID string, index uint8) string {
+	return strings.Join([]string{pathFormDir(dataID, formID), string(filepath.Separator), strconv.Itoa(int(index)), ".idx"}, "")
+}
+
+func pathFormNodeDir(dataID, formID string, index int) string {
+	return filepath.Join(pathFormDir(dataID, formID), strconv.Itoa(index))
+}
+
+func pathFormNodeFile(dataID, formID, fileName string, index uint8) string {
+	return filepath.Join(dataDir, dataID, formID, strconv.Itoa(int(index)), fileName)
 }
 
 // pathExist 检查路径是否存在

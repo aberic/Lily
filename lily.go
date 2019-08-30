@@ -131,8 +131,8 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 }
 
 func (l *Lily) CreateForm(databaseName, formName, comment string, sequence bool) error {
-	if cb := l.databases[databaseName]; nil != cb {
-		return cb.createForm(formName, comment, sequence)
+	if database := l.databases[databaseName]; nil != database {
+		return database.createForm(formName, comment, sequence)
 	}
 	return errorDataIsNil
 }

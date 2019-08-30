@@ -100,10 +100,12 @@ func TestPutGet(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", true)
-	_, _ = l.InsertInt(checkbookName, shopperName, 198, 200)
+	_ = l.CreateForm(checkbookName, shopperName, "", false)
+	_, err = l.InsertInt(checkbookName, shopperName, 198, 200)
+	t.Log("InsertInt err =", err)
 	i, err := l.QueryInt(checkbookName, shopperName, 198)
-	t.Log("get 198 = ", i, "err = ", err)
+	t.Log("get 198 =", i, "err =", err)
+	time.Sleep(5 * time.Second)
 }
 
 func TestPutGetInts(t *testing.T) {

@@ -14,11 +14,14 @@
 
 package Lily
 
-import "github.com/ennoo/rivet/utils/env"
+import (
+	"github.com/ennoo/rivet/utils/env"
+	"path/filepath"
+)
 
 const (
-	cityCount = 16
-	//mallCount    = 128
+	hashCount  = 16
+	nodalCount = 128
 	//trolleyCount = 128
 	//purseCount   = 128
 	//boxCount     = 128
@@ -41,7 +44,7 @@ const (
 )
 
 //const (
-//	//cityCount    = 1
+//	//hashCount    = 1
 //	//mallCount    = 4
 //	//trolleyCount = 4
 //	//purseCount   = 4
@@ -62,9 +65,11 @@ const (
 //)
 
 var (
+	rootDir string // Lily服务默认存储路径
 	dataDir string // Lily服务默认存储路径
 )
 
 func init() {
-	dataDir = env.GetEnvDefault(dataPath, "test/t1")
+	rootDir = env.GetEnvDefault(dataPath, "test/t1")
+	dataDir = filepath.Join(rootDir, "data")
 }
