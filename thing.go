@@ -15,91 +15,45 @@
 package Lily
 
 import (
+	"github.com/aberic/common/log"
 	"strconv"
 	"strings"
 )
 
 type thing struct {
-	nodal       nodal // box 所属 purse
-	originalKey Key
-	seekStart   int64 // value最终存储在文件中的起始位置
-	seekLast    int   // value最终存储在文件中的持续长度
-	value       interface{}
+	nodal     nodal // box 所属 purse
+	md5Key    string
+	seekStart int64 // value最终存储在文件中的起始位置
+	seekLast  int   // value最终存储在文件中的持续长度
+	value     interface{}
 }
 
-func (t *thing) put(originalKey Key, key uint32, value interface{}) error {
-	indexPath, formPath, form := t.getPath()
-	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("indexPath", indexPath), log.String("formPath", formPath))
-	wrTo := make(chan *writeResult, 1)
-	wrIndexBack := make(chan *writeResult, 1)
-	wrFormBack := make(chan *writeResult, 1)
-	go func() {
-		wrFormBack <- store().appendForm(form, formPath, value, wrTo)
-	}()
-	go func() {
-		wrIndexBack <- store().appendIndex(t.nodal.getPreNodal().getPreNodal(), indexPath, t.uint32toFullState(key), wrTo)
-	}()
-	for {
-		select {
-		case wrForm := <-wrFormBack:
-			if nil != wrForm.err {
-				return wrForm.err
-			}
-		case wrIndex := <-wrIndexBack:
-			if nil != wrIndex.err {
-				return wrIndex.err
-			}
-			t.seekStart = wrIndex.seekStart
-			t.seekLast = wrIndex.seekLast
-			// todo 测试留用，必须删除这两个结构体字段 originalKey & value
-			t.originalKey = originalKey
-			t.value = value
-			return nil
-		}
+func (t *thing) put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack {
+	formIndexFilePath := t.getFormIndexFilePath(indexID)
+	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("formIndexFilePath", formIndexFilePath))
+	return &indexBack{
+		formIndexFilePath: formIndexFilePath,
+		indexNodal:        t.nodal.getPreNodal().getPreNodal(),
+		thing:             t,
+		err:               nil,
 	}
 }
 
-func (t *thing) get(originalKey Key, key uint32) (interface{}, error) {
+func (t *thing) get() (interface{}, error) {
 	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
-	dataID := spr.database.getID()
-	formID := spr.id
-	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
-	pathFormNodeFile := pathFormNodeFile(
-		dataID,
-		formID,
-		strings.Join([]string{
-			t.uint8toFullState(t.nodal.getPreNodal().getPreNodal().getDegreeIndex()), // level 2
-			t.uint8toFullState(t.nodal.getPreNodal().getDegreeIndex()),               // level 3
-			t.uint8toFullState(t.nodal.getDegreeIndex()),                             // level 4
-			".dat"}, "",
-		),
-		rootNodeDegreeIndex,
-	)
 	rrFormBack := make(chan *readResult, 1)
-	go store().read(pathFormNodeFile, t.seekStart, t.seekLast, rrFormBack)
+	go store().read(pathFormDataFile(spr.database.getID(), spr.id, spr.fileIndex), t.seekStart, t.seekLast, rrFormBack)
 	rr := <-rrFormBack
 	return rr.value, rr.err
 }
 
-// getFormPath 获取表存储文件路径
-func (t *thing) getPath() (indexPath, formPath string, form Form) {
+// getFormIndexFilePath 获取表索引文件路径
+func (t *thing) getFormIndexFilePath(indexID string) (formIndexFilePath string) {
 	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
 	dataID := spr.database.getID()
 	formID := spr.id
 	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
-	return pathFormIndexFile(dataID, formID, rootNodeDegreeIndex),
-		pathFormNodeFile(
-			dataID,
-			formID,
-			strings.Join([]string{
-				t.uint8toFullState(t.nodal.getPreNodal().getPreNodal().getDegreeIndex()), // level 2
-				t.uint8toFullState(t.nodal.getPreNodal().getDegreeIndex()),               // level 3
-				t.uint8toFullState(t.nodal.getDegreeIndex()),                             // level 4
-				".dat"}, "",
-			),
-			rootNodeDegreeIndex,
-		),
-		spr
+	return pathFormIndexFile(dataID, formID, indexID, rootNodeDegreeIndex)
 }
 
 // uint8toFullState 补全不满三位数状态，如1->001、34->034、215->215

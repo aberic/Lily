@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	hashCount  = 16
-	nodalCount = 128
+	hashCount = 16
+	//nodalCount = 128
 	//trolleyCount = 128
 	//purseCount   = 128
 	//boxCount     = 128

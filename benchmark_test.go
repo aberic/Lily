@@ -34,7 +34,7 @@ func BenchmarkInsert(b *testing.B) {
 	if nil != err {
 		b.Error(err)
 	}
-	_ = data.createForm(formName, "", true)
+	_ = data.createForm(formName, "")
 	now := time.Now().UnixNano()
 	for i := 1; i <= b.N; i++ {
 		go func(formName string, i int) {

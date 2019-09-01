@@ -126,10 +126,8 @@ func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// mkDataPath 创建库存储目录
-//
-// 存储格式 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
-func mkDataPath(dataName string) (err error) {
+// mkDataDir 创建库存储目录
+func mkDataDir(dataName string) (err error) {
 	dataPath := filepath.Join(dataDir, dataName)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
@@ -139,8 +137,8 @@ func mkDataPath(dataName string) (err error) {
 	return os.MkdirAll(dataPath, os.ModePerm)
 }
 
-// rmDataPath 删除库存储目录
-func rmDataPath(dataName string) (err error) {
+// rmDataDir 删除库存储目录
+func rmDataDir(dataName string) (err error) {
 	dataPath := filepath.Join(dataDir, dataName)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
@@ -150,43 +148,118 @@ func rmDataPath(dataName string) (err error) {
 	return nil
 }
 
-// mkFormResource 创建表存储资源
+// mkFormResource 创建表资源
 //
-// 存储格式 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
-func mkFormResource(dataID, formID string) (err error) {
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
+//
+// customID put key index id
+func mkFormResource(dataID, formID, indexID, customID string, fileIndex int) (err error) {
+	if err = mkFormDir(dataID, formID); nil != err {
+		return
+	}
+	if err = mkFormIndexDir(dataID, formID, indexID); nil != err {
+		_ = rmFormDir(dataID, formID)
+		return
+	}
+	if err = mkFormIndexDir(dataID, formID, customID); nil != err {
+		_ = rmFormDir(dataID, formID)
+		return
+	}
+	if err = mkFormDataFile(dataID, formID, fileIndex); nil != err {
+		_ = rmFormDir(dataID, formID)
+		return
+	}
+	return
+}
+
+// mkFormDir 创建表存储目录
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+func mkFormDir(dataID, formID string) (err error) {
 	dataPath := pathFormDir(dataID, formID)
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
 		return formExistErr
 	}
-	if err = os.MkdirAll(dataPath, os.ModePerm); nil != err {
-		return
+	return os.MkdirAll(dataPath, os.ModePerm)
+}
+
+// rmFormDir 删除表存储目录
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+func rmFormDir(dataID, formID string) (err error) {
+	formPath := pathFormDir(dataID, formID)
+	if exist, err := pathExist(formPath); nil != err {
+		return err
+	} else if exist {
+		return os.Remove(formPath)
 	}
-	for i := 0; i < hashCount; i++ {
-		if _, err = os.Create(pathFormIndexFile(dataID, formID, uint8(i))); nil != err {
-			_ = rmFormPath(dataID, formID)
-			return
-		}
+	return nil
+}
+
+// mkFormIndexDir 创建表索引目录
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
+func mkFormIndexDir(dataID, formID, indexID string) (err error) {
+	return os.Mkdir(pathFormIndexDir(dataID, formID, indexID), os.ModePerm)
+}
+
+// rmFormIndexDir 删除表索引目录
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
+func rmFormIndexDir(dataID, formID, indexID string) (err error) {
+	indexPath := pathFormIndexDir(dataID, formID, indexID)
+	if exist, err := pathExist(indexPath); nil != err {
+		return err
+	} else if exist {
+		return os.Remove(indexPath)
 	}
-	for i := 0; i < nodalCount; i++ {
-		if err = os.Mkdir(pathFormNodeDir(dataID, formID, i), os.ModePerm); nil != err {
-			_ = rmFormPath(dataID, formID)
-			return
-		}
-	}
+	return nil
+}
+
+// mkFormIndexDir 创建表索引文件
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
+//
+// index 所在表顶层数组中下标
+func mkFormIndexFile(dataID, formID, indexID string, index uint8) (err error) {
+	_, err = os.Create(pathFormIndexFile(dataID, formID, indexID, index))
 	return
 }
 
-// rmFormPath 删除表存储目录
-func rmFormPath(dataID, formID string) (err error) {
-	dataPath := pathFormDir(dataID, formID)
-	if exist, err := pathExist(dataPath); nil != err {
-		return err
-	} else if exist {
-		return os.Remove(dataPath)
-	}
-	return nil
+// mkFormIndexDir 创建表索引文件
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
+//
+// index 所在表顶层数组中下标
+func mkFormDataFile(dataID, formID string, fileIndex int) (err error) {
+	_, err = os.Create(pathFormDataFile(dataID, formID, fileIndex))
+	return
 }
 
 // pathFormDir 表目录
@@ -198,19 +271,36 @@ func pathFormDir(dataID, formID string) string {
 	return filepath.Join(dataDir, dataID, formID)
 }
 
+// pathFormIndexDir 表索引目录
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
+func pathFormIndexDir(dataID, formID, indexID string) string {
+	return filepath.Join(dataDir, dataID, formID, indexID)
+}
+
 // pathFormIndexFile 表索引文件路径
 //
 // dataID 数据库唯一id
 //
 // formID 表唯一id
 //
+// indexID 表索引唯一id
+//
 // index 所在表顶层数组中下标
-func pathFormIndexFile(dataID, formID string, index uint8) string {
-	return strings.Join([]string{pathFormDir(dataID, formID), string(filepath.Separator), strconv.Itoa(int(index)), ".idx"}, "")
+func pathFormIndexFile(dataID, formID, indexID string, index uint8) string {
+	return strings.Join([]string{pathFormIndexDir(dataID, formID, indexID), string(filepath.Separator), strconv.Itoa(int(index)), ".idx"}, "")
 }
 
-func pathFormNodeDir(dataID, formID string, index int) string {
-	return filepath.Join(pathFormDir(dataID, formID), strconv.Itoa(index))
+func pathFormDataFile(dataID, formID string, fileIndex int) string {
+	return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), strconv.Itoa(fileIndex), ".dat"}, "")
+}
+
+func pathFormNodeDir(dataID, formID string, index uint8) string {
+	return filepath.Join(pathFormDir(dataID, formID), strconv.Itoa(int(index)))
 }
 
 func pathFormNodeFile(dataID, formID, fileName string, index uint8) string {
@@ -255,10 +345,10 @@ var intHexMap = map[string]int{
 	"c": 12, "d": 13, "e": 14, "f": 15,
 }
 
-// intToHexString int转十六进制字符串
-func intToHexString(i int) string {
-	hexStrArr := make([]string, 16)
-	for index := 15; index >= 0; index-- {
+// int32ToHexString int32转十六进制字符串
+func int32ToHexString(i int) string {
+	hexStrArr := make([]string, 8)
+	for index := 7; index >= 0; index-- {
 		if i >= 16 {
 			hexStrArr[index] = hexIntMap[i%16]
 			i /= 16

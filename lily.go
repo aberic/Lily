@@ -27,6 +27,7 @@ const (
 	sysDatabase  = "lily"      // 跟随‘Lily’创建的默认库
 	userForm     = "_user"     // 跟随‘sysDatabase’库创建的‘Lily’用户管理表
 	databaseForm = "_database" // 跟随‘sysDatabase’库创建的‘Lily’数据库管理表
+	indexForm    = "_index"    // 跟随‘sysDatabase’库创建的‘Lily’索引管理表
 	defaultForm  = "_default"  // 跟随‘sysDatabase’库创建的‘Lily’k-v表
 )
 
@@ -82,7 +83,7 @@ func (l *Lily) Start() {
 //
 // 调用 Restart() 会恢复 Lily 的索引，如果 Lily 索引存在，则 Restart() 什么也不会做
 func (l *Lily) Restart() {
-
+	// todo 恢复索引
 }
 
 // initialize 初始化默认库及默认表
@@ -97,16 +98,20 @@ func (l *Lily) initialize() {
 				panic(err)
 			}
 		}
-		if err = data.createForm(userForm, "default user form", false); nil != err {
-			_ = rmDataPath(sysDatabase)
+		if err = data.createForm(userForm, "default user form"); nil != err {
+			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(databaseForm, "default database form", false); nil != err {
-			_ = rmDataPath(sysDatabase)
+		if err = data.createForm(databaseForm, "default database form"); nil != err {
+			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(defaultForm, "default data form", false); nil != err {
-			_ = rmDataPath(sysDatabase)
+		if err = data.createForm(indexForm, "default index form"); nil != err {
+			_ = rmDataDir(sysDatabase)
+			return
+		}
+		if err = data.createForm(defaultForm, "default data form"); nil != err {
+			_ = rmDataDir(sysDatabase)
 			return
 		}
 		l.defaultDatabase = data
@@ -122,52 +127,59 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 	}
 	// 确保数据库唯一ID不重复
 	id := l.name2id(name)
-	if err := mkDataPath(id); nil != err {
+	if err := mkDataDir(id); nil != err {
 		return nil, err
 	}
 	data := &checkbook{name: name, id: id, forms: map[string]Form{}}
 	l.databases[name] = data
+	//l.defaultDatabase.insert(databaseForm, id, )
 	return data, nil
 }
 
-func (l *Lily) CreateForm(databaseName, formName, comment string, sequence bool) error {
+func (l *Lily) CreateForm(databaseName, formName, comment string) error {
 	if database := l.databases[databaseName]; nil != database {
-		return database.createForm(formName, comment, sequence)
+		return database.createForm(formName, comment)
 	}
 	return errorDataIsNil
 }
 
 func (l *Lily) Put(key Key, value interface{}) (uint32, error) {
+	if nil == l || nil == l.databases[defaultForm] {
+		return 0, errorDataIsNil
+	}
 	return l.Insert(sysDatabase, defaultForm, key, value)
 }
 
 func (l *Lily) Get(key Key) (interface{}, error) {
+	if nil == l || nil == l.databases[defaultForm] {
+		return 0, errorDataIsNil
+	}
 	return l.Query(sysDatabase, defaultForm, key)
 }
 
 func (l *Lily) InsertInt(databaseName, formName string, key int, value interface{}) (uint32, error) {
-	if nil == l {
+	if nil == l || nil == l.databases[databaseName] {
 		return 0, errorDataIsNil
 	}
 	return l.databases[databaseName].insert(formName, Key(strconv.Itoa(key)), uint32(key), value)
 }
 
 func (l *Lily) QueryInt(databaseName, formName string, key int) (interface{}, error) {
-	if nil == l {
+	if nil == l || nil == l.databases[databaseName] {
 		return nil, errorDataIsNil
 	}
 	return l.databases[databaseName].query(formName, Key(strconv.Itoa(key)), uint32(key))
 }
 
 func (l *Lily) Insert(databaseName, formName string, key Key, value interface{}) (uint32, error) {
-	if nil == l {
+	if nil == l || nil == l.databases[databaseName] {
 		return 0, errorDataIsNil
 	}
 	return l.databases[databaseName].insert(formName, key, hash(key), value)
 }
 
 func (l *Lily) Query(databaseName, formName string, key Key) (interface{}, error) {
-	if nil == l {
+	if nil == l || nil == l.databases[databaseName] {
 		return nil, errorDataIsNil
 	}
 	return l.databases[databaseName].query(formName, key, hash(key))

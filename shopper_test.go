@@ -57,6 +57,22 @@ func TestHashCode(t *testing.T) {
 	t.Log("2147483650 = ", hash(Key("2147483650")))
 }
 
+func TestChan(t *testing.T) {
+	chanTest := make(chan int, 3)
+	go func() {
+		time.Sleep(2 * time.Second)
+		chanTest <- 1
+		time.Sleep(2 * time.Second)
+		chanTest <- 2
+		time.Sleep(2 * time.Second)
+		chanTest <- 3
+	}()
+	for i := 0; i < 3; i++ {
+		x := <-chanTest
+		log.Self.Debug("TestChan", log.Int("x", x))
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var (
@@ -71,7 +87,7 @@ func TestLilyPutGet(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "")
 	hashKey, err := l.Put(Key("young"), 101)
 	t.Log("put young = 101 | hashKey =", hashKey, "| err = ", err)
 	i, err := l.Get(Key("young"))
@@ -85,7 +101,7 @@ func TestPut(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "")
 	for i := 1; i <= 255; i++ {
 		//_ = tmpLily.InsertD(Key(strconv.Itoa(i)), i)
 		_, _ = l.InsertInt(checkbookName, shopperName, i, i)
@@ -100,7 +116,22 @@ func TestPutGet(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", false)
+	_ = l.CreateForm(checkbookName, shopperName, "")
+	_, err = l.Insert(checkbookName, shopperName, Key(198), 200)
+	t.Log("InsertInt err =", err)
+	i, err := l.Query(checkbookName, shopperName, Key(198))
+	t.Log("get 198 =", i, "err =", err)
+	time.Sleep(5 * time.Second)
+}
+
+func TestPutGetInt(t *testing.T) {
+	l := ObtainLily()
+	l.Start()
+	_, err := l.CreateDatabase(checkbookName)
+	if nil != err {
+		t.Error(err)
+	}
+	_ = l.CreateForm(checkbookName, shopperName, "")
 	_, err = l.InsertInt(checkbookName, shopperName, 198, 200)
 	t.Log("InsertInt err =", err)
 	i, err := l.QueryInt(checkbookName, shopperName, 198)
@@ -115,7 +146,7 @@ func TestPutGetInts(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "")
 	for i := 1; i <= 255; i++ {
 		_, _ = l.InsertInt(checkbookName, shopperName, i, i+10)
 	}
@@ -132,7 +163,7 @@ func TestPutGets(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "")
 	for i := 1; i <= 255; i++ {
 		_, _ = l.Insert(checkbookName, shopperName, Key(i), i)
 	}
@@ -149,7 +180,7 @@ func TestQuerySelector(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", true)
+	_ = l.CreateForm(checkbookName, shopperName, "")
 	//for i := 1; i <= 10; i++ {
 	//	_ = checkbook.InsertInt(formName, i, i+10)
 	//}
@@ -575,7 +606,19 @@ func TestFileWriteInt(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TestHex(t *testing.T) {
+func TestInt32Hex(t *testing.T) {
+	var i = 65536326
+	t.Log("i =", i)
+	hexStr := int32ToHexString(i)
+	t.Log("intToHexString =", hexStr, " |", hexStr[0:1], " |", hexStr[1:2], " |", hexStr[2:3], " |", hexStr[7:8])
+	j, err := hexStringToInt64(hexStr)
+	if nil != err {
+		t.Error(err)
+	}
+	t.Log("j =", j)
+}
+
+func TestInt64Hex(t *testing.T) {
 	var i int64
 	i = 10997
 	t.Log("i =", i)

@@ -49,19 +49,6 @@ type insert struct {
 	value       interface{}
 }
 
-func (d *dataPool) insert(data nodal, originalKey Key, key uint32, value interface{}) error {
-	return data.put(originalKey, key, value)
-}
-
-func (d *dataPool) submitInsert() error {
-	for {
-		select {
-		case insert := <-d.inserts:
-			insert.data.put(insert.originalKey, insert.key, insert.value)
-		}
-	}
-}
-
 // tune 动态变更协程池数量
 func (d *dataPool) tune(poolSize int) {
 	d.pool.Tune(poolSize)
@@ -70,11 +57,5 @@ func (d *dataPool) tune(poolSize int) {
 func (d *dataPool) submit(task func()) error {
 	return d.pool.Submit(func() {
 		task()
-	})
-}
-
-func (d *dataPool) submitInsert1(data nodal, originalKey Key, key uint32, value interface{}) error {
-	return d.pool.Submit(func() {
-		_ = data.put(originalKey, key, value)
 	})
 }

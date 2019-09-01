@@ -44,13 +44,15 @@ import (
 //
 // 索引格式
 type shopper struct {
-	autoID   uint32   // 自增id
-	database Database // 数据库对象
-	name     string   // 表名，根据需求可以随时变化
-	id       string   // 表唯一ID，不能改变
-	comment  string   // 描述
-	nodes    []nodal  // 节点
-	fLock    sync.RWMutex
+	autoID    uint32   // 自增id
+	database  Database // 数据库对象
+	name      string   // 表名，根据需求可以随时变化
+	id        string   // 表唯一ID，不能改变
+	indexIDs  []string // 索引ID集合
+	fileIndex int      // 数据文件存储编号
+	comment   string   // 描述
+	nodes     []nodal  // 节点
+	fLock     sync.RWMutex
 }
 
 func (s *shopper) getAutoID() *uint32 {
@@ -65,15 +67,23 @@ func (s *shopper) getName() string {
 	return s.name
 }
 
+func (s *shopper) getFileIndex() int {
+	return s.fileIndex
+}
+
+func (s *shopper) getIndexIDs() []string {
+	return s.indexIDs
+}
+
 func (s *shopper) getDatabaseID() string {
 	return s.database.getID()
 }
 
-func (s *shopper) put(originalKey Key, key uint32, value interface{}) error {
+func (s *shopper) put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack {
 	index := key / cityDistance
 	//index := uint32(0)
 	data := s.createChild(uint8(index))
-	return data.put(originalKey, key-index*cityDistance, value)
+	return data.put(indexID, originalKey, key-index*cityDistance, value)
 }
 
 func (s *shopper) get(originalKey Key, key uint32) (interface{}, error) {

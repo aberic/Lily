@@ -16,6 +16,7 @@ package Lily
 
 import (
 	"errors"
+	"github.com/ennoo/rivet/utils/cryptos"
 	"strings"
 )
 
@@ -32,15 +33,15 @@ func (b *box) getFlexibleKey() uint32 {
 	return 0
 }
 
-func (b *box) put(originalKey Key, key uint32, value interface{}) error {
+func (b *box) put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack {
 	b.createChildSelf(originalKey, key, value)
 	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value))
-	return b.things[len(b.things)-1].put(originalKey, key, value)
+	return b.things[len(b.things)-1].put(indexID, originalKey, key, value)
 }
 
 func (b *box) get(originalKey Key, key uint32) (interface{}, error) {
 	if realIndex, exist := b.existChildSelf(originalKey, key); exist {
-		return b.things[realIndex].get(originalKey, key)
+		return b.things[realIndex].get()
 	} else {
 		return nil, errors.New(strings.Join([]string{"box key", string(originalKey), "is nil"}, " "))
 	}
@@ -56,7 +57,7 @@ func (b *box) createChild(index uint8) nodal {
 
 func (b *box) existChildSelf(originalKey Key, key uint32) (int, bool) {
 	for index, thg := range b.things {
-		if strings.EqualFold(string(thg.originalKey), string(originalKey)) {
+		if strings.EqualFold(thg.md5Key, cryptos.MD516(string(originalKey))) {
 			return index, true
 		}
 	}
@@ -66,7 +67,7 @@ func (b *box) existChildSelf(originalKey Key, key uint32) (int, bool) {
 func (b *box) createChildSelf(originalKey Key, key uint32, value interface{}) {
 	if len(b.things) > 0 {
 		for _, thg := range b.things {
-			if strings.EqualFold(string(thg.originalKey), string(originalKey)) {
+			if strings.EqualFold(thg.md5Key, cryptos.MD516(string(originalKey))) {
 				return
 			}
 		}

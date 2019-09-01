@@ -36,12 +36,12 @@ type API interface {
 	CreateDatabase(name string) (Database, error)
 	// CreateForm 创建表
 	//
+	// 默认自增ID索引
+	//
 	// name 表名称
 	//
 	// comment 表描述
-	//
-	// sequence 是否启用自增ID索引
-	CreateForm(databaseName, formName, comment string, sequence bool) error
+	CreateForm(databaseName, formName, comment string) error
 	// InsertD 新增数据
 	//
 	// 向_default表中新增一条数据，key相同则覆盖
@@ -106,12 +106,14 @@ type Database interface {
 	getName() string
 	// createForm 新建表方法
 	//
+	// 默认自增ID索引
+	//
 	// name 表名称
 	//
 	// comment 表描述
 	//
 	// sequence 是否启用自增ID索引
-	createForm(formName, comment string, sequence bool) error
+	createForm(formName, comment string) error
 	// Insert 新增数据
 	//
 	// 向指定表中新增一条数据，key相同则覆盖
@@ -144,10 +146,12 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	data                // 表内数据操作接口
-	getAutoID() *uint32 // getAutoID 返回表当前自增ID值
-	getID() string      // getID 返回表唯一ID
-	getName() string    // getName 返回表名称
+	data                   // 表内数据操作接口
+	getAutoID() *uint32    // getAutoID 返回表当前自增ID值
+	getID() string         // getID 返回表唯一ID
+	getName() string       // getName 返回表名称
+	getFileIndex() int     // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
+	getIndexIDs() []string // getIndexIDs 获取表下索引ID集合
 }
 
 // nodal 节点对象接口
@@ -158,6 +162,13 @@ type nodal interface {
 	getFlexibleKey() uint32        // getFlexibleKey 下一级最左最小树所对应真实key
 	getDegreeIndex() uint8         // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNodal() nodal            // getPreNodal 获取父节点对象
+}
+
+type indexBack struct {
+	formIndexFilePath string
+	indexNodal        nodal
+	thing             *thing
+	err               error
 }
 
 // data 表内数据操作接口
@@ -171,7 +182,7 @@ type data interface {
 	// key 索引key，可通过hash转换string生成
 	//
 	// value 存储对象
-	put(originalKey Key, key uint32, value interface{}) error
+	put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型
@@ -184,4 +195,9 @@ type data interface {
 	unLock()               // 写解锁
 	rLock()                // 读锁
 	rUnLock()              // 读解锁
+}
+
+type database struct {
+	id   string
+	name string
 }

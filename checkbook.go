@@ -16,10 +16,11 @@ package Lily
 
 import (
 	"errors"
+	"github.com/aberic/common/log"
 	"github.com/ennoo/rivet/utils/cryptos"
 	"github.com/ennoo/rivet/utils/string"
+	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 )
 
@@ -42,12 +43,12 @@ func (c *checkbook) getName() string {
 
 // createForm 创建表
 //
+// 默认自增ID索引
+//
 // name 表名称
 //
 // comment 表描述
-//
-// sequence 是否启用自增ID索引
-func (c *checkbook) createForm(formName, comment string, sequence bool) error {
+func (c *checkbook) createForm(formName, comment string) error {
 	// 确定库名不重复
 	for k := range c.forms {
 		if k == formName {
@@ -55,30 +56,22 @@ func (c *checkbook) createForm(formName, comment string, sequence bool) error {
 		}
 	}
 	// 确保表唯一ID不重复
-	id := c.name2id(formName)
-	if err := mkFormResource(c.id, id); nil != err {
+	formID := c.name2id(formName)
+	indexID := c.name2id(strings.Join([]string{formName, "id"}, "_"))
+	customID := c.name2id(strings.Join([]string{formName, "custom"}, "_"))
+	fileIndex := 0
+	if err := mkFormResource(c.id, formID, indexID, customID, fileIndex); nil != err {
 		return err
 	}
 	c.forms[formName] = &shopper{
-		autoID:   0,
-		name:     formName,
-		id:       id,
-		comment:  comment,
-		database: c,
-		nodes:    []nodal{},
-	}
-	if sequence {
-		sequenceName := c.sequenceName(formName)
-		sequenceId := c.name2id(sequenceName)
-		c.forms[sequenceName] = &shopper{
-			autoID:   0,
-			name:     sequenceName,
-			id:       sequenceId,
-			comment:  comment,
-			database: c,
-			nodes:    []nodal{},
-		}
-
+		autoID:    0,
+		name:      formName,
+		id:        formID,
+		indexIDs:  []string{indexID, customID},
+		fileIndex: fileIndex,
+		comment:   comment,
+		database:  c,
+		nodes:     []nodal{},
 	}
 	return nil
 }
@@ -99,63 +92,63 @@ func (c *checkbook) insert(formName string, key Key, hashKey uint32, value inter
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
 	}
-	sequenceName := c.sequenceName(formName)
-	if nil == c.forms[sequenceName] {
-		return hashKey, form.put(key, hashKey, value)
-	} else {
-		var (
-			formSequence Form
-			err          error
-			wg           sync.WaitGroup
-			checkErr     chan error
-		)
-		formSequence = c.forms[sequenceName]
-		checkErr = make(chan error, 2)
-		wg.Add(2)
-		err = pool().submit(func() {
-			defer wg.Done()
-			err := form.put(key, hashKey, value)
-			if nil != err {
-				checkErr <- err
-			} else {
-				checkErr <- nil
+	var (
+		chanIndex chan *indexBack
+		err       error
+	)
+	indexIDs := form.getIndexIDs()
+	indexLen := len(indexIDs)
+	chanIndex = make(chan *indexBack, indexLen)
+	autoID := atomic.AddUint32(form.getAutoID(), 1)
+	for _, indexID := range indexIDs {
+		if err = pool().submit(func() {
+			if indexID == c.name2id(strings.Join([]string{formName, "id"}, "_")) {
+				chanIndex <- form.put(indexID, key, autoID, value)
+			} else if indexID == c.name2id(strings.Join([]string{formName, "custom"}, "_")) {
+				chanIndex <- form.put(indexID, key, hashKey, value)
 			}
-		})
-		if nil != err {
+		}); nil != err {
 			return 0, err
 		}
-		err = pool().submit(func() {
-			defer wg.Done()
-			err := formSequence.put(key, atomic.AddUint32(formSequence.getAutoID(), 1), value)
-			if nil != err {
-				checkErr <- err
-			} else {
-				checkErr <- nil
+	}
+	wrTo := make(chan *writeResult, 1)
+	wrIndexBack := make(chan *writeResult, 1)
+	wrFormBack := make(chan *writeResult, 1)
+	if err = pool().submit(func() {
+		wrFormBack <- store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value, wrTo)
+	}); nil != err {
+		return 0, err
+	}
+	md5Key := cryptos.MD516(string(key))
+	for i := 0; i < indexLen; i++ {
+		ib := <-chanIndex
+		if err = pool().submit(func() {
+			appendStr := strings.Join([]string{c.uint32toFullState(autoID), md5Key}, "")
+			log.Self.Debug("insert", log.Reflect("formIndexFilePath", ib.formIndexFilePath))
+			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wrTo)
+			if nil == wr.err {
+				ib.thing.md5Key = md5Key
+				ib.thing.seekStart = wr.seekStart
+				ib.thing.seekLast = wr.seekLast
 			}
-		})
-		if nil != err {
+			wrIndexBack <- wr
+		}); nil != err {
 			return 0, err
 		}
-		wg.Wait()
-		err = <-checkErr
-		if nil == err {
-			err = <-checkErr
-		} else {
-			return 0, err
+	}
+	for {
+		select {
+		case wrForm := <-wrFormBack:
+			if nil != wrForm.err {
+				return 0, wrForm.err
+			}
+		case wrIndex := <-wrIndexBack:
+			if nil != wrIndex.err {
+				return 0, wrIndex.err
+			}
+			// todo 回滚策略待完成
+			return autoID, nil
 		}
-		if nil != err {
-			return 0, err
-		}
-		//err = form.put(key, hashKey, value)
-		//if nil != err {
-		//	return 0, err
-		//}
-		//err = formSequence.put(key, hashKey, value)
-		//if nil != err {
-		//	return 0, err
-		//}
-		// todo 回滚策略待完成
-		return hashKey, nil
 	}
 }
 
@@ -213,4 +206,19 @@ func (c *checkbook) name2id(name string) string {
 		}
 	}
 	return id
+}
+
+// uint32toFullState 补全不满十位数状态，如1->0000000001、34->0000000034、215->0000000215
+func (c *checkbook) uint32toFullState(index uint32) string {
+	pos := 0
+	for index > 1 {
+		index /= 10
+		pos++
+	}
+	backZero := 10 - pos
+	backZeroStr := strconv.Itoa(int(index))
+	for i := 0; i < backZero; i++ {
+		backZeroStr = strings.Join([]string{"0", backZeroStr}, "")
+	}
+	return backZeroStr
 }
