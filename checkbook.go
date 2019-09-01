@@ -94,6 +94,7 @@ func (c *checkbook) insert(formName string, key Key, hashKey uint32, value inter
 	}
 	var (
 		chanIndex chan *indexBack
+		wrTos     []chan *writeResult
 		err       error
 	)
 	indexIDs := form.getIndexIDs()
@@ -101,7 +102,8 @@ func (c *checkbook) insert(formName string, key Key, hashKey uint32, value inter
 	chanIndex = make(chan *indexBack, indexLen)
 	autoID := atomic.AddUint32(form.getAutoID(), 1)
 	for _, indexID := range indexIDs {
-		if err = pool().submit(func() {
+		wrTos = append(wrTos, make(chan *writeResult, 1))
+		if err = pool().submitIndex(indexID, func(indexID string) {
 			if indexID == c.name2id(strings.Join([]string{formName, "id"}, "_")) {
 				chanIndex <- form.put(indexID, key, autoID, value)
 			} else if indexID == c.name2id(strings.Join([]string{formName, "custom"}, "_")) {
@@ -111,11 +113,10 @@ func (c *checkbook) insert(formName string, key Key, hashKey uint32, value inter
 			return 0, err
 		}
 	}
-	wrTo := make(chan *writeResult, 1)
 	wrIndexBack := make(chan *writeResult, 1)
 	wrFormBack := make(chan *writeResult, 1)
 	if err = pool().submit(func() {
-		wrFormBack <- store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value, wrTo)
+		wrFormBack <- store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value, wrTos)
 	}); nil != err {
 		return 0, err
 	}
@@ -125,7 +126,7 @@ func (c *checkbook) insert(formName string, key Key, hashKey uint32, value inter
 		if err = pool().submit(func() {
 			appendStr := strings.Join([]string{c.uint32toFullState(autoID), md5Key}, "")
 			log.Self.Debug("insert", log.Reflect("formIndexFilePath", ib.formIndexFilePath))
-			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wrTo)
+			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wrTos[i])
 			if nil == wr.err {
 				ib.thing.md5Key = md5Key
 				ib.thing.seekStart = wr.seekStart

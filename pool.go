@@ -59,3 +59,9 @@ func (d *dataPool) submit(task func()) error {
 		task()
 	})
 }
+
+func (d *dataPool) submitIndex(indexID string, task func(indexID string)) error {
+	return d.pool.Submit(func() {
+		task(indexID)
+	})
+}

@@ -42,7 +42,11 @@ func (t *thing) put(indexID string, originalKey Key, key uint32, value interface
 func (t *thing) get() (interface{}, error) {
 	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
 	rrFormBack := make(chan *readResult, 1)
-	go store().read(pathFormDataFile(spr.database.getID(), spr.id, spr.fileIndex), t.seekStart, t.seekLast, rrFormBack)
+	if err := pool().submit(func() {
+		store().read(pathFormDataFile(spr.database.getID(), spr.id, spr.fileIndex), t.seekStart, t.seekLast, rrFormBack)
+	}); nil != err {
+		return nil, err
+	}
 	rr := <-rrFormBack
 	return rr.value, rr.err
 }

@@ -62,15 +62,34 @@ func TestChan(t *testing.T) {
 	go func() {
 		time.Sleep(2 * time.Second)
 		chanTest <- 1
-		time.Sleep(2 * time.Second)
 		chanTest <- 2
-		time.Sleep(2 * time.Second)
 		chanTest <- 3
 	}()
 	for i := 0; i < 3; i++ {
 		x := <-chanTest
 		log.Self.Debug("TestChan", log.Int("x", x))
 	}
+}
+
+func TestCond(t *testing.T) {
+	var locker = new(sync.Mutex)
+	var cond = sync.NewCond(locker)
+	for i := 0; i < 5; i++ {
+		go func(index int) {
+			cond.L.Lock() //获取锁
+			cond.Wait()   // 等待通知  暂时阻塞
+			fmt.Println("index: ", index)
+			cond.L.Unlock() //释放锁
+		}(i)
+	}
+	//time.Sleep(time.Second * 1)
+	//cond.Signal()
+	//time.Sleep(time.Second * 1)
+	//cond.Signal()
+	time.Sleep(time.Second * 2)
+	fmt.Println("broadcast")
+	cond.Broadcast() // 下发广播给所有等待的goroutine
+	time.Sleep(time.Second * 2)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,10 +136,15 @@ func TestPutGet(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "")
-	_, err = l.Insert(checkbookName, shopperName, Key(198), 200)
+	if _, err = l.Insert(checkbookName, shopperName, Key(198), 200); nil != err {
+		t.Error(err)
+	}
 	t.Log("InsertInt err =", err)
-	i, err := l.Query(checkbookName, shopperName, Key(198))
-	t.Log("get 198 =", i, "err =", err)
+	if i, err := l.Query(checkbookName, shopperName, Key(198)); nil != err {
+		t.Error(err)
+	} else {
+		t.Log("get 198 =", i, "err =", err)
+	}
 	time.Sleep(5 * time.Second)
 }
 

@@ -102,25 +102,26 @@ func (f *filed) running() {
 			}
 			switch task.getMold() {
 			case moldIndex:
-				log.Self.Debug("moldIndex")
+				log.Self.Debug("running", log.String("type", "moldIndex"))
 				it := task.(*indexTask)
 				wr := <-it.accept
 				if nil != wr.err {
+					log.Self.Debug("running", log.Error(err))
 					task.getChanResult() <- &writeResult{err: err}
 					continue
 				}
 				// 写入10位key及16位md5后key及16位起始seek和8位持续seek
 				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(), int64ToHexString(wr.seekStart), int32ToHexString(wr.seekLast)}, ""))
-				log.Self.Debug("moldIndex", log.Error(err))
+				log.Self.Debug("running", log.Error(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: wr.seekStart,
 					seekLast:  wr.seekLast,
 					err:       err,
 				}
 			case moldForm:
-				log.Self.Debug("moldForm")
+				log.Self.Debug("running", log.String("type", "moldForm"))
 				seekLast, err = f.file.WriteString(task.getAppendContent())
-				log.Self.Debug("moldForm", log.Error(err))
+				log.Self.Debug("running", log.Error(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: seekStart,
 					seekLast:  seekLast,
@@ -131,6 +132,7 @@ func (f *filed) running() {
 			// todo 需要优雅关闭，暂时暴力操作
 			log.Self.Debug("timeout")
 			_ = f.file.Close()
+			return
 		}
 	}
 }
@@ -157,19 +159,19 @@ type storage struct {
 
 func (s *storage) appendIndex(node nodal, path, key string, wr chan *writeResult) *writeResult {
 	log.Self.Debug("appendIndex", log.String("path", path))
-	return s.write(node, path, key, wr, moldIndex)
+	return s.writeIndex(node, path, key, wr)
 }
 
-func (s *storage) appendForm(form Form, path string, value interface{}, wr chan *writeResult) *writeResult {
+func (s *storage) appendForm(form Form, path string, value interface{}, wrs []chan *writeResult) *writeResult {
 	log.Self.Debug("appendForm", log.String("path", path))
 	if data, err := json.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	} else {
-		return s.write(form, path, string(data), wr, moldForm)
+		return s.writeForm(form, path, string(data), wrs)
 	}
 }
 
-func (s *storage) write(data data, filePath, appendStr string, wr chan *writeResult, mold uint8) *writeResult {
+func (s *storage) writeIndex(data data, filePath, appendStr string, wr chan *writeResult) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -178,24 +180,30 @@ func (s *storage) write(data data, filePath, appendStr string, wr chan *writeRes
 		return &writeResult{err: err}
 	}
 	result := make(chan *writeResult, 1)
-	switch mold {
-	default:
-		log.Self.Debug("default")
-		return &writeResult{err: moldTypeInvalidErr}
-	case moldIndex:
-		log.Self.Debug("index")
-		fd.tasks <- &indexTask{key: appendStr, result: result, accept: wr}
-		return <-result
-	case moldForm:
-		log.Self.Debug("form")
-		fd.tasks <- &formTask{key: appendStr, result: result}
-		wrOut := <-result
-		log.Self.Debug("form", log.Reflect("wrOut", wrOut))
-		if nil == wrOut.err {
+	log.Self.Debug("index")
+	fd.tasks <- &indexTask{key: appendStr, result: result, accept: wr}
+	return <-result
+}
+
+func (s *storage) writeForm(data data, filePath, appendStr string, wrs []chan *writeResult) *writeResult {
+	var (
+		fd  *filed
+		err error
+	)
+	if fd, err = s.useFiled(data, filePath); nil != err {
+		return &writeResult{err: err}
+	}
+	result := make(chan *writeResult, 1)
+	log.Self.Debug("form")
+	fd.tasks <- &formTask{key: appendStr, result: result}
+	wrOut := <-result
+	log.Self.Debug("form", log.Reflect("wrOut", wrOut))
+	if nil == wrOut.err {
+		for _, wr := range wrs {
 			wr <- wrOut
 		}
-		return wrOut
 	}
+	return wrOut
 }
 
 func (s *storage) read(filePath string, seekStart int64, seekLast int, rr chan *readResult) {
@@ -233,9 +241,11 @@ func (s *storage) useFiled(data data, filePath string) (fd *filed, err error) {
 	if fd = s.files[filePath]; nil == fd {
 		defer data.unLock()
 		data.lock()
+		log.Self.Debug("useFiled", log.String("filePath", filePath))
 		if fd = s.files[filePath]; nil == fd {
 			var f *os.File
 			if f, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); nil != err {
+				log.Self.Debug("useFiled", log.Error(err))
 				return
 			}
 			fd = &filed{
@@ -245,7 +255,6 @@ func (s *storage) useFiled(data data, filePath string) (fd *filed, err error) {
 			err = pool().submit(func() {
 				fd.running()
 			})
-			return
 		}
 	}
 	return
