@@ -44,7 +44,7 @@ var (
 //
 // API 入口
 //
-// 存储格式 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
+// 存储格式 {dataDir}/Data/{dataName}/{formName}/{formName}.dat/idx...
 type Lily struct {
 	defaultDatabase Database
 	databases       map[string]Database
@@ -109,7 +109,7 @@ func (l *Lily) initialize() {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(defaultForm, "default data form"); nil != err {
+		if err = data.createForm(defaultForm, "default Data form"); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}

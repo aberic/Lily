@@ -46,28 +46,28 @@ func hash(key string) uint32 {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// matchableData 'nodal'内子节点数组二分查找是否存在指定值
+// matchableData 'Nodal'内子节点数组二分查找是否存在指定值
 //
 // matchIndex 要查找的值
 //
-// matcher 'binaryMatcher'接口支持的获取‘nodal’接口的内置方法对象
+// matcher 'binaryMatcher'接口支持的获取‘Nodal’接口的内置方法对象
 //
 // bool 返回存在与否
-func matchableData(matchIndex uint8, matcher nodal) bool {
+func matchableData(matchIndex uint8, matcher Nodal) bool {
 	_, err := binaryMatchData(matchIndex, matcher)
 	return nil == err
 }
 
-// binaryMatchData 'nodal'内子节点数组二分查找基本方法
+// binaryMatchData 'Nodal'内子节点数组二分查找基本方法
 //
 // matchIndex 要查找的值
 //
-// matcher 'binaryMatcher'接口支持的获取‘nodal’接口的内置方法对象
+// matcher 'binaryMatcher'接口支持的获取‘Nodal’接口的内置方法对象
 //
 // realIndex 返回查找到的真实的元素下标，该下标是对应数组内的下标，并非树中节点数组原型的下标
 //
 // 如果没找到，则返回err
-func binaryMatchData(matchIndex uint8, matcher nodal) (realIndex int, err error) {
+func binaryMatchData(matchIndex uint8, matcher Nodal) (realIndex int, err error) {
 	var (
 		leftIndex   int
 		middleIndex int

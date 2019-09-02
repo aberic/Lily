@@ -93,7 +93,7 @@ func (s *Selector) query() ([]interface{}, error) {
 	}
 }
 
-func (s *Selector) leftQuery(data data) []interface{} {
+func (s *Selector) leftQuery(data Data) []interface{} {
 	is := make([]interface{}, 0)
 	count := data.childCount()
 	for i := 0; i < count; i++ {
@@ -111,7 +111,7 @@ func (s *Selector) leftQuery(data data) []interface{} {
 	return is
 }
 
-func (s *Selector) rightQuery(data data) []interface{} {
+func (s *Selector) rightQuery(data Data) []interface{} {
 	is := make([]interface{}, 0)
 	count := data.childCount()
 	for i := count - 1; i >= 0; i-- {

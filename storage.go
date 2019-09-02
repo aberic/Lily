@@ -150,7 +150,7 @@ type storage struct {
 	files map[string]*filed
 }
 
-func (s *storage) appendIndex(node nodal, path, key string, wr *writeResult) *writeResult {
+func (s *storage) appendIndex(node Nodal, path, key string, wr *writeResult) *writeResult {
 	log.Self.Debug("appendIndex", log.String("path", path))
 	return s.writeIndex(node, path, key, wr)
 }
@@ -164,7 +164,7 @@ func (s *storage) appendForm(form Form, path string, value interface{}) *writeRe
 	}
 }
 
-func (s *storage) writeIndex(data data, filePath, appendStr string, wr *writeResult) *writeResult {
+func (s *storage) writeIndex(data Data, filePath, appendStr string, wr *writeResult) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -178,7 +178,7 @@ func (s *storage) writeIndex(data data, filePath, appendStr string, wr *writeRes
 	return <-result
 }
 
-func (s *storage) writeForm(data data, filePath, appendStr string) *writeResult {
+func (s *storage) writeForm(data Data, filePath, appendStr string) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -212,7 +212,7 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		rr <- &readResult{err: err}
 		return
 	} else {
-		log.Self.Debug("read", log.String("data", string(bytes)))
+		log.Self.Debug("read", log.String("Data", string(bytes)))
 		var value interface{}
 		if err = json.Unmarshal(bytes, &value); nil != err {
 			log.Self.Debug("read", log.Error(err))
@@ -223,7 +223,7 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 	}
 }
 
-func (s *storage) useFiled(data data, filePath string) (fd *filed, err error) {
+func (s *storage) useFiled(data Data, filePath string) (fd *filed, err error) {
 	if fd = s.files[filePath]; nil == fd {
 		defer data.unLock()
 		data.lock()

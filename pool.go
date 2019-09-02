@@ -43,7 +43,7 @@ func pool() *dataPool {
 }
 
 type insert struct {
-	data        nodal
+	data        Nodal
 	originalKey string
 	key         uint32
 	value       interface{}

@@ -25,7 +25,7 @@ import (
 // 这里面存放的是具体物品
 type box struct {
 	degreeIndex uint8 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
-	nodal       nodal // box 所属 purse
+	nodal       Nodal // box 所属 purse
 	things      []*thing
 }
 
@@ -51,7 +51,7 @@ func (b *box) existChild(index uint8) bool {
 	return false
 }
 
-func (b *box) createChild(index uint8) nodal {
+func (b *box) createChild(index uint8) Nodal {
 	return nil
 }
 
@@ -79,7 +79,7 @@ func (b *box) childCount() int {
 	return -1
 }
 
-func (b *box) child(index int) nodal {
+func (b *box) child(index int) Nodal {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func (b *box) getDegreeIndex() uint8 {
 	return b.degreeIndex
 }
 
-func (b *box) getPreNodal() nodal {
+func (b *box) getPreNodal() Nodal {
 	return b.nodal
 }
 

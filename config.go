@@ -71,5 +71,5 @@ var (
 
 func init() {
 	rootDir = env.GetEnvDefault(dataPath, "test/t1")
-	dataDir = filepath.Join(rootDir, "data")
+	dataDir = filepath.Join(rootDir, "Data")
 }

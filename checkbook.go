@@ -41,13 +41,6 @@ func (c *checkbook) getName() string {
 	return c.name
 }
 
-// createForm 创建表
-//
-// 默认自增ID索引
-//
-// name 表名称
-//
-// comment 表描述
 func (c *checkbook) createForm(formName, comment string) error {
 	// 确定库名不重复
 	for k := range c.forms {
@@ -73,7 +66,7 @@ func (c *checkbook) createForm(formName, comment string) error {
 		fileIndex: fileIndex,
 		comment:   comment,
 		database:  c,
-		nodes:     []nodal{},
+		nodes:     []Nodal{},
 	}
 	return nil
 }
@@ -82,17 +75,6 @@ func (c *checkbook) createIndex(formName string, key string, value interface{}) 
 	return 0, nil
 }
 
-// Insert 新增数据
-//
-// 向指定表中新增一条数据，key相同则覆盖
-//
-// formName 表名
-//
-// key 插入数据唯一key
-//
-// value 插入数据对象
-//
-// 返回 hashKey
 func (c *checkbook) insert(formName string, key string, value interface{}) (uint32, error) {
 	form := c.forms[formName] // 获取待操作表
 	if nil == form {
@@ -153,14 +135,6 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 		}
 	}
 }
-
-// Query 获取数据
-//
-// 向指定表中查询一条数据并返回
-//
-// formName 表名
-//
-// key 插入数据唯一key
 func (c *checkbook) query(formName string, key string, hashKey uint32) (interface{}, error) {
 	form := c.forms[formName]
 	if nil == form {
@@ -169,11 +143,6 @@ func (c *checkbook) query(formName string, key string, hashKey uint32) (interfac
 	return form.get(key, hashKey)
 }
 
-// querySelector 根据条件检索
-//
-// formName 表名
-//
-// selector 条件选择器
 func (c *checkbook) querySelector(formName string, selector *Selector) (interface{}, error) {
 	if nil == c {
 		return nil, errorDataIsNil
@@ -208,20 +177,4 @@ func (c *checkbook) name2id(name string) string {
 		}
 	}
 	return id
-}
-
-// uint32toFullState 补全不满十位数状态，如1->0000000001、34->0000000034、215->0000000215
-func (c *checkbook) uint32toFullState(index uint32) string {
-	intIndex := int(index)
-	pos := 0
-	for index >= 1 {
-		index /= 10
-		pos++
-	}
-	backZero := 10 - pos
-	backZeroStr := strconv.Itoa(intIndex)
-	for i := 0; i < backZero; i++ {
-		backZeroStr = strings.Join([]string{"0", backZeroStr}, "")
-	}
-	return backZeroStr
 }

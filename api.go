@@ -91,8 +91,6 @@ type Database interface {
 	// name 表名称
 	//
 	// comment 表描述
-	//
-	// sequence 是否启用自增ID索引
 	createForm(formName, comment string) error
 	// Insert 新增数据
 	//
@@ -126,7 +124,7 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	data                   // 表内数据操作接口
+	Data                   // 表内数据操作接口
 	getAutoID() *uint32    // getAutoID 返回表当前自增ID值
 	getID() string         // getID 返回表唯一ID
 	getName() string       // getName 返回表名称
@@ -134,30 +132,30 @@ type Form interface {
 	getIndexIDs() []string // getIndexIDs 获取表下索引ID集合
 }
 
-// nodal 节点对象接口
-type nodal interface {
-	data                           // 表内数据操作接口
+// Nodal 节点对象接口
+type Nodal interface {
+	Data                           // 表内数据操作接口
 	existChild(index uint8) bool   // existChild 根据下标判定是否存在子节点
-	createChild(index uint8) nodal // createChild 根据下标创建新的子节点
+	createChild(index uint8) Nodal // createChild 根据下标创建新的子节点
 	getFlexibleKey() uint32        // getFlexibleKey 下一级最左最小树所对应真实key
 	getDegreeIndex() uint8         // getDegreeIndex 获取节点所在树中度集合中的数组下标
-	getPreNodal() nodal            // getPreNodal 获取父节点对象
+	getPreNodal() Nodal            // getPreNodal 获取父节点对象
 }
 
 // indexBack 索引对象
 type indexBack struct {
 	formIndexFilePath string // 索引文件所在路径
-	indexNodal        nodal  // 索引文件所对应level2层级度节点
+	indexNodal        Nodal  // 索引文件所对应level2层级度节点
 	thing             *thing // 索引对应节点对象子集
 	originalKey       string // put key
 	key               uint32 // put hash key
 	err               error
 }
 
-// data 表内数据操作接口
+// Data 表内数据操作接口
 //
 // 表对象、节点对象、叶子结点对象以及存储节点对象都会实现该接口
-type data interface {
+type Data interface {
 	// put 插入数据
 	//
 	// originalKey 真实key，必须string类型
@@ -173,7 +171,7 @@ type data interface {
 	// key 索引key，可通过hash转换string生成
 	get(originalKey string, key uint32) (interface{}, error)
 	childCount() int       // childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
-	child(index int) nodal // child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
+	child(index int) Nodal // child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
 	lock()                 // 写锁
 	unLock()               // 写解锁
 	rLock()                // 读锁

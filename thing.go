@@ -21,7 +21,7 @@ import (
 )
 
 type thing struct {
-	nodal     nodal // box 所属 purse
+	nodal     Nodal // box 所属 purse
 	md5Key    string
 	seekStart uint32 // value最终存储在文件中的起始位置
 	seekLast  int    // value最终存储在文件中的持续长度

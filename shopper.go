@@ -51,7 +51,7 @@ type shopper struct {
 	indexIDs  []string // 索引ID集合
 	fileIndex int      // 数据文件存储编号
 	comment   string   // 描述
-	nodes     []nodal  // 节点
+	nodes     []Nodal  // 节点
 	fLock     sync.RWMutex
 }
 
@@ -100,13 +100,13 @@ func (s *shopper) existChild(index uint8) bool {
 	return matchableData(index, s)
 }
 
-func (s *shopper) createChild(index uint8) nodal {
+func (s *shopper) createChild(index uint8) Nodal {
 	if realIndex, err := binaryMatchData(index, s); nil != err {
 		nd := &purse{
 			level:       0,
 			degreeIndex: index,
 			nodal:       s,
-			nodes:       []nodal{},
+			nodes:       []Nodal{},
 		}
 		lenData := len(s.nodes)
 		if lenData == 0 {
@@ -135,7 +135,7 @@ func (s *shopper) childCount() int {
 	return len(s.nodes)
 }
 
-func (s *shopper) child(index int) nodal {
+func (s *shopper) child(index int) Nodal {
 	return s.nodes[index]
 }
 
@@ -147,7 +147,7 @@ func (s *shopper) getFlexibleKey() uint32 {
 	return 0
 }
 
-func (s *shopper) getPreNodal() nodal {
+func (s *shopper) getPreNodal() Nodal {
 	return nil
 }
 
