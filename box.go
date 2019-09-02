@@ -33,17 +33,17 @@ func (b *box) getFlexibleKey() uint32 {
 	return 0
 }
 
-func (b *box) put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack {
+func (b *box) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
 	b.createChildSelf(originalKey, key, value)
 	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value))
 	return b.things[len(b.things)-1].put(indexID, originalKey, key, value)
 }
 
-func (b *box) get(originalKey Key, key uint32) (interface{}, error) {
+func (b *box) get(originalKey string, key uint32) (interface{}, error) {
 	if realIndex, exist := b.existChildSelf(originalKey, key); exist {
 		return b.things[realIndex].get()
 	} else {
-		return nil, errors.New(strings.Join([]string{"box key", string(originalKey), "is nil"}, " "))
+		return nil, errors.New(strings.Join([]string{"box key", originalKey, "is nil"}, " "))
 	}
 }
 
@@ -55,19 +55,19 @@ func (b *box) createChild(index uint8) nodal {
 	return nil
 }
 
-func (b *box) existChildSelf(originalKey Key, key uint32) (int, bool) {
+func (b *box) existChildSelf(originalKey string, key uint32) (int, bool) {
 	for index, thg := range b.things {
-		if strings.EqualFold(thg.md5Key, cryptos.MD516(string(originalKey))) {
+		if strings.EqualFold(thg.md5Key, cryptos.MD516(originalKey)) {
 			return index, true
 		}
 	}
 	return 0, false
 }
 
-func (b *box) createChildSelf(originalKey Key, key uint32, value interface{}) {
+func (b *box) createChildSelf(originalKey string, key uint32, value interface{}) {
 	if len(b.things) > 0 {
 		for _, thg := range b.things {
-			if strings.EqualFold(thg.md5Key, cryptos.MD516(string(originalKey))) {
+			if strings.EqualFold(thg.md5Key, cryptos.MD516(originalKey)) {
 				return
 			}
 		}

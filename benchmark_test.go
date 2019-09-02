@@ -39,7 +39,7 @@ func BenchmarkInsert(b *testing.B) {
 	for i := 1; i <= b.N; i++ {
 		go func(formName string, i int) {
 			//_, _ = checkbook.InsertInt(formName, i, i+10)
-			_, _ = l.Insert(databaseName, formName, Key(i), i+10)
+			_, _ = l.Insert(databaseName, formName, string(i), i+10)
 		}(formName, i)
 		//_, _ = checkbook.InsertInt(formName, i, i+10)
 	}

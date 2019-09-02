@@ -15,7 +15,7 @@
 package Lily
 
 import (
-	"github.com/aberic/common/log"
+	"github.com/ennoo/rivet/utils/log"
 	"strconv"
 	"strings"
 )
@@ -23,18 +23,20 @@ import (
 type thing struct {
 	nodal     nodal // box 所属 purse
 	md5Key    string
-	seekStart int64 // value最终存储在文件中的起始位置
-	seekLast  int   // value最终存储在文件中的持续长度
+	seekStart uint32 // value最终存储在文件中的起始位置
+	seekLast  int    // value最终存储在文件中的持续长度
 	value     interface{}
 }
 
-func (t *thing) put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack {
+func (t *thing) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
 	formIndexFilePath := t.getFormIndexFilePath(indexID)
 	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
 		indexNodal:        t.nodal.getPreNodal().getPreNodal(),
 		thing:             t,
+		originalKey:       originalKey,
+		key:               key,
 		err:               nil,
 	}
 }

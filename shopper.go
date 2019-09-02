@@ -79,20 +79,20 @@ func (s *shopper) getDatabaseID() string {
 	return s.database.getID()
 }
 
-func (s *shopper) put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack {
+func (s *shopper) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
 	index := key / cityDistance
 	//index := uint32(0)
 	data := s.createChild(uint8(index))
 	return data.put(indexID, originalKey, key-index*cityDistance, value)
 }
 
-func (s *shopper) get(originalKey Key, key uint32) (interface{}, error) {
+func (s *shopper) get(originalKey string, key uint32) (interface{}, error) {
 	index := key / cityDistance
 	//index := uint32(0)
 	if realIndex, err := binaryMatchData(uint8(index), s); nil == err {
 		return s.nodes[realIndex].get(originalKey, key-index*cityDistance)
 	} else {
-		return nil, errors.New(strings.Join([]string{"shopper key", string(originalKey), "is nil"}, " "))
+		return nil, errors.New(strings.Join([]string{"shopper key", originalKey, "is nil"}, " "))
 	}
 }
 

@@ -14,8 +14,6 @@
 
 package Lily
 
-type Key string
-
 // API 暴露公共API接口
 //
 // 提供通用 k-v 方法，无需创建新的数据库和表等对象
@@ -51,31 +49,13 @@ type API interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	Put(key Key, value interface{}) (uint32, error)
+	Put(key string, value interface{}) (uint32, error)
 	// QueryD 获取数据
 	//
 	// 向_default表中查询一条数据并返回
 	//
 	// key 插入数据唯一key
-	Get(key Key) (interface{}, error)
-	// InsertInt 新增数据
-	//
-	// 向指定表中新增一条数据，key相同则覆盖
-	//
-	// formName 表名
-	//
-	// key 插入数据唯一key
-	//
-	// value 插入数据对象
-	InsertInt(databaseName, formName string, key int, value interface{}) (uint32, error)
-	// QueryInt 获取数据
-	//
-	// 向指定表中查询一条数据并返回
-	//
-	// formName 表名
-	//
-	// key 插入数据唯一key
-	QueryInt(databaseName, formName string, key int) (interface{}, error)
+	Get(key string) (interface{}, error)
 	// Insert 新增数据
 	//
 	// 向指定表中新增一条数据，key相同则覆盖
@@ -85,7 +65,7 @@ type API interface {
 	// key 插入数据唯一key
 	//
 	// value 插入数据对象
-	Insert(databaseName, formName string, key Key, value interface{}) (uint32, error)
+	Insert(databaseName, formName string, key string, value interface{}) (uint32, error)
 	// Query 获取数据
 	//
 	// 向指定表中查询一条数据并返回
@@ -93,7 +73,7 @@ type API interface {
 	// formName 表名
 	//
 	// key 插入数据唯一key
-	Query(databaseName, formName string, key Key) (interface{}, error)
+	Query(databaseName, formName string, key string) (interface{}, error)
 }
 
 // Database 数据库接口
@@ -125,7 +105,7 @@ type Database interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	insert(formName string, key Key, hashKey uint32, value interface{}) (uint32, error)
+	insert(formName string, key string, value interface{}) (uint32, error)
 	// Query 获取数据
 	//
 	// 向指定表中查询一条数据并返回
@@ -133,7 +113,7 @@ type Database interface {
 	// formName 表名
 	//
 	// key 插入数据唯一key
-	query(formName string, key Key, hashKey uint32) (interface{}, error)
+	query(formName string, key string, hashKey uint32) (interface{}, error)
 	// querySelector 根据条件检索
 	//
 	// formName 表名
@@ -164,10 +144,13 @@ type nodal interface {
 	getPreNodal() nodal            // getPreNodal 获取父节点对象
 }
 
+// indexBack 索引对象
 type indexBack struct {
-	formIndexFilePath string
-	indexNodal        nodal
-	thing             *thing
+	formIndexFilePath string // 索引文件所在路径
+	indexNodal        nodal  // 索引文件所对应level2层级度节点
+	thing             *thing // 索引对应节点对象子集
+	originalKey       string // put key
+	key               uint32 // put hash key
 	err               error
 }
 
@@ -182,22 +165,17 @@ type data interface {
 	// key 索引key，可通过hash转换string生成
 	//
 	// value 存储对象
-	put(indexID string, originalKey Key, key uint32, value interface{}) *indexBack
+	put(indexID string, originalKey string, key uint32, value interface{}) *indexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型
 	//
 	// key 索引key，可通过hash转换string生成
-	get(originalKey Key, key uint32) (interface{}, error)
+	get(originalKey string, key uint32) (interface{}, error)
 	childCount() int       // childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
 	child(index int) nodal // child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
 	lock()                 // 写锁
 	unLock()               // 写解锁
 	rLock()                // 读锁
 	rUnLock()              // 读解锁
-}
-
-type database struct {
-	id   string
-	name string
 }

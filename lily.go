@@ -18,7 +18,6 @@ import (
 	"errors"
 	"github.com/ennoo/rivet/utils/cryptos"
 	"github.com/ennoo/rivet/utils/string"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -143,42 +142,28 @@ func (l *Lily) CreateForm(databaseName, formName, comment string) error {
 	return errorDataIsNil
 }
 
-func (l *Lily) Put(key Key, value interface{}) (uint32, error) {
+func (l *Lily) Put(key string, value interface{}) (uint32, error) {
 	if nil == l || nil == l.databases[defaultForm] {
 		return 0, errorDataIsNil
 	}
 	return l.Insert(sysDatabase, defaultForm, key, value)
 }
 
-func (l *Lily) Get(key Key) (interface{}, error) {
+func (l *Lily) Get(key string) (interface{}, error) {
 	if nil == l || nil == l.databases[defaultForm] {
 		return 0, errorDataIsNil
 	}
 	return l.Query(sysDatabase, defaultForm, key)
 }
 
-func (l *Lily) InsertInt(databaseName, formName string, key int, value interface{}) (uint32, error) {
+func (l *Lily) Insert(databaseName, formName string, key string, value interface{}) (uint32, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, errorDataIsNil
 	}
-	return l.databases[databaseName].insert(formName, Key(strconv.Itoa(key)), uint32(key), value)
+	return l.databases[databaseName].insert(formName, key, value)
 }
 
-func (l *Lily) QueryInt(databaseName, formName string, key int) (interface{}, error) {
-	if nil == l || nil == l.databases[databaseName] {
-		return nil, errorDataIsNil
-	}
-	return l.databases[databaseName].query(formName, Key(strconv.Itoa(key)), uint32(key))
-}
-
-func (l *Lily) Insert(databaseName, formName string, key Key, value interface{}) (uint32, error) {
-	if nil == l || nil == l.databases[databaseName] {
-		return 0, errorDataIsNil
-	}
-	return l.databases[databaseName].insert(formName, key, hash(key), value)
-}
-
-func (l *Lily) Query(databaseName, formName string, key Key) (interface{}, error) {
+func (l *Lily) Query(databaseName, formName string, key string) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return nil, errorDataIsNil
 	}

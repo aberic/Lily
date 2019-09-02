@@ -44,7 +44,7 @@ func pool() *dataPool {
 
 type insert struct {
 	data        nodal
-	originalKey Key
+	originalKey string
 	key         uint32
 	value       interface{}
 }
@@ -63,5 +63,11 @@ func (d *dataPool) submit(task func()) error {
 func (d *dataPool) submitIndex(indexID string, task func(indexID string)) error {
 	return d.pool.Submit(func() {
 		task(indexID)
+	})
+}
+
+func (d *dataPool) submitChanIndex(ib *indexBack, task func(ib *indexBack)) error {
+	return d.pool.Submit(func() {
+		task(ib)
 	})
 }

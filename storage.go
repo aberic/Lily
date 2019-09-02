@@ -17,8 +17,7 @@ package Lily
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
-	"github.com/aberic/common/log"
+	"github.com/ennoo/rivet/utils/log"
 	"io"
 	"os"
 	"strings"
@@ -31,10 +30,9 @@ const (
 	moldForm
 )
 
-var (
-	moldTypeInvalidErr = errors.New("mold type invalid")
-)
-
+// task 执行存储任务对象
+//
+// 兼容数据存储和索引存储
 type task interface {
 	getMold() int             // 获取当前任务类型
 	getAppendContent() string // getAppendContent 获取追加入文件的内容
@@ -43,9 +41,10 @@ type task interface {
 	getChanResult() chan *writeResult
 }
 
+// writeResult 数据存储结果
 type writeResult struct {
-	seekStart int64
-	seekLast  int
+	seekStart uint32 // 16位起始seek
+	seekLast  int    // 8位持续seek
 	err       error
 }
 
@@ -57,7 +56,7 @@ type readResult struct {
 type indexTask struct {
 	key    string
 	result chan *writeResult
-	accept chan *writeResult
+	accept *writeResult
 }
 
 func (i *indexTask) getMold() int                     { return moldIndex }
@@ -104,18 +103,12 @@ func (f *filed) running() {
 			case moldIndex:
 				log.Self.Debug("running", log.String("type", "moldIndex"))
 				it := task.(*indexTask)
-				wr := <-it.accept
-				if nil != wr.err {
-					log.Self.Debug("running", log.Error(err))
-					task.getChanResult() <- &writeResult{err: err}
-					continue
-				}
-				// 写入10位key及16位md5后key及16位起始seek和8位持续seek
-				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(), int64ToHexString(wr.seekStart), int32ToHexString(wr.seekLast)}, ""))
+				// 写入5位key及16位md5后key及5位起始seek和4位持续seek
+				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(), uint32ToDDuoString(it.accept.seekStart), intToDDuoString(it.accept.seekLast)}, ""))
 				log.Self.Debug("running", log.Error(err))
 				task.getChanResult() <- &writeResult{
-					seekStart: wr.seekStart,
-					seekLast:  wr.seekLast,
+					seekStart: it.accept.seekStart,
+					seekLast:  it.accept.seekLast,
 					err:       err,
 				}
 			case moldForm:
@@ -123,7 +116,7 @@ func (f *filed) running() {
 				seekLast, err = f.file.WriteString(task.getAppendContent())
 				log.Self.Debug("running", log.Error(err))
 				task.getChanResult() <- &writeResult{
-					seekStart: seekStart,
+					seekStart: uint32(seekStart),
 					seekLast:  seekLast,
 					err:       err,
 				}
@@ -157,21 +150,21 @@ type storage struct {
 	files map[string]*filed
 }
 
-func (s *storage) appendIndex(node nodal, path, key string, wr chan *writeResult) *writeResult {
+func (s *storage) appendIndex(node nodal, path, key string, wr *writeResult) *writeResult {
 	log.Self.Debug("appendIndex", log.String("path", path))
 	return s.writeIndex(node, path, key, wr)
 }
 
-func (s *storage) appendForm(form Form, path string, value interface{}, wrs []chan *writeResult) *writeResult {
+func (s *storage) appendForm(form Form, path string, value interface{}) *writeResult {
 	log.Self.Debug("appendForm", log.String("path", path))
 	if data, err := json.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	} else {
-		return s.writeForm(form, path, string(data), wrs)
+		return s.writeForm(form, path, string(data))
 	}
 }
 
-func (s *storage) writeIndex(data data, filePath, appendStr string, wr chan *writeResult) *writeResult {
+func (s *storage) writeIndex(data data, filePath, appendStr string, wr *writeResult) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -185,7 +178,7 @@ func (s *storage) writeIndex(data data, filePath, appendStr string, wr chan *wri
 	return <-result
 }
 
-func (s *storage) writeForm(data data, filePath, appendStr string, wrs []chan *writeResult) *writeResult {
+func (s *storage) writeForm(data data, filePath, appendStr string) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -196,25 +189,18 @@ func (s *storage) writeForm(data data, filePath, appendStr string, wrs []chan *w
 	result := make(chan *writeResult, 1)
 	log.Self.Debug("form")
 	fd.tasks <- &formTask{key: appendStr, result: result}
-	wrOut := <-result
-	log.Self.Debug("form", log.Reflect("wrOut", wrOut))
-	if nil == wrOut.err {
-		for _, wr := range wrs {
-			wr <- wrOut
-		}
-	}
-	return wrOut
+	return <-result
 }
 
-func (s *storage) read(filePath string, seekStart int64, seekLast int, rr chan *readResult) {
-	log.Self.Debug("read", log.Int64("seekStart", seekStart), log.Int("seekLast", seekLast))
+func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan *readResult) {
+	log.Self.Debug("read", log.Uint32("seekStart", seekStart), log.Int("seekLast", seekLast))
 	f, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
 	if err != nil {
 		log.Self.Debug("read", log.Error(err))
 		rr <- &readResult{err: err}
 		return
 	}
-	_, err = f.Seek(seekStart, io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
+	_, err = f.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
 		log.Self.Debug("read", log.Error(err))
 		rr <- &readResult{err: err}

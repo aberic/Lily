@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	s "sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -50,11 +51,11 @@ func TestHashCode(t *testing.T) {
 	t.Log("1 = ", hash("1"))
 	t.Log("a = ", hash("a"))
 	t.Log("asd = ", hash("asd"))
-	t.Log("asd = ", hash(Key("asd")))
-	t.Log("2147483648 = ", hash(Key("2147483648")))
-	t.Log("2147483648 = ", hash(Key("2147483648")))
-	t.Log("2147483650 = ", hash(Key("2147483650")))
-	t.Log("2147483650 = ", hash(Key("2147483650")))
+	t.Log("asd = ", hash("asd"))
+	t.Log("2147483648 = ", hash("2147483648"))
+	t.Log("2147483648 = ", hash("2147483648"))
+	t.Log("2147483650 = ", hash("2147483650"))
+	t.Log("2147483650 = ", hash("2147483650"))
 }
 
 func TestChan(t *testing.T) {
@@ -92,6 +93,24 @@ func TestCond(t *testing.T) {
 	time.Sleep(time.Second * 2)
 }
 
+func TestUint32toFullState(t *testing.T) {
+	var index uint32
+	index = 97890417
+	intIndex := int(index)
+	pos := 0
+	for index > 1 {
+		index /= 10
+		pos++
+	}
+	backZero := 10 - pos
+	backZeroStr := strconv.Itoa(intIndex)
+	t.Log("backZeroStr =", backZeroStr)
+	for i := 0; i < backZero; i++ {
+		backZeroStr = strings.Join([]string{"0", backZeroStr}, "")
+	}
+	t.Log("backZeroStr =", backZeroStr)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var (
@@ -107,25 +126,10 @@ func TestLilyPutGet(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "")
-	hashKey, err := l.Put(Key("young"), 101)
+	hashKey, err := l.Put("young", 101)
 	t.Log("put young = 101 | hashKey =", hashKey, "| err = ", err)
-	i, err := l.Get(Key("young"))
+	i, err := l.Get("young")
 	t.Log("get young =", i, "| err = ", err)
-}
-
-func TestPut(t *testing.T) {
-	l := ObtainLily()
-	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
-	if nil != err {
-		t.Error(err)
-	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
-	for i := 1; i <= 255; i++ {
-		//_ = tmpLily.InsertD(Key(strconv.Itoa(i)), i)
-		_, _ = l.InsertInt(checkbookName, shopperName, i, i)
-	}
-	_, _ = l.InsertInt(checkbookName, shopperName, 1, 1)
 }
 
 func TestPutGet(t *testing.T) {
@@ -136,48 +140,16 @@ func TestPutGet(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "")
-	if _, err = l.Insert(checkbookName, shopperName, Key(198), 200); nil != err {
+	if _, err = l.Insert(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
 		t.Error(err)
 	}
 	t.Log("InsertInt err =", err)
-	if i, err := l.Query(checkbookName, shopperName, Key(198)); nil != err {
+	if i, err := l.Query(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
 		t.Error(err)
 	} else {
 		t.Log("get 198 =", i, "err =", err)
 	}
 	time.Sleep(5 * time.Second)
-}
-
-func TestPutGetInt(t *testing.T) {
-	l := ObtainLily()
-	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
-	if nil != err {
-		t.Error(err)
-	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
-	_, err = l.InsertInt(checkbookName, shopperName, 198, 200)
-	t.Log("InsertInt err =", err)
-	i, err := l.QueryInt(checkbookName, shopperName, 198)
-	t.Log("get 198 =", i, "err =", err)
-	time.Sleep(5 * time.Second)
-}
-
-func TestPutGetInts(t *testing.T) {
-	l := ObtainLily()
-	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
-	if nil != err {
-		t.Error(err)
-	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
-	for i := 1; i <= 255; i++ {
-		_, _ = l.InsertInt(checkbookName, shopperName, i, i+10)
-	}
-	for i := 1; i <= 255; i++ {
-		j, err := l.QueryInt(checkbookName, shopperName, i)
-		t.Log("get ", i, " = ", j, "err = ", err)
-	}
 }
 
 func TestPutGets(t *testing.T) {
@@ -189,10 +161,10 @@ func TestPutGets(t *testing.T) {
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "")
 	for i := 1; i <= 255; i++ {
-		_, _ = l.Insert(checkbookName, shopperName, Key(i), i)
+		_, _ = l.Insert(checkbookName, shopperName, string(i), i)
 	}
 	for i := 1; i <= 255; i++ {
-		j, err := l.Query(checkbookName, shopperName, Key(i))
+		j, err := l.Query(checkbookName, shopperName, string(i))
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
 }
@@ -208,21 +180,21 @@ func TestQuerySelector(t *testing.T) {
 	//for i := 1; i <= 10; i++ {
 	//	_ = checkbook.InsertInt(formName, i, i+10)
 	//}
-	_, err = l.InsertInt(checkbookName, shopperName, 1000, 1000)
+	_, err = l.Insert(checkbookName, shopperName, "1000", 1000)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 100, 100)
+	_, err = l.Insert(checkbookName, shopperName, "100", 100)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 110000, 110000)
+	_, err = l.Insert(checkbookName, shopperName, "110000", 110000)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 1100, 1100)
+	_, err = l.Insert(checkbookName, shopperName, "1100", 1100)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 10000, 10000)
+	_, err = l.Insert(checkbookName, shopperName, "10000", 10000)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 1, 1)
+	_, err = l.Insert(checkbookName, shopperName, "1", 1)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 10, 10)
+	_, err = l.Insert(checkbookName, shopperName, "10", 10)
 	t.Log("err = ", err)
-	_, err = l.InsertInt(checkbookName, shopperName, 110, 110)
+	_, err = l.Insert(checkbookName, shopperName, "110", 110)
 	t.Log("err = ", err)
 	i, err := data.querySelector(shopperName, &Selector{})
 	t.Log("get ", i, " = ", i, "err = ", err)
@@ -635,7 +607,7 @@ func TestInt32Hex(t *testing.T) {
 	t.Log("i =", i)
 	hexStr := int32ToHexString(i)
 	t.Log("intToHexString =", hexStr, " |", hexStr[0:1], " |", hexStr[1:2], " |", hexStr[2:3], " |", hexStr[7:8])
-	j, err := hexStringToInt64(hexStr)
+	j, err := hexStringToInt32(hexStr)
 	if nil != err {
 		t.Error(err)
 	}
@@ -649,6 +621,59 @@ func TestInt64Hex(t *testing.T) {
 	hexStr := int64ToHexString(i)
 	t.Log("int64ToHexString =", hexStr, " |", hexStr[0:1], " |", hexStr[1:2], " |", hexStr[2:3], " |", hexStr[7:8])
 	j, err := hexStringToInt64(hexStr)
+	if nil != err {
+		t.Error(err)
+	}
+	t.Log("j =", j)
+}
+
+func TestInt32Duo(t *testing.T) {
+	var i = 65536326
+	t.Log("i =", i)
+	duoStr := intToDuoString(i)
+	t.Log("intToDuoString =", duoStr)
+	j, err := duoStringToInt32(duoStr)
+	if nil != err {
+		t.Error(err)
+	}
+	t.Log("j =", j)
+}
+
+func TestUInt32Duo(t *testing.T) {
+	var i uint32
+	i = 4153632644
+	i = 4294967295
+	t.Log("i =", i)
+	duoStr := uint32ToDuoString(i)
+	t.Log("intToDuoString =", duoStr)
+	j, err := duoStringToUint32(duoStr)
+	if nil != err {
+		t.Error(err)
+	}
+	t.Log("j =", j)
+}
+
+func TestUInt32DDuo(t *testing.T) {
+	var i uint32
+	i = 4153632644
+	i = 4294967295
+	t.Log("i =", i)
+	duoStr := uint32ToDDuoString(i)
+	t.Log("intToDuoString =", duoStr)
+	j, err := dDuoStringToUint32(duoStr)
+	if nil != err {
+		t.Error(err)
+	}
+	t.Log("j =", j)
+}
+
+func TestInt64Duo(t *testing.T) {
+	var i int64
+	i = 10997
+	t.Log("i =", i)
+	duoStr := int64ToDuoString(i)
+	t.Log("int64ToDuoString =", duoStr)
+	j, err := duoStringToInt64(duoStr)
 	if nil != err {
 		t.Error(err)
 	}
