@@ -124,7 +124,7 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	Data                   // 表内数据操作接口
+	Data                   // Data 表内数据操作接口
 	getAutoID() *uint32    // getAutoID 返回表当前自增ID值
 	getID() string         // getID 返回表唯一ID
 	getName() string       // getName 返回表名称
@@ -134,7 +134,7 @@ type Form interface {
 
 // Nodal 节点对象接口
 type Nodal interface {
-	Data                           // 表内数据操作接口
+	Data                           // Data 表内数据操作接口
 	existChild(index uint8) bool   // existChild 根据下标判定是否存在子节点
 	createChild(index uint8) Nodal // createChild 根据下标创建新的子节点
 	getFlexibleKey() uint32        // getFlexibleKey 下一级最左最小树所对应真实key
@@ -170,10 +170,16 @@ type Data interface {
 	//
 	// key 索引key，可通过hash转换string生成
 	get(originalKey string, key uint32) (interface{}, error)
-	childCount() int       // childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
-	child(index int) Nodal // child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
-	lock()                 // 写锁
-	unLock()               // 写解锁
-	rLock()                // 读锁
-	rUnLock()              // 读解锁
+	// childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
+	childCount() int
+	// child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
+	child(index int) Nodal
+	// lock 写锁
+	lock()
+	// unLock 写解锁
+	unLock()
+	// rLock 读锁
+	rLock()
+	// rUnLock 读解锁
+	rUnLock()
 }

@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/ennoo/rivet/utils/cryptos"
+	"github.com/ennoo/rivet/utils/log"
 	"strings"
 )
 
@@ -40,6 +41,7 @@ func (b *box) put(indexID string, originalKey string, key uint32, value interfac
 }
 
 func (b *box) get(originalKey string, key uint32) (interface{}, error) {
+	log.Self.Debug("box-get", log.String("originalKey", originalKey))
 	if realIndex, exist := b.existChildSelf(originalKey, key); exist {
 		return b.things[realIndex].get()
 	}
@@ -56,6 +58,7 @@ func (b *box) createChild(index uint8) Nodal {
 
 func (b *box) existChildSelf(originalKey string, key uint32) (int, bool) {
 	for index, thg := range b.things {
+		log.Self.Debug("existChildSelf", log.String("thg.md5Key", thg.md5Key))
 		if strings.EqualFold(thg.md5Key, cryptos.MD516(originalKey)) {
 			return index, true
 		}
