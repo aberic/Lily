@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"errors"
@@ -45,7 +45,7 @@ func (c *checkbook) createForm(formName, comment string) error {
 	// 确定库名不重复
 	for k := range c.forms {
 		if k == formName {
-			return formExistErr
+			return ErrFormExist
 		}
 	}
 	// 确保表唯一ID不重复
@@ -90,9 +90,9 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 	autoID := atomic.AddUint32(form.getAutoID(), 1) // ID自增
 	for _, indexID := range indexIDs {              // 遍历表索引ID集合，检索并计算当前索引所在文件位置
 		if err = pool().submitIndex(indexID, func(indexID string) {
-			if indexID == c.name2id(strings.Join([]string{formName, "id"}, "_")) {
+			if indexID == c.name2id(c.indexID(formName, "id")) {
 				chanIndex <- form.put(indexID, strconv.Itoa(int(autoID)), autoID, value)
-			} else if indexID == c.name2id(strings.Join([]string{formName, "custom"}, "_")) {
+			} else if indexID == c.name2id(c.indexID(formName, "custom")) {
 				chanIndex <- form.put(indexID, key, hash(key), value)
 			}
 		}); nil != err {
@@ -145,7 +145,7 @@ func (c *checkbook) query(formName string, key string, hashKey uint32) (interfac
 
 func (c *checkbook) querySelector(formName string, selector *Selector) (interface{}, error) {
 	if nil == c {
-		return nil, errorDataIsNil
+		return nil, ErrDataIsNil
 	}
 	selector.formName = formName
 	selector.checkbook = c
@@ -157,9 +157,9 @@ func shopperIsInvalid(formName string) error {
 	return errors.New(strings.Join([]string{"invalid name ", formName}, ""))
 }
 
-// sequenceName 开启自增主键索引后新的组合固定表明
-func (c *checkbook) sequenceName(name string) string {
-	return strings.Join([]string{name, "id"}, "_")
+// indexID 索引ID新的组合名称
+func (c *checkbook) indexID(formName, indexName string) string {
+	return strings.Join([]string{formName, indexName}, "_")
 }
 
 // name2id 确保数据库唯一ID不重复

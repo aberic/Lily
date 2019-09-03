@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"bufio"
@@ -156,12 +156,15 @@ func (s *storage) appendIndex(node Nodal, path, key string, wr *writeResult) *wr
 }
 
 func (s *storage) appendForm(form Form, path string, value interface{}) *writeResult {
+	var (
+		data []byte
+		err  error
+	)
 	log.Self.Debug("appendForm", log.String("path", path))
-	if data, err := json.Marshal(value); nil != err {
+	if data, err = json.Marshal(value); nil != err {
 		return &writeResult{err: err}
-	} else {
-		return s.writeForm(form, path, string(data))
 	}
+	return s.writeForm(form, path, string(data))
 }
 
 func (s *storage) writeIndex(data Data, filePath, appendStr string, wr *writeResult) *writeResult {
@@ -207,20 +210,20 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		return
 	}
 	inputReader := bufio.NewReader(f)
-	if bytes, err := inputReader.Peek(seekLast); nil != err {
+	var bytes []byte
+	if bytes, err = inputReader.Peek(seekLast); nil != err {
 		log.Self.Debug("read", log.Error(err))
 		rr <- &readResult{err: err}
 		return
-	} else {
-		log.Self.Debug("read", log.String("Data", string(bytes)))
-		var value interface{}
-		if err = json.Unmarshal(bytes, &value); nil != err {
-			log.Self.Debug("read", log.Error(err))
-			rr <- &readResult{err: err}
-			return
-		}
-		rr <- &readResult{err: err, value: value}
 	}
+	log.Self.Debug("read", log.String("Data", string(bytes)))
+	var value interface{}
+	if err = json.Unmarshal(bytes, &value); nil != err {
+		log.Self.Debug("read", log.Error(err))
+		rr <- &readResult{err: err}
+		return
+	}
+	rr <- &readResult{err: err, value: value}
 }
 
 func (s *storage) useFiled(data Data, filePath string) (fd *filed, err error) {

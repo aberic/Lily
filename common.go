@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"errors"
@@ -132,7 +132,7 @@ func mkDataDir(dataName string) (err error) {
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
-		return databaseExistErr
+		return ErrDatabaseExist
 	}
 	return os.MkdirAll(dataPath, os.ModePerm)
 }
@@ -186,7 +186,7 @@ func mkFormDir(dataID, formID string) (err error) {
 	if exist, err := pathExist(dataPath); nil != err {
 		return err
 	} else if exist {
-		return formExistErr
+		return ErrFormExist
 	}
 	return os.MkdirAll(dataPath, os.ModePerm)
 }
@@ -243,20 +243,6 @@ func rmFormIndexDir(dataID, formID, indexID string) (err error) {
 // indexID 表索引唯一id
 //
 // index 所在表顶层数组中下标
-func mkFormIndexFile(dataID, formID, indexID string, index uint8) (err error) {
-	_, err = os.Create(pathFormIndexFile(dataID, formID, indexID, index))
-	return
-}
-
-// mkFormIndexDir 创建表索引文件
-//
-// dataID 数据库唯一id
-//
-// formID 表唯一id
-//
-// indexID 表索引唯一id
-//
-// index 所在表顶层数组中下标
 func mkFormDataFile(dataID, formID string, fileIndex int) (err error) {
 	_, err = os.Create(pathFormDataFile(dataID, formID, fileIndex))
 	return
@@ -297,14 +283,6 @@ func pathFormIndexFile(dataID, formID, indexID string, index uint8) string {
 
 func pathFormDataFile(dataID, formID string, fileIndex int) string {
 	return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), strconv.Itoa(fileIndex), ".dat"}, "")
-}
-
-func pathFormNodeDir(dataID, formID string, index uint8) string {
-	return filepath.Join(pathFormDir(dataID, formID), strconv.Itoa(int(index)))
-}
-
-func pathFormNodeFile(dataID, formID, fileName string, index uint8) string {
-	return filepath.Join(dataDir, dataID, formID, strconv.Itoa(int(index)), fileName)
 }
 
 // pathExist 检查路径是否存在

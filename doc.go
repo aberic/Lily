@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-// Lily 数据库
+// Package lily 数据库
 //
 // 存储结构 {dataDir}/data/{dataName}/{formName}/{formName}.dat/idx...
 //
@@ -33,4 +33,4 @@
 // 索引起始seek最大值为1073741824，即每一个索引文件最大1G，新增一条索引超过1G则新开新的索引文件
 //
 // 索引持续seek最大值为16777216，即每一条存储value对象允许最大存储16777216个字节
-package Lily
+package lily

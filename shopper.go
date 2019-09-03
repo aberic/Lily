@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"errors"
@@ -91,9 +91,8 @@ func (s *shopper) get(originalKey string, key uint32) (interface{}, error) {
 	//index := uint32(0)
 	if realIndex, err := binaryMatchData(uint8(index), s); nil == err {
 		return s.nodes[realIndex].get(originalKey, key-index*cityDistance)
-	} else {
-		return nil, errors.New(strings.Join([]string{"shopper key", originalKey, "is nil"}, " "))
 	}
+	return nil, errors.New(strings.Join([]string{"shopper key", originalKey, "is nil"}, " "))
 }
 
 func (s *shopper) existChild(index uint8) bool {
@@ -101,7 +100,11 @@ func (s *shopper) existChild(index uint8) bool {
 }
 
 func (s *shopper) createChild(index uint8) Nodal {
-	if realIndex, err := binaryMatchData(index, s); nil != err {
+	var (
+		realIndex int
+		err       error
+	)
+	if realIndex, err = binaryMatchData(index, s); nil != err {
 		nd := &purse{
 			level:       0,
 			degreeIndex: index,
@@ -121,14 +124,12 @@ func (s *shopper) createChild(index uint8) Nodal {
 			} else if s.nodes[i].getDegreeIndex() > index {
 				s.nodes[i+1] = s.nodes[i]
 				s.nodes[i] = nd
-			} else {
-				return s.nodes[i]
 			}
+			return s.nodes[i]
 		}
 		return nd
-	} else {
-		return s.nodes[realIndex]
 	}
+	return s.nodes[realIndex]
 }
 
 func (s *shopper) childCount() int {

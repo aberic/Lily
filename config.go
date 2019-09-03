@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"github.com/ennoo/rivet/utils/env"

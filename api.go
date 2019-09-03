@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 // API 暴露公共API接口
 //
@@ -40,7 +40,7 @@ type API interface {
 	//
 	// comment 表描述
 	CreateForm(databaseName, formName, comment string) error
-	// InsertD 新增数据
+	// Put 新增数据
 	//
 	// 向_default表中新增一条数据，key相同则覆盖
 	//
@@ -50,7 +50,7 @@ type API interface {
 	//
 	// 返回 hashKey
 	Put(key string, value interface{}) (uint32, error)
-	// QueryD 获取数据
+	// Get 获取数据
 	//
 	// 向_default表中查询一条数据并返回
 	//

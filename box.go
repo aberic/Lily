@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"errors"
@@ -42,9 +42,8 @@ func (b *box) put(indexID string, originalKey string, key uint32, value interfac
 func (b *box) get(originalKey string, key uint32) (interface{}, error) {
 	if realIndex, exist := b.existChildSelf(originalKey, key); exist {
 		return b.things[realIndex].get()
-	} else {
-		return nil, errors.New(strings.Join([]string{"box key", originalKey, "is nil"}, " "))
 	}
+	return nil, errors.New(strings.Join([]string{"box key", originalKey, "is nil"}, " "))
 }
 
 func (b *box) existChild(index uint8) bool {

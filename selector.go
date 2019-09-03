@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"strconv"
@@ -87,10 +87,9 @@ func (s *Selector) query() ([]interface{}, error) {
 			return s.leftQuery(l), nil
 		}
 		return nil, shopperIsInvalid(s.formName)
-	} else {
-		// todo 条件全开检索
-		return s.rightQuery(s.checkbook.forms[s.formName]), nil
 	}
+	// todo 条件全开检索
+	return s.rightQuery(s.checkbook.forms[s.formName]), nil
 }
 
 func (s *Selector) leftQuery(data Data) []interface{} {

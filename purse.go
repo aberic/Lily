@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"errors"
@@ -68,9 +68,8 @@ func (p *purse) get(originalKey string, key uint32) (interface{}, error) {
 	}
 	if realIndex, err := binaryMatchData(uint8(index), p); nil == err {
 		return p.nodes[realIndex].get(originalKey, key)
-	} else {
-		return nil, errors.New(strings.Join([]string{"purse key", originalKey, "is nil"}, " "))
 	}
+	return nil, errors.New(strings.Join([]string{"purse key", originalKey, "is nil"}, " "))
 }
 
 func (p *purse) existChild(index uint8) bool {
@@ -78,9 +77,13 @@ func (p *purse) existChild(index uint8) bool {
 }
 
 func (p *purse) createChild(index uint8) Nodal {
+	var (
+		realIndex int
+		err       error
+	)
 	defer p.pLock.Unlock()
 	p.pLock.Lock()
-	if realIndex, err := binaryMatchData(index, p); nil != err {
+	if realIndex, err = binaryMatchData(index, p); nil != err {
 		level := p.level + 1
 		if level < levelMax {
 			n := &purse{
@@ -90,17 +93,14 @@ func (p *purse) createChild(index uint8) Nodal {
 				nodes:       []Nodal{},
 			}
 			return p.appendNodal(index, n)
-		} else {
-			n := &box{
-				degreeIndex: index,
-				nodal:       p,
-				things:      []*thing{},
-			}
-			return p.appendNodal(index, n)
 		}
-	} else {
-		return p.nodes[realIndex]
+		return p.appendNodal(index, &box{
+			degreeIndex: index,
+			nodal:       p,
+			things:      []*thing{},
+		})
 	}
+	return p.nodes[realIndex]
 }
 
 func (p *purse) appendNodal(index uint8, n Nodal) Nodal {

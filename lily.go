@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package Lily
+package lily
 
 import (
 	"errors"
@@ -31,11 +31,14 @@ const (
 )
 
 var (
-	lilyInstance     *Lily
-	onceLily         sync.Once
-	databaseExistErr = errors.New("database already exist")          // databaseExistErr 自定义error信息
-	formExistErr     = errors.New("form already exist")              // formExistErr 自定义error信息
-	errorDataIsNil   = errors.New("database had never been created") // errorDataIsNil 自定义error信息
+	lilyInstance *Lily
+	onceLily     sync.Once
+	// ErrDatabaseExist 自定义error信息
+	ErrDatabaseExist = errors.New("database already exist")
+	// ErrFormExist 自定义error信息
+	ErrFormExist = errors.New("form already exist")
+	// ErrDataIsNil 自定义error信息
+	ErrDataIsNil = errors.New("database had never been created")
 )
 
 // Lily 祖宗！
@@ -90,12 +93,11 @@ func (l *Lily) initialize() {
 	l.once.Do(func() {
 		data, err := l.CreateDatabase(sysDatabase)
 		if nil != err {
-			if err == databaseExistErr {
+			if err == ErrDatabaseExist {
 				l.Restart()
 				return
-			} else {
-				panic(err)
 			}
+			panic(err)
 		}
 		if err = data.createForm(userForm, "default user form"); nil != err {
 			_ = rmDataDir(sysDatabase)
@@ -117,11 +119,16 @@ func (l *Lily) initialize() {
 	})
 }
 
+// CreateDatabase 新建数据库
+//
+// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
+//
+// name 数据库名称
 func (l *Lily) CreateDatabase(name string) (Database, error) {
 	// 确定库名不重复
 	for k := range l.databases {
 		if k == name {
-			return nil, databaseExistErr
+			return nil, ErrDatabaseExist
 		}
 	}
 	// 确保数据库唯一ID不重复
@@ -129,43 +136,79 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 	if err := mkDataDir(id); nil != err {
 		return nil, err
 	}
-	data := &checkbook{name: name, id: id, forms: map[string]Form{}}
-	l.databases[name] = data
+	l.databases[name] = &checkbook{name: name, id: id, forms: map[string]Form{}}
 	//l.defaultDatabase.insert(databaseForm, id, )
-	return data, nil
+	return l.databases[name], nil
 }
 
+// CreateForm 创建表
+//
+// 默认自增ID索引
+//
+// name 表名称
+//
+// comment 表描述
 func (l *Lily) CreateForm(databaseName, formName, comment string) error {
 	if database := l.databases[databaseName]; nil != database {
 		return database.createForm(formName, comment)
 	}
-	return errorDataIsNil
+	return ErrDataIsNil
 }
 
+// Put 新增数据
+//
+// 向_default表中新增一条数据，key相同则覆盖
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+//
+// 返回 hashKey
 func (l *Lily) Put(key string, value interface{}) (uint32, error) {
 	if nil == l || nil == l.databases[defaultForm] {
-		return 0, errorDataIsNil
+		return 0, ErrDataIsNil
 	}
 	return l.Insert(sysDatabase, defaultForm, key, value)
 }
 
+// Get 获取数据
+//
+// 向_default表中查询一条数据并返回
+//
+// key 插入数据唯一key
 func (l *Lily) Get(key string) (interface{}, error) {
 	if nil == l || nil == l.databases[defaultForm] {
-		return 0, errorDataIsNil
+		return 0, ErrDataIsNil
 	}
 	return l.Query(sysDatabase, defaultForm, key)
 }
 
+// Insert 新增数据
+//
+// 向指定表中新增一条数据，key相同则覆盖
+//
+// formName 表名
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
 func (l *Lily) Insert(databaseName, formName string, key string, value interface{}) (uint32, error) {
 	if nil == l || nil == l.databases[databaseName] {
-		return 0, errorDataIsNil
+		return 0, ErrDataIsNil
 	}
 	return l.databases[databaseName].insert(formName, key, value)
 }
 
+// Query 获取数据
+//
+// 向指定表中查询一条数据并返回
+//
+// formName 表名
+//
+// key 插入数据唯一key
 func (l *Lily) Query(databaseName, formName string, key string) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
-		return nil, errorDataIsNil
+		return nil, ErrDataIsNil
 	}
 	return l.databases[databaseName].query(formName, key, hash(key))
 }
