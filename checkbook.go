@@ -87,7 +87,8 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 	indexLen := len(indexIDs)
 	chanIndex = make(chan *indexBack, indexLen)     // 创建索引ID结果返回通道
 	autoID := atomic.AddUint32(form.getAutoID(), 1) // ID自增
-	for _, indexID := range indexIDs {              // 遍历表索引ID集合，检索并计算当前索引所在文件位置
+	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
+	for _, indexID := range indexIDs {
 		if err = pool().submitIndex(indexID, func(indexID string) {
 			if indexID == c.name2id(c.indexID(formName, "id")) {
 				chanIndex <- form.put(indexID, strconv.Itoa(int(autoID)), autoID, value)
@@ -114,6 +115,7 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wf)
 			if nil == wr.err {
+				log.Self.Debug("insert", log.String("md5Key", md5Key))
 				ib.thing.md5Key = md5Key
 				ib.thing.seekStart = wr.seekStart
 				ib.thing.seekLast = wr.seekLast

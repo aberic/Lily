@@ -30,7 +30,7 @@ type thing struct {
 
 func (t *thing) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
 	formIndexFilePath := t.getFormIndexFilePath(indexID)
-	log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value), log.String("formIndexFilePath", formIndexFilePath))
+	log.Self.Debug("box", log.String("originalKey", originalKey), log.Uint32("key", key), log.Reflect("value", value), log.String("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
 		indexNodal:        t.nodal.getPreNodal().getPreNodal(),
