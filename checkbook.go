@@ -16,9 +16,8 @@ package lily
 
 import (
 	"errors"
-	"github.com/ennoo/rivet/utils/cryptos"
+	"github.com/aberic/gnomon"
 	"github.com/ennoo/rivet/utils/log"
-	"github.com/ennoo/rivet/utils/string"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -108,7 +107,7 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex
 		if err = pool().submitChanIndex(ib, func(ib *indexBack) {
-			md5Key := cryptos.MD516(ib.originalKey) // hash(originalKey) 会发生碰撞，因此这里存储md5结果进行反向验证
+			md5Key := gnomon.CryptoHash().MD516(ib.originalKey) // hash(originalKey) 会发生碰撞，因此这里存储md5结果进行反向验证
 			// 写入5位key及16位md5后key
 			appendStr := strings.Join([]string{uint32ToDDuoString(ib.key), md5Key}, "")
 			log.Self.Debug("insert", log.String("appendStr", appendStr), log.Reflect("formIndexFilePath", ib.formIndexFilePath))
@@ -164,14 +163,14 @@ func (c *checkbook) indexID(formName, indexName string) string {
 
 // name2id 确保数据库唯一ID不重复
 func (c *checkbook) name2id(name string) string {
-	id := cryptos.MD516(name)
+	id := gnomon.CryptoHash().MD516(name)
 	have := true
 	for have {
 		have = false
 		for _, v := range c.forms {
 			if v.getID() == id {
 				have = true
-				id = cryptos.MD516(strings.Join([]string{id, str.RandSeq(3)}, ""))
+				id = gnomon.CryptoHash().MD516(strings.Join([]string{id, gnomon.String().RandSeq(3)}, ""))
 				break
 			}
 		}
