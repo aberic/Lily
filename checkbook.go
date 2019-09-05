@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -108,9 +109,32 @@ func (c *checkbook) get(formName string, key string) (interface{}, error) {
 
 }
 
-func (c *checkbook) insert(formName string, value interface{}) (uint32, error) {
+func (c *checkbook) insert(formName string, value interface{}, update bool) (uint32, error) {
 	// todo
 	return 0, nil
+}
+
+func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey uint32, support bool) {
+	support = true
+	switch value.Kind() {
+	default:
+		return "", 0, false
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i64 := value.Int()
+
+		key = strconv.Itoa(int(value.Int()))
+		hashKey = uint32(value.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		key = strconv.Itoa(int(value.Uint()))
+		hashKey = uint32(value.Uint())
+	case reflect.Float32, reflect.Float64:
+		key = strconv.Itoa(int(value.Float()))
+		hashKey = uint32(value.Float())
+	case reflect.String:
+		key = value.String()
+		hashKey = hash(key)
+	}
+	return
 }
 
 func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes []*index, value interface{}, update bool) (uint32, error) {
@@ -128,7 +152,19 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 			} else if index.key == indexCustomID {
 				chanIndex <- form.put(index.id, key, hash(key), value, update)
 			} else {
-
+				reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
+				params := strings.Split(index.key, ".")
+				checkValue := reflectObj.Elem()
+				for _, param := range params {
+					if checkValue = checkValue.FieldByName(param); checkValue.IsValid() { // 子字段有效
+						continue
+					}
+					chanIndex <- &indexBack{err: errors.New(strings.Join([]string{"index", index.key, "is invalid"}, " "))}
+					return
+				}
+				if keyNew, hashKeyNew, valid := c.valueTypeCheckKey(&checkValue); valid {
+					chanIndex <- form.put(index.id, keyNew, hashKeyNew, value, update)
+				}
 			}
 		}); nil != err {
 			return 0, err

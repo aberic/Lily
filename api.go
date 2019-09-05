@@ -57,7 +57,7 @@ type API interface {
 	PutD(key string, value interface{}) (uint32, error)
 	// SetD 设置数据，如果存在将被覆盖，如果不存在，则新建
 	//
-	// 向_default表中新增一条数据，key相同则覆盖
+	// 向_default表中新增或更新一条数据，key相同则覆盖
 	//
 	// key 插入数据唯一key
 	//
@@ -87,7 +87,7 @@ type API interface {
 	Put(databaseName, formName, key string, value interface{}) (uint32, error)
 	// Set 设置数据，如果存在将被覆盖，如果不存在，则新建
 	//
-	// 向指定表中新增一条数据，key相同则覆盖
+	// 向指定表中新增或更新一条数据，key相同则覆盖
 	//
 	// databaseName 数据库名
 	//
@@ -111,7 +111,7 @@ type API interface {
 	Get(databaseName, formName, key string) (interface{}, error)
 	// Insert 新增数据
 	//
-	// 向指定表中新增一条数据，key相同则覆盖
+	// 向指定表中新增一条数据，key相同则返回一个Error
 	//
 	// databaseName 数据库名
 	//
@@ -119,6 +119,16 @@ type API interface {
 	//
 	// value 插入数据对象
 	Insert(databaseName, formName string, value interface{}) (uint32, error)
+	// Update 更新数据
+	//
+	// 向指定表中新增或更新一条数据，key相同则覆盖
+	//
+	// databaseName 数据库名
+	//
+	// formName 表名
+	//
+	// value 插入数据对象
+	Update(databaseName, formName string, value interface{}) error
 	// Query 获取数据
 	//
 	// 向指定表中查询一条数据并返回
@@ -129,6 +139,16 @@ type API interface {
 	//
 	// selector 条件选择器
 	Query(databaseName, formName string, selector *Selector) (interface{}, error)
+	// Delete 删除数据
+	//
+	// 向指定表中删除一条数据并返回
+	//
+	// databaseName 数据库名
+	//
+	// formName 表名
+	//
+	// selector 条件选择器
+	Delete(databaseName, formName string, selector *Selector) error
 }
 
 // Database 数据库接口
@@ -176,7 +196,7 @@ type Database interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	insert(formName string, value interface{}) (uint32, error)
+	insert(formName string, value interface{}, update bool) (uint32, error)
 	// querySelector 根据条件检索
 	//
 	// formName 表名

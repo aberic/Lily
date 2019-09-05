@@ -59,8 +59,21 @@ type shopper struct {
 
 // index 索引对象
 type index struct {
-	id  string // 索引唯一ID
-	key string // 索引字段名称，
+	// id 索引唯一ID
+	id string
+	// 索引字段名称，由对象结构层级字段通过'.'组成，如
+	//
+	// ref := &ref{
+	//		i: 1,
+	//		s: "2",
+	//		in: refIn{
+	//			i: 3,
+	//			s: "4",
+	//		},
+	//	}
+	//
+	// key可取'i','in.s'
+	key string
 }
 
 func (s *shopper) getAutoID() *uint32 {
