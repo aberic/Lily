@@ -17,7 +17,7 @@ package lily
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/ennoo/rivet/utils/log"
+	"github.com/aberic/gnomon"
 	"io"
 	"os"
 	"strings"
@@ -101,20 +101,20 @@ func (f *filed) running() {
 			}
 			switch task.getMold() {
 			case moldIndex:
-				log.Self.Debug("running", log.String("type", "moldIndex"))
+				gnomon.Log().Debug("running", gnomon.LogField("type", "moldIndex"))
 				it := task.(*indexTask)
 				// 写入5位key及16位md5后key及5位起始seek和4位持续seek
 				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(), uint32ToDDuoString(it.accept.seekStart), intToDDuoString(it.accept.seekLast)}, ""))
-				log.Self.Debug("running", log.Error(err))
+				gnomon.Log().Debug("running", gnomon.LogErr(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: it.accept.seekStart,
 					seekLast:  it.accept.seekLast,
 					err:       err,
 				}
 			case moldForm:
-				log.Self.Debug("running", log.String("type", "moldForm"))
+				gnomon.Log().Debug("running", gnomon.LogField("type", "moldForm"))
 				seekLast, err = f.file.WriteString(task.getAppendContent())
-				log.Self.Debug("running", log.Error(err))
+				gnomon.Log().Debug("running", gnomon.LogErr(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: uint32(seekStart),
 					seekLast:  seekLast,
@@ -123,7 +123,7 @@ func (f *filed) running() {
 			}
 		case <-to.C:
 			// todo 需要优雅关闭，暂时暴力操作
-			log.Self.Debug("timeout")
+			gnomon.Log().Debug("timeout")
 			_ = f.file.Close()
 			return
 		}
@@ -151,7 +151,7 @@ type storage struct {
 }
 
 func (s *storage) appendIndex(node Nodal, path, key string, wr *writeResult) *writeResult {
-	log.Self.Debug("appendIndex", log.String("path", path))
+	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", path))
 	return s.writeIndex(node, path, key, wr)
 }
 
@@ -160,7 +160,7 @@ func (s *storage) appendForm(form Form, path string, value interface{}) *writeRe
 		data []byte
 		err  error
 	)
-	log.Self.Debug("appendForm", log.String("path", path))
+	gnomon.Log().Debug("appendForm", gnomon.LogField("path", path))
 	if data, err = json.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	}
@@ -176,7 +176,7 @@ func (s *storage) writeIndex(data Data, filePath, appendStr string, wr *writeRes
 		return &writeResult{err: err}
 	}
 	result := make(chan *writeResult, 1)
-	log.Self.Debug("index")
+	gnomon.Log().Debug("index")
 	fd.tasks <- &indexTask{key: appendStr, result: result, accept: wr}
 	return <-result
 }
@@ -190,36 +190,36 @@ func (s *storage) writeForm(data Data, filePath, appendStr string) *writeResult 
 		return &writeResult{err: err}
 	}
 	result := make(chan *writeResult, 1)
-	log.Self.Debug("form")
+	gnomon.Log().Debug("form")
 	fd.tasks <- &formTask{key: appendStr, result: result}
 	return <-result
 }
 
 func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan *readResult) {
-	log.Self.Debug("read", log.Uint32("seekStart", seekStart), log.Int("seekLast", seekLast))
+	gnomon.Log().Debug("read", gnomon.LogField("seekStart", seekStart), gnomon.LogField("seekLast", seekLast))
 	f, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
 	if err != nil {
-		log.Self.Debug("read", log.Error(err))
+		gnomon.Log().Debug("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	_, err = f.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
-		log.Self.Debug("read", log.Error(err))
+		gnomon.Log().Debug("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	inputReader := bufio.NewReader(f)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
-		log.Self.Debug("read", log.Error(err))
+		gnomon.Log().Debug("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
-	log.Self.Debug("read", log.String("Data", string(bytes)))
+	gnomon.Log().Debug("read", gnomon.LogField("Data", string(bytes)))
 	var value interface{}
 	if err = json.Unmarshal(bytes, &value); nil != err {
-		log.Self.Debug("read", log.Error(err))
+		gnomon.Log().Debug("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
@@ -230,11 +230,11 @@ func (s *storage) useFiled(data Data, filePath string) (fd *filed, err error) {
 	if fd = s.files[filePath]; nil == fd {
 		defer data.unLock()
 		data.lock()
-		log.Self.Debug("useFiled", log.String("filePath", filePath))
+		gnomon.Log().Debug("useFiled", gnomon.LogField("filePath", filePath))
 		if fd = s.files[filePath]; nil == fd {
 			var f *os.File
 			if f, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); nil != err {
-				log.Self.Debug("useFiled", log.Error(err))
+				gnomon.Log().Debug("useFiled", gnomon.LogErr(err))
 				return
 			}
 			fd = &filed{

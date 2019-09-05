@@ -34,12 +34,12 @@ func BenchmarkInsert(b *testing.B) {
 	if nil != err {
 		b.Error(err)
 	}
-	_ = data.createForm(formName, "")
+	_ = data.createForm(formName, "", formTypeDoc)
 	now := time.Now().UnixNano()
 	for i := 1; i <= b.N; i++ {
 		go func(formName string, i int) {
 			//_, _ = checkbook.InsertInt(formName, i, i+10)
-			_, _ = l.Insert(databaseName, formName, string(i), i+10)
+			_, _ = l.Put(databaseName, formName, string(i), i+10)
 		}(formName, i)
 		//_, _ = checkbook.InsertInt(formName, i, i+10)
 	}

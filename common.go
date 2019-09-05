@@ -155,6 +155,28 @@ func rmDataDir(dataName string) (err error) {
 // formID 表唯一id
 //
 // indexID 表索引唯一id
+func mkFormResourceSQL(dataID, formID, indexID string, fileIndex int) (err error) {
+	if err = mkFormDir(dataID, formID); nil != err {
+		return
+	}
+	if err = mkFormIndexDir(dataID, formID, indexID); nil != err {
+		_ = rmFormDir(dataID, formID)
+		return
+	}
+	if err = mkFormDataFile(dataID, formID, fileIndex); nil != err {
+		_ = rmFormDir(dataID, formID)
+		return
+	}
+	return
+}
+
+// mkFormResource 创建表资源
+//
+// dataID 数据库唯一id
+//
+// formID 表唯一id
+//
+// indexID 表索引唯一id
 //
 // customID put key index id
 func mkFormResource(dataID, formID, indexID, customID string, fileIndex int) (err error) {

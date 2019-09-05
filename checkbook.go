@@ -17,10 +17,14 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
-	"github.com/ennoo/rivet/utils/log"
 	"strconv"
 	"strings"
 	"sync/atomic"
+)
+
+const (
+	indexAutoID   = "lily_id"
+	indexCustomID = "lily_custom"
 )
 
 // checkbook 数据库对象
@@ -40,60 +44,91 @@ func (c *checkbook) getName() string {
 	return c.name
 }
 
-func (c *checkbook) createForm(formName, comment string) error {
+func (c *checkbook) createForm(formName, comment, formType string) error {
 	// 确定库名不重复
 	for k := range c.forms {
 		if k == formName {
 			return ErrFormExist
 		}
 	}
+	var indexes []*index
 	// 确保表唯一ID不重复
 	formID := c.name2id(formName)
 	// 自增索引ID
-	indexID := c.name2id(strings.Join([]string{formName, "id"}, "_"))
-	// 默认自定义Key生成ID
-	customID := c.name2id(strings.Join([]string{formName, "custom"}, "_"))
+	indexID := c.name2id(strings.Join([]string{formName, indexAutoID}, "_"))
+	indexes = append(indexes, &index{id: indexID, key: indexAutoID})
 	fileIndex := 0
-	if err := mkFormResource(c.id, formID, indexID, customID, fileIndex); nil != err {
-		return err
+	if formType == formTypeSQL {
+		if err := mkFormResourceSQL(c.id, formID, indexID, fileIndex); nil != err {
+			return err
+		}
+	} else {
+		// 默认自定义Key生成ID
+		customID := c.name2id(strings.Join([]string{formName, indexCustomID}, "_"))
+		if err := mkFormResource(c.id, formID, indexID, customID, fileIndex); nil != err {
+			return err
+		}
+		indexes = append(indexes, &index{id: customID, key: indexCustomID})
 	}
 	c.forms[formName] = &shopper{
 		autoID:    0,
 		name:      formName,
 		id:        formID,
-		indexIDs:  []string{indexID, customID},
+		indexes:   indexes,
 		fileIndex: fileIndex,
 		comment:   comment,
 		database:  c,
 		nodes:     []Nodal{},
+		formType:  formType,
 	}
 	return nil
 }
 
 func (c *checkbook) createIndex(formName string, key string, value interface{}) (uint32, error) {
+	// todo
 	return 0, nil
 }
 
-func (c *checkbook) insert(formName string, key string, value interface{}) (uint32, error) {
+func (c *checkbook) put(formName string, key string, value interface{}, update bool) (uint32, error) {
 	form := c.forms[formName] // 获取待操作表
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
 	}
+	indexes := form.getIndexes()                    // 获取表索引ID集合
+	autoID := atomic.AddUint32(form.getAutoID(), 1) // ID自增
+	return c.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
+}
+
+func (c *checkbook) get(formName string, key string) (interface{}, error) {
+	form := c.forms[formName]
+	if nil == form {
+		return nil, shopperIsInvalid(formName)
+	}
+	return form.get(key, hash(key))
+
+}
+
+func (c *checkbook) insert(formName string, value interface{}) (uint32, error) {
+	// todo
+	return 0, nil
+}
+
+func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes []*index, value interface{}, update bool) (uint32, error) {
 	var (
 		chanIndex chan *indexBack
 		err       error
 	)
-	indexIDs := form.getIndexIDs() // 获取表索引ID集合
-	indexLen := len(indexIDs)
-	chanIndex = make(chan *indexBack, indexLen)     // 创建索引ID结果返回通道
-	autoID := atomic.AddUint32(form.getAutoID(), 1) // ID自增
+	indexLen := len(indexes)
+	chanIndex = make(chan *indexBack, indexLen) // 创建索引ID结果返回通道
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
-	for _, indexID := range indexIDs {
-		if err = pool().submitIndex(indexID, func(indexID string) {
-			if indexID == c.name2id(c.indexID(formName, "id")) {
-				chanIndex <- form.put(indexID, strconv.Itoa(int(autoID)), autoID, value)
-			} else if indexID == c.name2id(c.indexID(formName, "custom")) {
-				chanIndex <- form.put(indexID, key, hash(key), value)
+	for _, info := range indexes {
+		if err = pool().submitIndexInfo(autoID, info, func(autoID uint32, index *index) {
+			if index.key == indexAutoID {
+				chanIndex <- form.put(index.id, strconv.Itoa(int(autoID)), autoID, value, update)
+			} else if index.key == indexCustomID {
+				chanIndex <- form.put(index.id, key, hash(key), value, update)
+			} else {
+
 			}
 		}); nil != err {
 			return 0, err
@@ -107,15 +142,18 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 	}
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex
+		if nil != ib.err {
+			return 0, ib.err
+		}
 		if err = pool().submitChanIndex(ib, func(ib *indexBack) {
 			md5Key := gnomon.CryptoHash().MD516(ib.originalKey) // hash(originalKey) 会发生碰撞，因此这里存储md5结果进行反向验证
 			// 写入5位key及16位md5后key
 			appendStr := strings.Join([]string{uint32ToDDuoString(ib.key), md5Key}, "")
-			log.Self.Debug("insert", log.String("appendStr", appendStr), log.Reflect("formIndexFilePath", ib.formIndexFilePath))
+			gnomon.Log().Debug("insert", gnomon.LogField("appendStr", appendStr), gnomon.LogField("formIndexFilePath", ib.formIndexFilePath))
 			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wf)
 			if nil == wr.err {
-				log.Self.Debug("insert", log.String("md5Key", md5Key))
+				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key))
 				ib.thing.md5Key = md5Key
 				ib.thing.seekStart = wr.seekStart
 				ib.thing.seekLast = wr.seekLast
@@ -136,15 +174,9 @@ func (c *checkbook) insert(formName string, key string, value interface{}) (uint
 		}
 	}
 }
-func (c *checkbook) query(formName string, key string, hashKey uint32) (interface{}, error) {
-	form := c.forms[formName]
-	if nil == form {
-		return nil, shopperIsInvalid(formName)
-	}
-	return form.get(key, hashKey)
-}
 
-func (c *checkbook) querySelector(formName string, selector *Selector) (interface{}, error) {
+func (c *checkbook) query(formName string, selector *Selector) (interface{}, error) {
+	// todo
 	if nil == c {
 		return nil, ErrDataIsNil
 	}

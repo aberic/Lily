@@ -40,7 +40,7 @@ func (p *purse) getFlexibleKey() uint32 {
 	return p.flexibleKey
 }
 
-func (p *purse) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
+func (p *purse) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
 	var index uint8
 	if p.level == 0 {
 		index = uint8(key / mallDistance)
@@ -54,7 +54,7 @@ func (p *purse) put(indexID string, originalKey string, key uint32, value interf
 	//}
 	//log.Self.Debug("purse", log.Uint32("key", key), log.Uint32("index", index))
 	data := p.createChild(uint8(index))
-	return data.put(indexID, originalKey, key, value)
+	return data.put(indexID, originalKey, key, value, update)
 }
 
 func (p *purse) get(originalKey string, key uint32) (interface{}, error) {

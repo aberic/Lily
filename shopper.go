@@ -16,6 +16,7 @@ package lily
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -48,11 +49,18 @@ type shopper struct {
 	database  Database // 数据库对象
 	name      string   // 表名，根据需求可以随时变化
 	id        string   // 表唯一ID，不能改变
-	indexIDs  []string // 索引ID集合
+	indexes   []*index // 索引ID集合
 	fileIndex int      // 数据文件存储编号
 	comment   string   // 描述
 	nodes     []Nodal  // 节点
+	formType  string   // 表类型 SQL/JSON/YAML/BYTES
 	fLock     sync.RWMutex
+}
+
+// index 索引对象
+type index struct {
+	id  string // 索引唯一ID
+	key string // 索引字段名称，
 }
 
 func (s *shopper) getAutoID() *uint32 {
@@ -71,19 +79,23 @@ func (s *shopper) getFileIndex() int {
 	return s.fileIndex
 }
 
-func (s *shopper) getIndexIDs() []string {
-	return s.indexIDs
+func (s *shopper) getIndexes() []*index {
+	return s.indexes
+}
+
+func (s *shopper) getFormType() string {
+	return s.formType
 }
 
 func (s *shopper) getDatabaseID() string {
 	return s.database.getID()
 }
 
-func (s *shopper) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
+func (s *shopper) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
 	index := key / cityDistance
 	//index := uint32(0)
 	data := s.createChild(uint8(index))
-	return data.put(indexID, originalKey, key-index*cityDistance, value)
+	return data.put(indexID, originalKey, key-index*cityDistance, value, update)
 }
 
 func (s *shopper) get(originalKey string, key uint32) (interface{}, error) {
@@ -92,7 +104,7 @@ func (s *shopper) get(originalKey string, key uint32) (interface{}, error) {
 	if realIndex, err := binaryMatchData(uint8(index), s); nil == err {
 		return s.nodes[realIndex].get(originalKey, key-index*cityDistance)
 	}
-	return nil, errors.New(strings.Join([]string{"shopper key", originalKey, "is nil"}, " "))
+	return nil, errors.New(strings.Join([]string{"shopper originalKey =", originalKey, "and key =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
 }
 
 func (s *shopper) existChild(index uint8) bool {
@@ -116,16 +128,15 @@ func (s *shopper) createChild(index uint8) Nodal {
 			s.nodes = append(s.nodes, nd)
 			return nd
 		}
-		s.nodes = append(s.nodes, nil)
-		for i := len(s.nodes) - 2; i >= 0; i-- {
+		s.nodes = append(s.nodes, nd)
+		for i := lenData - 1; i >= 0; i-- {
 			if s.nodes[i].getDegreeIndex() < index {
-				s.nodes[i+1] = nd
 				break
 			} else if s.nodes[i].getDegreeIndex() > index {
 				s.nodes[i+1] = s.nodes[i]
 				s.nodes[i] = nd
+				continue
 			}
-			return s.nodes[i]
 		}
 		return nd
 	}

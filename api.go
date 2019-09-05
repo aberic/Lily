@@ -14,6 +14,11 @@
 
 package lily
 
+const (
+	formTypeSQL = "FORM_TYPE_SQL" // formTypeSQL 关系型数据存储方式
+	formTypeDoc = "FORM_TYPE_DOC" // formTypeDoc 文档型数据存储方式
+)
+
 // API 暴露公共API接口
 //
 // 提供通用 k-v 方法，无需创建新的数据库和表等对象
@@ -39,8 +44,18 @@ type API interface {
 	// name 表名称
 	//
 	// comment 表描述
-	CreateForm(databaseName, formName, comment string) error
-	// Put 新增数据
+	CreateForm(databaseName, formName, comment, formType string) error
+	// PutD 新增数据
+	//
+	// 向_default表中新增一条数据，key相同则返回一个Error
+	//
+	// key 插入数据唯一key
+	//
+	// value 插入数据对象
+	//
+	// 返回 hashKey
+	PutD(key string, value interface{}) (uint32, error)
+	// SetD 设置数据，如果存在将被覆盖，如果不存在，则新建
 	//
 	// 向_default表中新增一条数据，key相同则覆盖
 	//
@@ -49,31 +64,71 @@ type API interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	Put(key string, value interface{}) (uint32, error)
-	// Get 获取数据
+	SetD(key string, value interface{}) (uint32, error)
+	// GetD 获取数据
 	//
 	// 向_default表中查询一条数据并返回
 	//
 	// key 插入数据唯一key
-	Get(key string) (interface{}, error)
-	// Insert 新增数据
+	GetD(key string) (interface{}, error)
+	// Put 新增数据
 	//
-	// 向指定表中新增一条数据，key相同则覆盖
+	// 向指定表中新增一条数据，key相同则返回一个Error
+	//
+	// databaseName 数据库名
 	//
 	// formName 表名
 	//
 	// key 插入数据唯一key
 	//
 	// value 插入数据对象
-	Insert(databaseName, formName string, key string, value interface{}) (uint32, error)
-	// Query 获取数据
 	//
-	// 向指定表中查询一条数据并返回
+	// 返回 hashKey
+	Put(databaseName, formName, key string, value interface{}) (uint32, error)
+	// Set 设置数据，如果存在将被覆盖，如果不存在，则新建
+	//
+	// 向指定表中新增一条数据，key相同则覆盖
+	//
+	// databaseName 数据库名
 	//
 	// formName 表名
 	//
 	// key 插入数据唯一key
-	Query(databaseName, formName string, key string) (interface{}, error)
+	//
+	// value 插入数据对象
+	//
+	// 返回 hashKey
+	Set(databaseName, formName, key string, value interface{}) (uint32, error)
+	// Get 获取数据
+	//
+	// 向指定表中查询一条数据并返回
+	//
+	// databaseName 数据库名
+	//
+	// formName 表名
+	//
+	// key 插入数据唯一key
+	Get(databaseName, formName, key string) (interface{}, error)
+	// Insert 新增数据
+	//
+	// 向指定表中新增一条数据，key相同则覆盖
+	//
+	// databaseName 数据库名
+	//
+	// formName 表名
+	//
+	// value 插入数据对象
+	Insert(databaseName, formName string, value interface{}) (uint32, error)
+	// Query 获取数据
+	//
+	// 向指定表中查询一条数据并返回
+	//
+	// databaseName 数据库名
+	//
+	// formName 表名
+	//
+	// selector 条件选择器
+	Query(databaseName, formName string, selector *Selector) (interface{}, error)
 }
 
 // Database 数据库接口
@@ -91,7 +146,25 @@ type Database interface {
 	// name 表名称
 	//
 	// comment 表描述
-	createForm(formName, comment string) error
+	createForm(formName, comment, formType string) error
+	// Put 新增数据
+	//
+	// 向_default表中新增一条数据，key相同则覆盖
+	//
+	// key 插入数据唯一key
+	//
+	// value 插入数据对象
+	//
+	// 返回 hashKey
+	//
+	// update 本次是否执行更新操作
+	put(formName string, key string, value interface{}, update bool) (uint32, error)
+	// Get 获取数据
+	//
+	// 向_default表中查询一条数据并返回
+	//
+	// key 插入数据唯一key
+	get(formName string, key string) (interface{}, error)
 	// Insert 新增数据
 	//
 	// 向指定表中新增一条数据，key相同则覆盖
@@ -103,33 +176,26 @@ type Database interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	insert(formName string, key string, value interface{}) (uint32, error)
-	// Query 获取数据
-	//
-	// 向指定表中查询一条数据并返回
-	//
-	// formName 表名
-	//
-	// key 插入数据唯一key
-	query(formName string, key string, hashKey uint32) (interface{}, error)
+	insert(formName string, value interface{}) (uint32, error)
 	// querySelector 根据条件检索
 	//
 	// formName 表名
 	//
 	// selector 条件选择器
-	querySelector(formName string, selector *Selector) (interface{}, error)
+	query(formName string, selector *Selector) (interface{}, error)
 }
 
 // Form 表接口
 //
 // 提供表基本操作方法
 type Form interface {
-	Data                   // Data 表内数据操作接口
-	getAutoID() *uint32    // getAutoID 返回表当前自增ID值
-	getID() string         // getID 返回表唯一ID
-	getName() string       // getName 返回表名称
-	getFileIndex() int     // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
-	getIndexIDs() []string // getIndexIDs 获取表下索引ID集合
+	Data                  // Data 表内数据操作接口
+	getAutoID() *uint32   // getAutoID 返回表当前自增ID值
+	getID() string        // getID 返回表唯一ID
+	getName() string      // getName 返回表名称
+	getFileIndex() int    // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
+	getIndexes() []*index // getIndexes 获取表下索引集合
+	getFormType() string  // getFormType 获取表类型
 }
 
 // Nodal 节点对象接口
@@ -163,7 +229,9 @@ type Data interface {
 	// key 索引key，可通过hash转换string生成
 	//
 	// value 存储对象
-	put(indexID string, originalKey string, key uint32, value interface{}) *indexBack
+	//
+	// update 本次是否执行更新操作
+	put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型

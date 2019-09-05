@@ -16,8 +16,7 @@ package lily
 
 import (
 	"errors"
-	"github.com/ennoo/rivet/utils/cryptos"
-	"github.com/ennoo/rivet/utils/log"
+	"github.com/aberic/gnomon"
 	"strings"
 )
 
@@ -34,14 +33,16 @@ func (b *box) getFlexibleKey() uint32 {
 	return 0
 }
 
-func (b *box) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
-	b.createChildSelf(originalKey, key, value)
+func (b *box) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
+	if !update && b.createChildSelf(originalKey, key, value) {
+		return &indexBack{err: ErrDataExist}
+	}
 	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value))
 	return b.things[len(b.things)-1].put(indexID, originalKey, key, value)
 }
 
 func (b *box) get(originalKey string, key uint32) (interface{}, error) {
-	log.Self.Debug("box-get", log.String("originalKey", originalKey))
+	gnomon.Log().Debug("box-get", gnomon.LogField("originalKey", originalKey))
 	if realIndex, exist := b.existChildSelf(originalKey, key); exist {
 		return b.things[realIndex].get()
 	}
@@ -58,23 +59,24 @@ func (b *box) createChild(index uint8) Nodal {
 
 func (b *box) existChildSelf(originalKey string, key uint32) (int, bool) {
 	for index, thg := range b.things {
-		log.Self.Debug("existChildSelf", log.String("thg.md5Key", thg.md5Key))
-		if strings.EqualFold(thg.md5Key, cryptos.MD516(originalKey)) {
+		gnomon.Log().Debug("existChildSelf", gnomon.LogField("thg.md5Key", thg.md5Key), gnomon.LogField("md516", gnomon.CryptoHash().MD516(originalKey)))
+		if strings.EqualFold(thg.md5Key, gnomon.CryptoHash().MD516(originalKey)) {
 			return index, true
 		}
 	}
 	return 0, false
 }
 
-func (b *box) createChildSelf(originalKey string, key uint32, value interface{}) {
+func (b *box) createChildSelf(originalKey string, key uint32, value interface{}) bool {
 	if len(b.things) > 0 {
 		for _, thg := range b.things {
-			if strings.EqualFold(thg.md5Key, cryptos.MD516(originalKey)) {
-				return
+			if strings.EqualFold(thg.md5Key, gnomon.CryptoHash().MD516(originalKey)) {
+				return true
 			}
 		}
 	}
 	b.things = append(b.things, &thing{nodal: b})
+	return false
 }
 
 func (b *box) childCount() int {

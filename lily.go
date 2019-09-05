@@ -16,8 +16,7 @@ package lily
 
 import (
 	"errors"
-	"github.com/ennoo/rivet/utils/cryptos"
-	"github.com/ennoo/rivet/utils/string"
+	"github.com/aberic/gnomon"
 	"strings"
 	"sync"
 )
@@ -37,8 +36,12 @@ var (
 	ErrDatabaseExist = errors.New("database already exist")
 	// ErrFormExist 自定义error信息
 	ErrFormExist = errors.New("form already exist")
+	// ErrDataExist 自定义error信息
+	ErrDataExist = errors.New("data already exist")
 	// ErrDataIsNil 自定义error信息
 	ErrDataIsNil = errors.New("database had never been created")
+	// ErrKeyIsNil 自定义error信息
+	ErrKeyIsNil = errors.New("put key can not be nil")
 )
 
 // Lily 祖宗！
@@ -99,19 +102,19 @@ func (l *Lily) initialize() {
 			}
 			panic(err)
 		}
-		if err = data.createForm(userForm, "default user form"); nil != err {
+		if err = data.createForm(userForm, "default user form", formTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(databaseForm, "default database form"); nil != err {
+		if err = data.createForm(databaseForm, "default database form", formTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(indexForm, "default index form"); nil != err {
+		if err = data.createForm(indexForm, "default index form", formTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(defaultForm, "default Data form"); nil != err {
+		if err = data.createForm(defaultForm, "default Data form", formTypeDoc); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
@@ -148,11 +151,27 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 // name 表名称
 //
 // comment 表描述
-func (l *Lily) CreateForm(databaseName, formName, comment string) error {
+func (l *Lily) CreateForm(databaseName, formName, comment, formType string) error {
 	if database := l.databases[databaseName]; nil != database {
-		return database.createForm(formName, comment)
+		return database.createForm(formName, comment, formType)
 	}
 	return ErrDataIsNil
+}
+
+// Put 新增数据
+//
+// 向_default表中新增一条数据，key相同则返回一个Error
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+//
+// 返回 hashKey
+func (l *Lily) PutD(key string, value interface{}) (uint32, error) {
+	if gnomon.String().IsEmpty(key) {
+		return 0, ErrKeyIsNil
+	}
+	return l.databases[sysDatabase].put(defaultForm, key, value, false)
 }
 
 // Put 新增数据
@@ -164,11 +183,11 @@ func (l *Lily) CreateForm(databaseName, formName, comment string) error {
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) Put(key string, value interface{}) (uint32, error) {
-	if nil == l || nil == l.databases[defaultForm] {
-		return 0, ErrDataIsNil
+func (l *Lily) SetD(key string, value interface{}) (uint32, error) {
+	if gnomon.String().IsEmpty(key) {
+		return 0, ErrKeyIsNil
 	}
-	return l.Insert(sysDatabase, defaultForm, key, value)
+	return l.databases[sysDatabase].put(defaultForm, key, value, true)
 }
 
 // Get 获取数据
@@ -176,11 +195,70 @@ func (l *Lily) Put(key string, value interface{}) (uint32, error) {
 // 向_default表中查询一条数据并返回
 //
 // key 插入数据唯一key
-func (l *Lily) Get(key string) (interface{}, error) {
-	if nil == l || nil == l.databases[defaultForm] {
+func (l *Lily) GetD(key string) (interface{}, error) {
+	return l.databases[sysDatabase].get(defaultForm, key)
+}
+
+// Put 新增数据
+//
+// 向指定表中新增一条数据，key相同则返回一个Error
+//
+// databaseName 数据库名
+//
+// formName 表名
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+//
+// 返回 hashKey
+func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint32, error) {
+	if gnomon.String().IsEmpty(key) {
+		return 0, ErrKeyIsNil
+	}
+	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
 	}
-	return l.Query(sysDatabase, defaultForm, key)
+	return l.databases[databaseName].put(formName, key, value, false)
+}
+
+// Put 新增数据
+//
+// 向指定表中新增一条数据，key相同则覆盖
+//
+// databaseName 数据库名
+//
+// formName 表名
+//
+// key 插入数据唯一key
+//
+// value 插入数据对象
+//
+// 返回 hashKey
+func (l *Lily) Set(databaseName, formName, key string, value interface{}) (uint32, error) {
+	if gnomon.String().IsEmpty(key) {
+		return 0, ErrKeyIsNil
+	}
+	if nil == l || nil == l.databases[databaseName] {
+		return 0, ErrDataIsNil
+	}
+	return l.databases[databaseName].put(formName, key, value, true)
+}
+
+// Get 获取数据
+//
+// 向指定表中查询一条数据并返回
+//
+// databaseName 数据库名
+//
+// formName 表名
+//
+// key 插入数据唯一key
+func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
+	if nil == l || nil == l.databases[databaseName] {
+		return 0, ErrDataIsNil
+	}
+	return l.databases[databaseName].get(formName, key)
 }
 
 // Insert 新增数据
@@ -192,11 +270,11 @@ func (l *Lily) Get(key string) (interface{}, error) {
 // key 插入数据唯一key
 //
 // value 插入数据对象
-func (l *Lily) Insert(databaseName, formName string, key string, value interface{}) (uint32, error) {
+func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint32, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
 	}
-	return l.databases[databaseName].insert(formName, key, value)
+	return l.databases[databaseName].insert(formName, value)
 }
 
 // Query 获取数据
@@ -206,23 +284,23 @@ func (l *Lily) Insert(databaseName, formName string, key string, value interface
 // formName 表名
 //
 // key 插入数据唯一key
-func (l *Lily) Query(databaseName, formName string, key string) (interface{}, error) {
+func (l *Lily) Query(databaseName, formName string, selector *Selector) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return nil, ErrDataIsNil
 	}
-	return l.databases[databaseName].query(formName, key, hash(key))
+	return l.databases[databaseName].query(formName, selector)
 }
 
 // name2id 确保数据库唯一ID不重复
 func (l *Lily) name2id(name string) string {
-	id := cryptos.MD516(name)
+	id := gnomon.CryptoHash().MD516(name)
 	have := true
 	for have {
 		have = false
 		for _, v := range l.databases {
 			if v.getID() == id {
 				have = true
-				id = cryptos.MD516(strings.Join([]string{id, str.RandSeq(3)}, ""))
+				id = gnomon.CryptoHash().MD516(strings.Join([]string{id, gnomon.String().RandSeq(3)}, ""))
 				break
 			}
 		}

@@ -15,7 +15,7 @@
 package lily
 
 import (
-	"github.com/ennoo/rivet/utils/log"
+	"github.com/aberic/gnomon"
 	"strconv"
 	"strings"
 )
@@ -30,7 +30,11 @@ type thing struct {
 
 func (t *thing) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
 	formIndexFilePath := t.getFormIndexFilePath(indexID)
-	log.Self.Debug("box", log.String("originalKey", originalKey), log.Uint32("key", key), log.Reflect("value", value), log.String("formIndexFilePath", formIndexFilePath))
+	gnomon.Log().Debug("box",
+		gnomon.LogField("originalKey", originalKey),
+		gnomon.LogField("key", key),
+		gnomon.LogField("value", value),
+		gnomon.LogField("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
 		indexNodal:        t.nodal.getPreNodal().getPreNodal(),

@@ -15,7 +15,7 @@
 package lily
 
 import (
-	"github.com/ennoo/rivet/utils/env"
+	"github.com/aberic/gnomon"
 	"path/filepath"
 )
 
@@ -70,6 +70,6 @@ var (
 )
 
 func init() {
-	rootDir = env.GetEnvDefault(dataPath, "test/t1")
+	rootDir = gnomon.Env().GetEnvDefault(dataPath, "test/t1")
 	dataDir = filepath.Join(rootDir, "Data")
 }

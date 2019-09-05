@@ -121,15 +121,18 @@ var (
 func TestLilyPutGet(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
-	if nil != err {
-		t.Error(err)
-	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
-	hashKey, err := l.Put("young", 101)
-	t.Log("put young = 101 | hashKey =", hashKey, "| err = ", err)
-	i, err := l.Get("young")
-	t.Log("get young =", i, "| err = ", err)
+	hashKey, err := l.PutD("young", 101)
+	t.Log("put 101 young | hashKey =", hashKey, "| err = ", err)
+	i, err := l.GetD("young")
+	t.Log("get 101 young =", i, "| err = ", err)
+	hashKey, err = l.SetD("young", 102)
+	t.Log("put 102 young | hashKey =", hashKey, "| err = ", err)
+	i, err = l.GetD("young")
+	t.Log("get 102 young =", i, "| err = ", err)
+	hashKey, err = l.PutD("young", 103)
+	t.Log("put 103 young | hashKey =", hashKey, "| err = ", err)
+	i, err = l.GetD("young")
+	t.Log("get 103 young =", i, "| err = ", err)
 }
 
 func TestPutGet(t *testing.T) {
@@ -137,17 +140,27 @@ func TestPutGet(t *testing.T) {
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
-		t.Error(err)
+		t.Log(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
-	if _, err = l.Insert(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
-		t.Error(err)
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
+	if _, err = l.Put(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
+		t.Log(err)
 	}
-	t.Log("InsertInt err =", err)
-	if i, err := l.Query(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
-		t.Error(err)
+	if i, err := l.Get(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
+		t.Log(err)
 	} else {
 		t.Log("get 198 =", i, "err =", err)
+	}
+	if _, err = l.Set(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
+		t.Log(err)
+	}
+	if i, err := l.Get(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
+		t.Log(err)
+	} else {
+		t.Log("get 198 =", i, "err =", err)
+	}
+	if _, err = l.Put(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
+		t.Log(err)
 	}
 	time.Sleep(5 * time.Second)
 }
@@ -159,14 +172,15 @@ func TestPutGets(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
 	for i := 1; i <= 255; i++ {
-		_, _ = l.Insert(checkbookName, shopperName, string(i), i)
+		_, _ = l.Put(checkbookName, shopperName, strconv.Itoa(i), i)
 	}
 	for i := 1; i <= 255; i++ {
-		j, err := l.Query(checkbookName, shopperName, string(i))
+		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
+	time.Sleep(5 * time.Second)
 }
 
 func TestQuerySelector(t *testing.T) {
@@ -176,29 +190,29 @@ func TestQuerySelector(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "")
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
 	//for i := 1; i <= 10; i++ {
 	//	_ = checkbook.InsertInt(formName, i, i+10)
 	//}
-	_, err = l.Insert(checkbookName, shopperName, "1000", 1000)
+	_, err = l.Put(checkbookName, shopperName, "1000", 1000)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "100", 100)
+	_, err = l.Put(checkbookName, shopperName, "100", 100)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "110000", 110000)
+	_, err = l.Put(checkbookName, shopperName, "110000", 110000)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "1100", 1100)
+	_, err = l.Put(checkbookName, shopperName, "1100", 1100)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "10000", 10000)
+	_, err = l.Put(checkbookName, shopperName, "10000", 10000)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "1", 1)
+	_, err = l.Put(checkbookName, shopperName, "1", 1)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "10", 10)
+	_, err = l.Put(checkbookName, shopperName, "10", 10)
 	t.Log("err = ", err)
-	_, err = l.Insert(checkbookName, shopperName, "110", 110)
+	_, err = l.Put(checkbookName, shopperName, "110", 110)
 	t.Log("err = ", err)
-	i, err := data.querySelector(shopperName, &Selector{})
+	i, err := data.query(shopperName, &Selector{})
 	t.Log("get ", i, " = ", i, "err = ", err)
-	i, err = data.querySelector(shopperName, &Selector{Sort: &sort{}})
+	i, err = data.query(shopperName, &Selector{Sort: &sort{}})
 	t.Log("get ", i, " = ", i, "err = ", err)
 }
 
