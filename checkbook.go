@@ -52,12 +52,12 @@ func (c *checkbook) createForm(formName, comment, formType string) error {
 			return ErrFormExist
 		}
 	}
-	var indexes []*index
+	indexes := make(map[string]*index)
 	// 确保表唯一ID不重复
 	formID := c.name2id(formName)
 	// 自增索引ID
 	indexID := c.name2id(strings.Join([]string{formName, indexAutoID}, "_"))
-	indexes = append(indexes, &index{id: indexID, key: indexAutoID})
+	indexes[indexID] = &index{id: indexID, key: indexAutoID}
 	fileIndex := 0
 	if formType == formTypeSQL {
 		if err := mkFormResourceSQL(c.id, formID, indexID, fileIndex); nil != err {
@@ -69,7 +69,7 @@ func (c *checkbook) createForm(formName, comment, formType string) error {
 		if err := mkFormResource(c.id, formID, indexID, customID, fileIndex); nil != err {
 			return err
 		}
-		indexes = append(indexes, &index{id: customID, key: indexCustomID})
+		indexes[customID] = &index{id: customID, key: indexCustomID}
 	}
 	c.forms[formName] = &shopper{
 		autoID:    0,
@@ -114,6 +114,15 @@ func (c *checkbook) insert(formName string, value interface{}, update bool) (uin
 	return 0, nil
 }
 
+func (c *checkbook) query(formName string, selector *Selector) (interface{}, error) {
+	if nil == c {
+		return nil, ErrDataIsNil
+	}
+	selector.formName = formName
+	selector.checkbook = c
+	return selector.query()
+}
+
 func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey uint32, support bool) {
 	support = true
 	switch value.Kind() {
@@ -121,15 +130,16 @@ func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey
 		return "", 0, false
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i64 := value.Int()
-
-		key = strconv.Itoa(int(value.Int()))
-		hashKey = uint32(value.Int())
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int64ToUint32Index(i64)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		key = strconv.Itoa(int(value.Uint()))
-		hashKey = uint32(value.Uint())
+		ui64 := value.Uint()
+		key = gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint64ToDDuoString(ui64), 5)
+		hashKey = uint64ToUint32Index(ui64)
 	case reflect.Float32, reflect.Float64:
-		key = strconv.Itoa(int(value.Float()))
-		hashKey = uint32(value.Float())
+		i64 := gnomon.Scale().Wrap(value.Float(), 4)
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int64ToUint32Index(i64)
 	case reflect.String:
 		key = value.String()
 		hashKey = hash(key)
@@ -137,7 +147,7 @@ func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey
 	return
 }
 
-func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes []*index, value interface{}, update bool) (uint32, error) {
+func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]*index, value interface{}, update bool) (uint32, error) {
 	var (
 		chanIndex chan *indexBack
 		err       error
@@ -184,7 +194,7 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 		if err = pool().submitChanIndex(ib, func(ib *indexBack) {
 			md5Key := gnomon.CryptoHash().MD516(ib.originalKey) // hash(originalKey) 会发生碰撞，因此这里存储md5结果进行反向验证
 			// 写入5位key及16位md5后key
-			appendStr := strings.Join([]string{uint32ToDDuoString(ib.key), md5Key}, "")
+			appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.key), 5), md5Key}, "")
 			gnomon.Log().Debug("insert", gnomon.LogField("appendStr", appendStr), gnomon.LogField("formIndexFilePath", ib.formIndexFilePath))
 			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wf)
@@ -209,16 +219,6 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 			return autoID, nil
 		}
 	}
-}
-
-func (c *checkbook) query(formName string, selector *Selector) (interface{}, error) {
-	// todo
-	if nil == c {
-		return nil, ErrDataIsNil
-	}
-	selector.formName = formName
-	selector.checkbook = c
-	return selector.query()
 }
 
 // shopperIsInvalid 自定义error信息

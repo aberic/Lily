@@ -15,32 +15,30 @@
 package lily
 
 import (
+	"github.com/aberic/gnomon"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
-var (
-	databaseName = "checkbook"
-	formName     = "shopper"
-)
-
 func BenchmarkInsert(b *testing.B) {
+	gnomon.Log().Set(gnomon.ErrorLevel, false)
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateDatabase(databaseName)
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		b.Error(err)
 	}
-	_ = data.createForm(formName, "", formTypeDoc)
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
 	now := time.Now().UnixNano()
 	for i := 1; i <= b.N; i++ {
 		go func(formName string, i int) {
 			//_, _ = checkbook.InsertInt(formName, i, i+10)
-			_, _ = l.Put(databaseName, formName, string(i), i+10)
-		}(formName, i)
+			_, _ = l.Put(checkbookName, formName, strconv.Itoa(i), i+10)
+		}(shopperName, i)
 		//_, _ = checkbook.InsertInt(formName, i, i+10)
 	}
 	b.Log("time =", (time.Now().UnixNano()-now)/1e6)

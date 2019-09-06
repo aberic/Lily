@@ -166,6 +166,7 @@ func TestPutGet(t *testing.T) {
 }
 
 func TestPutGets(t *testing.T) {
+	//gnomon.Log().Set(gnomon.ErrorLevel, false)
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName)
@@ -615,84 +616,6 @@ func TestFileWriteInt(t *testing.T) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func TestInt32Hex(t *testing.T) {
-	var i = 65536326
-	t.Log("i =", i)
-	hexStr := int32ToHexString(i)
-	t.Log("intToHexString =", hexStr, " |", hexStr[0:1], " |", hexStr[1:2], " |", hexStr[2:3], " |", hexStr[7:8])
-	j, err := hexStringToInt32(hexStr)
-	if nil != err {
-		t.Error(err)
-	}
-	t.Log("j =", j)
-}
-
-func TestInt64Hex(t *testing.T) {
-	var i int64
-	i = 10997
-	t.Log("i =", i)
-	hexStr := int64ToHexString(i)
-	t.Log("int64ToHexString =", hexStr, " |", hexStr[0:1], " |", hexStr[1:2], " |", hexStr[2:3], " |", hexStr[7:8])
-	j, err := hexStringToInt64(hexStr)
-	if nil != err {
-		t.Error(err)
-	}
-	t.Log("j =", j)
-}
-
-func TestInt32Duo(t *testing.T) {
-	var i = 65536326
-	t.Log("i =", i)
-	duoStr := intToDuoString(i)
-	t.Log("intToDuoString =", duoStr)
-	j, err := duoStringToInt32(duoStr)
-	if nil != err {
-		t.Error(err)
-	}
-	t.Log("j =", j)
-}
-
-func TestUInt32Duo(t *testing.T) {
-	var i uint32
-	i = 4153632644
-	i = 4294967295
-	t.Log("i =", i)
-	duoStr := uint32ToDuoString(i)
-	t.Log("intToDuoString =", duoStr)
-	j, err := duoStringToUint32(duoStr)
-	if nil != err {
-		t.Error(err)
-	}
-	t.Log("j =", j)
-}
-
-func TestUInt32DDuo(t *testing.T) {
-	var i uint32
-	i = 4153632644
-	i = 4294967295
-	t.Log("i =", i)
-	duoStr := uint32ToDDuoString(i)
-	t.Log("intToDuoString =", duoStr)
-	j, err := dDuoStringToUint32(duoStr)
-	if nil != err {
-		t.Error(err)
-	}
-	t.Log("j =", j)
-}
-
-func TestInt64Duo(t *testing.T) {
-	var i int64
-	i = 10997
-	t.Log("i =", i)
-	duoStr := int64ToDuoString(i)
-	t.Log("int64ToDuoString =", duoStr)
-	j, err := duoStringToInt64(duoStr)
-	if nil != err {
-		t.Error(err)
-	}
-	t.Log("j =", j)
-}
 
 func TestMap(t *testing.T) {
 	var mp = make(map[string]int)

@@ -19,13 +19,15 @@ import (
 )
 
 // Selector 检索选择器
+//
+// 查询顺序 scope -> conditions -> match -> skip -> sort -> limit
 type Selector struct {
 	Scope      []*scope     `json:"scopes"`     // Scope 范围查询
 	Conditions []*condition `json:"conditions"` // Conditions 条件查询
 	Matches    []*match     `json:"matches"`    // Matches 匹配查询
 	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
-	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
 	Sort       *sort        `json:"sort"`       // Sort 排序方式
+	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
 	checkbook  *checkbook   // 数据库对象
 	formName   string       // 表名
 }
@@ -34,7 +36,19 @@ type Selector struct {
 //
 // 查询出来结果集合的起止位置
 type scope struct {
-	Param string `json:"param"` // 参数名
+	// 参数名，由对象结构层级字段通过'.'组成，如
+	//
+	// ref := &ref{
+	//		i: 1,
+	//		s: "2",
+	//		in: refIn{
+	//			i: 3,
+	//			s: "4",
+	//		},
+	//	}
+	//
+	// key可取'i','in.s'
+	Param string `json:"param"`
 	Start int32  `json:"Start"` // 起始位置
 	End   int32  `json:"end"`   // 终止位置
 }
@@ -43,7 +57,19 @@ type scope struct {
 //
 // 查询过程中不满足条件的记录将被移除出结果集
 type condition struct {
-	Param string      `json:"param"` // 参数名
+	// 参数名，由对象结构层级字段通过'.'组成，如
+	//
+	// ref := &ref{
+	//		i: 1,
+	//		s: "2",
+	//		in: refIn{
+	//			i: 3,
+	//			s: "4",
+	//		},
+	//	}
+	//
+	// key可取'i','in.s'
+	Param string      `json:"param"`
 	Cond  string      `json:"cond"`  // 条件 gt/lt/eq/dif 大于/小于/等于/不等
 	Value interface{} `json:"value"` // 比较对象，支持int、string、float和bool
 }
@@ -52,14 +78,38 @@ type condition struct {
 //
 // 查询过程中匹配与指定参数值相等的结果
 type match struct {
-	Param string      `json:"param"` // 参数名
+	// 参数名，由对象结构层级字段通过'.'组成，如
+	//
+	// ref := &ref{
+	//		i: 1,
+	//		s: "2",
+	//		in: refIn{
+	//			i: 3,
+	//			s: "4",
+	//		},
+	//	}
+	//
+	// key可取'i','in.s'
+	Param string      `json:"param"`
 	Value interface{} `json:"value"` // 参数值 string/int/float64/bool
 }
 
 // sort 排序方式
 type sort struct {
-	Param string `json:"param"` // 参数名
-	ASC   bool   `json:"asc"`   // 是否升序
+	// 参数名，由对象结构层级字段通过'.'组成，如
+	//
+	// ref := &ref{
+	//		i: 1,
+	//		s: "2",
+	//		in: refIn{
+	//			i: 3,
+	//			s: "4",
+	//		},
+	//	}
+	//
+	// key可取'i','in.s'
+	Param string `json:"param"`
+	ASC   bool   `json:"asc"` // 是否升序
 }
 
 //func (s *Selector) formName(formName string) string {

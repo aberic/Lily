@@ -209,13 +209,32 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	Data                  // Data 表内数据操作接口
-	getAutoID() *uint32   // getAutoID 返回表当前自增ID值
-	getID() string        // getID 返回表唯一ID
-	getName() string      // getName 返回表名称
-	getFileIndex() int    // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
-	getIndexes() []*index // getIndexes 获取表下索引集合
-	getFormType() string  // getFormType 获取表类型
+	Data                           // Data 表内数据操作接口
+	getAutoID() *uint32            // getAutoID 返回表当前自增ID值
+	getID() string                 // getID 返回表唯一ID
+	getName() string               // getName 返回表名称
+	getFileIndex() int             // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
+	getIndexes() map[string]*index // getIndexes 获取表下索引集合
+	getFormType() string           // getFormType 获取表类型
+}
+
+type Index interface {
+	Data
+	// id 索引唯一ID
+	getID() string
+	// 索引字段名称，由对象结构层级字段通过'.'组成，如
+	//
+	// ref := &ref{
+	//		i: 1,
+	//		s: "2",
+	//		in: refIn{
+	//			i: 3,
+	//			s: "4",
+	//		},
+	//	}
+	//
+	// key可取'i','in.s'
+	getKey() string
 }
 
 // Nodal 节点对象接口

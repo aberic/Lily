@@ -104,7 +104,9 @@ func (f *filed) running() {
 				gnomon.Log().Debug("running", gnomon.LogField("type", "moldIndex"))
 				it := task.(*indexTask)
 				// 写入5位key及16位md5后key及5位起始seek和4位持续seek
-				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(), uint32ToDDuoString(it.accept.seekStart), intToDDuoString(it.accept.seekLast)}, ""))
+				_, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(),
+					gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(it.accept.seekStart), 5),
+					gnomon.String().PrefixSupplementZero(gnomon.Scale().IntToDDuoString(it.accept.seekLast), 4)}, ""))
 				gnomon.Log().Debug("running", gnomon.LogErr(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: it.accept.seekStart,
