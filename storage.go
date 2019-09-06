@@ -152,9 +152,9 @@ type storage struct {
 	files map[string]*filed
 }
 
-func (s *storage) appendIndex(node Nodal, path, key string, wr *writeResult) *writeResult {
-	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", path))
-	return s.writeIndex(node, path, key, wr)
+func (s *storage) appendIndex(ib IndexBack, key string, wr *writeResult) *writeResult {
+	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", ib.getFormIndexFilePath()))
+	return s.writeIndex(ib.getNodal(), ib.getFormIndexFilePath(), key, wr)
 }
 
 func (s *storage) appendForm(form Form, path string, value interface{}) *writeResult {

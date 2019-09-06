@@ -247,14 +247,12 @@ type Nodal interface {
 	getPreNodal() Nodal            // getPreNodal 获取父节点对象
 }
 
-// indexBack 索引对象
-type indexBack struct {
-	formIndexFilePath string // 索引文件所在路径
-	indexNodal        Nodal  // 索引文件所对应level2层级度节点
-	thing             *thing // 索引对应节点对象子集
-	originalKey       string // put key
-	key               uint32 // put hash key
-	err               error
+type IndexBack interface {
+	getFormIndexFilePath() string // 索引文件所在路径
+	getNodal() Nodal              // 索引文件所对应level2层级度节点
+	getThing() *thing             // 索引对应节点对象子集
+	getHashKey() uint32           // put hash key
+	getErr() error
 }
 
 // Data 表内数据操作接口
@@ -270,7 +268,7 @@ type Data interface {
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack
+	put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型

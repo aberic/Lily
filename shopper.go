@@ -104,7 +104,7 @@ func (s *shopper) getDatabaseID() string {
 	return s.database.getID()
 }
 
-func (s *shopper) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
+func (s *shopper) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	index := key / cityDistance
 	//index := uint32(0)
 	data := s.createChild(uint8(index))

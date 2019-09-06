@@ -151,7 +151,7 @@ func TestPutGet(t *testing.T) {
 	} else {
 		t.Log("get 198 =", i, "err =", err)
 	}
-	if _, err = l.Set(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
+	if _, err = l.Set(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
 		t.Log(err)
 	}
 	if i, err := l.Get(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
@@ -477,7 +477,7 @@ func TestLock(t *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TestFileRandomWrite(t *testing.T) {
+func TestFileRandomWrite1(t *testing.T) {
 	f, err := os.OpenFile(filepath.Join(dataDir, "a.txt"), os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		t.Error(err)
@@ -501,6 +501,33 @@ func TestFileRandomWrite(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+func TestFileRandomWrite2(t *testing.T) {
+	f, err := os.OpenFile(filepath.Join(dataDir, "a.txt"), os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		t.Error(err)
+	}
+	seek, err := f.Seek(100, io.SeekStart)
+	t.Log("seek = ", seek)
+	seek1, err := f.WriteString("document")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("seek1 = ", seek1)
+	//seek2, err := f.Seek(-3, io.SeekCurrent) //表示文件的起始位置，从第二个字符往后写入。
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//t.Log("seek2 = ", seek2)
+	//seek3, err := f.WriteString("$$$$")
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//t.Log("seek3 = ", seek3)
+	//err = f.Close()
+	//if err != nil {
+	//	t.Error(err)
+	//}
 }
 
 func TestFileAppendWrite(t *testing.T) {

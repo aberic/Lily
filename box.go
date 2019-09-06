@@ -33,7 +33,7 @@ func (b *box) getFlexibleKey() uint32 {
 	return 0
 }
 
-func (b *box) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
+func (b *box) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	thg, exist := b.createChildSelf(originalKey, key, value)
 	if !update && exist {
 		return &indexBack{err: ErrDataExist}

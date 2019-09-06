@@ -149,11 +149,58 @@ func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey
 
 func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]*index, value interface{}, update bool) (uint32, error) {
 	var (
-		chanIndex chan *indexBack
+		ibs []IndexBack
+		err error
+	)
+	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
+	if ibs, err = c.rangeIndexes(form, key, autoID, indexes, value, update); nil != err {
+		return 0, err
+	}
+	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
+	// 存储数据到表文件
+	wf := store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value)
+	if nil != wf.err {
+		return 0, wf.err
+	}
+	for _, ib := range ibs {
+		if err = pool().submitChanIndex(key, ib, func(key string, ib IndexBack) {
+			md5Key := gnomon.CryptoHash().MD516(key) // hash(key) 会发生碰撞，因此这里存储md5结果进行反向验证
+			// 写入5位key及16位md5后key
+			appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
+			gnomon.Log().Debug("insert", gnomon.LogField("appendStr", appendStr), gnomon.LogField("formIndexFilePath", ib.getFormIndexFilePath()))
+			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
+			wr := store().appendIndex(ib, appendStr, wf)
+			if nil == wr.err {
+				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key))
+				ib.getThing().md5Key = md5Key
+				ib.getThing().seekStart = wr.seekStart
+				ib.getThing().seekLast = wr.seekLast
+			}
+			wrIndexBack <- wr
+		}); nil != err {
+			return 0, err
+		}
+	}
+	for {
+		select {
+		case wrIndex := <-wrIndexBack:
+			if nil != wrIndex.err {
+				return 0, wrIndex.err
+			}
+			// todo 回滚策略待完成
+			return autoID, nil
+		}
+	}
+}
+
+// rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
+func (c *checkbook) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]*index, value interface{}, update bool) ([]IndexBack, error) {
+	var (
+		chanIndex chan IndexBack
 		err       error
 	)
 	indexLen := len(indexes)
-	chanIndex = make(chan *indexBack, indexLen) // 创建索引ID结果返回通道
+	chanIndex = make(chan IndexBack, indexLen) // 创建索引ID结果返回通道
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	for _, info := range indexes {
 		if err = pool().submitIndexInfo(autoID, info, func(autoID uint32, index *index) {
@@ -177,52 +224,18 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 				}
 			}
 		}); nil != err {
-			return 0, err
+			return nil, err
 		}
 	}
-	var ibs []*indexBack
+	var ibs []IndexBack
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex
-		if nil != ib.err {
-			return 0, ib.err
+		if err = ib.getErr(); nil != err {
+			return nil, err
 		}
 		ibs = append(ibs, ib)
 	}
-	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
-	// 存储数据到表文件
-	wf := store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value)
-	if nil != wf.err {
-		return 0, wf.err
-	}
-	for _, ib := range ibs {
-		if err = pool().submitChanIndex(ib, func(ib *indexBack) {
-			md5Key := gnomon.CryptoHash().MD516(ib.originalKey) // hash(originalKey) 会发生碰撞，因此这里存储md5结果进行反向验证
-			// 写入5位key及16位md5后key
-			appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.key), 5), md5Key}, "")
-			gnomon.Log().Debug("insert", gnomon.LogField("appendStr", appendStr), gnomon.LogField("formIndexFilePath", ib.formIndexFilePath))
-			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
-			wr := store().appendIndex(ib.indexNodal, ib.formIndexFilePath, appendStr, wf)
-			if nil == wr.err {
-				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key))
-				ib.thing.md5Key = md5Key
-				ib.thing.seekStart = wr.seekStart
-				ib.thing.seekLast = wr.seekLast
-			}
-			wrIndexBack <- wr
-		}); nil != err {
-			return 0, err
-		}
-	}
-	for {
-		select {
-		case wrIndex := <-wrIndexBack:
-			if nil != wrIndex.err {
-				return 0, wrIndex.err
-			}
-			// todo 回滚策略待完成
-			return autoID, nil
-		}
-	}
+	return ibs, nil
 }
 
 // shopperIsInvalid 自定义error信息

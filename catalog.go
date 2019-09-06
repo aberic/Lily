@@ -42,7 +42,7 @@ func (c *catalog) getKey() string {
 	return c.key
 }
 
-func (c *catalog) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
+func (c *catalog) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	index := key / cityDistance
 	//index := uint32(0)
 	data := c.createChild(uint8(index))

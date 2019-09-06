@@ -37,7 +37,6 @@ func (t *thing) put(indexID string, originalKey string, key uint32, value interf
 		formIndexFilePath: formIndexFilePath,
 		indexNodal:        t.nodal.getPreNodal().getPreNodal(),
 		thing:             t,
-		originalKey:       originalKey,
 		key:               key,
 		err:               nil,
 	}
@@ -62,4 +61,38 @@ func (t *thing) getFormIndexFilePath(indexID string) (formIndexFilePath string) 
 	formID := spr.id
 	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
 	return pathFormIndexFile(dataID, formID, indexID, rootNodeDegreeIndex)
+}
+
+// indexBack 索引对象
+type indexBack struct {
+	formIndexFilePath string // 索引文件所在路径
+	indexNodal        Nodal  // 索引文件所对应level2层级度节点
+	thing             *thing // 索引对应节点对象子集
+	key               uint32 // put hash key
+	err               error
+}
+
+// getFormIndexFilePath 索引文件所在路径
+func (i *indexBack) getFormIndexFilePath() string {
+	return i.formIndexFilePath
+}
+
+// getNodal 索引文件所对应level2层级度节点
+func (i *indexBack) getNodal() Nodal {
+	return i.indexNodal
+}
+
+// getThing 索引对应节点对象子集
+func (i *indexBack) getThing() *thing {
+	return i.thing
+}
+
+// getHashKey put hash key
+func (i *indexBack) getHashKey() uint32 {
+	return i.key
+}
+
+// getErr error信息
+func (i *indexBack) getErr() error {
+	return i.err
 }

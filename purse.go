@@ -40,7 +40,7 @@ func (p *purse) getFlexibleKey() uint32 {
 	return p.flexibleKey
 }
 
-func (p *purse) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
+func (p *purse) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	var index uint8
 	if p.level == 0 {
 		index = uint8(key / mallDistance)
