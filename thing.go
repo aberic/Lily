@@ -16,8 +16,6 @@ package lily
 
 import (
 	"github.com/aberic/gnomon"
-	"strconv"
-	"strings"
 )
 
 type thing struct {
@@ -64,30 +62,4 @@ func (t *thing) getFormIndexFilePath(indexID string) (formIndexFilePath string) 
 	formID := spr.id
 	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
 	return pathFormIndexFile(dataID, formID, indexID, rootNodeDegreeIndex)
-}
-
-// uint8toFullState 补全不满三位数状态，如1->001、34->034、215->215
-func (t *thing) uint8toFullState(index uint8) string {
-	result := strconv.Itoa(int(index))
-	if index < 10 {
-		return strings.Join([]string{"00", result}, "")
-	} else if index < 100 {
-		return strings.Join([]string{"0", result}, "")
-	}
-	return result
-}
-
-// uint32toFullState 补全不满十位数状态，如1->0000000001、34->0000000034、215->0000000215
-func (t *thing) uint32toFullState(index uint32) string {
-	pos := 0
-	for index > 1 {
-		index /= 10
-		pos++
-	}
-	backZero := 10 - pos
-	backZeroStr := strconv.Itoa(int(index))
-	for i := 0; i < backZero; i++ {
-		backZeroStr = strings.Join([]string{"0", backZeroStr}, "")
-	}
-	return backZeroStr
 }

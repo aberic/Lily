@@ -180,17 +180,21 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 			return 0, err
 		}
 	}
+	var ibs []*indexBack
+	for i := 0; i < indexLen; i++ {
+		ib := <-chanIndex
+		if nil != ib.err {
+			return 0, ib.err
+		}
+		ibs = append(ibs, ib)
+	}
 	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
 	// 存储数据到表文件
 	wf := store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value)
 	if nil != wf.err {
 		return 0, wf.err
 	}
-	for i := 0; i < indexLen; i++ {
-		ib := <-chanIndex
-		if nil != ib.err {
-			return 0, ib.err
-		}
+	for _, ib := range ibs {
 		if err = pool().submitChanIndex(ib, func(ib *indexBack) {
 			md5Key := gnomon.CryptoHash().MD516(ib.originalKey) // hash(originalKey) 会发生碰撞，因此这里存储md5结果进行反向验证
 			// 写入5位key及16位md5后key

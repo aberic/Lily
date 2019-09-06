@@ -34,11 +34,12 @@ func (b *box) getFlexibleKey() uint32 {
 }
 
 func (b *box) put(indexID string, originalKey string, key uint32, value interface{}, update bool) *indexBack {
-	if !update && b.createChildSelf(originalKey, key, value) {
+	thg, exist := b.createChildSelf(originalKey, key, value)
+	if !update && exist {
 		return &indexBack{err: ErrDataExist}
 	}
 	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value))
-	return b.things[len(b.things)-1].put(indexID, originalKey, key, value)
+	return thg.put(indexID, originalKey, key, value)
 }
 
 func (b *box) get(originalKey string, key uint32) (interface{}, error) {
@@ -67,16 +68,17 @@ func (b *box) existChildSelf(originalKey string, key uint32) (int, bool) {
 	return 0, false
 }
 
-func (b *box) createChildSelf(originalKey string, key uint32, value interface{}) bool {
+func (b *box) createChildSelf(originalKey string, key uint32, value interface{}) (*thing, bool) {
 	if len(b.things) > 0 {
 		for _, thg := range b.things {
 			if strings.EqualFold(thg.md5Key, gnomon.CryptoHash().MD516(originalKey)) {
-				return true
+				return thg, true
 			}
 		}
 	}
-	b.things = append(b.things, &thing{nodal: b})
-	return false
+	thg := &thing{nodal: b}
+	b.things = append(b.things, thg)
+	return thg, false
 }
 
 func (b *box) childCount() int {

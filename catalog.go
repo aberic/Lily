@@ -22,6 +22,8 @@ import (
 )
 
 // index 索引对象
+//
+// 5位key及16位md5后key及5位起始seek和4位持续seek
 type catalog struct {
 	id        string  // id 索引唯一ID
 	key       string  // 索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'

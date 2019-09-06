@@ -159,10 +159,12 @@ func TestPutGet(t *testing.T) {
 	} else {
 		t.Log("get 198 =", i, "err =", err)
 	}
-	if _, err = l.Put(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
+	if i, err := l.Put(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
 		t.Log(err)
+	} else {
+		t.Log("get 198 =", i, "err =", err)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 func TestPutGets(t *testing.T) {
