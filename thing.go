@@ -16,18 +16,20 @@ package lily
 
 import (
 	"github.com/aberic/gnomon"
+	"sync"
 )
 
 type thing struct {
-	nodal     Nodal // box 所属 purse
-	md5Key    string
-	seekStart uint32 // value最终存储在文件中的起始位置
-	seekLast  int    // value最终存储在文件中的持续长度
-	value     interface{}
+	nodal          Nodal // box 所属 purse
+	md5Key         string
+	seekStartIndex int64  // 索引最终存储在文件中的起始位置
+	seekStart      uint32 // value最终存储在文件中的起始位置
+	seekLast       int    // value最终存储在文件中的持续长度
+	value          interface{}
+	lock           sync.Mutex
 }
 
-func (t *thing) put(originalKey string, key uint32, value interface{}) *indexBack {
-	formIndexFilePath := t.getFormIndexFilePath()
+func (t *thing) put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack {
 	gnomon.Log().Debug("box",
 		gnomon.LogField("originalKey", originalKey),
 		gnomon.LogField("keyStructure", key),
@@ -43,10 +45,10 @@ func (t *thing) put(originalKey string, key uint32, value interface{}) *indexBac
 }
 
 func (t *thing) get() (interface{}, error) {
-	index := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*catalog)
+	index := t.getIndex()
 	rrFormBack := make(chan *readResult, 1)
 	if err := pool().submit(func() {
-		store().read(pathFormDataFile(index.form.getDatabase().getID(), index.form.getID(), index.fileIndex), t.seekStart, t.seekLast, rrFormBack)
+		store().read(pathFormDataFile(index.form.getDatabase().getID(), index.form.getID(), index.form.getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
 	}); nil != err {
 		return nil, err
 	}
@@ -54,13 +56,8 @@ func (t *thing) get() (interface{}, error) {
 	return rr.value, rr.err
 }
 
-// getFormIndexFilePath 获取表索引文件路径
-func (t *thing) getFormIndexFilePath() (formIndexFilePath string) {
-	index := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*catalog)
-	dataID := index.form.getDatabase().getID()
-	formID := index.form.getID()
-	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
-	return pathFormIndexFile(dataID, formID, index.id, rootNodeDegreeIndex)
+func (t *thing) getIndex() *catalog {
+	return t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*catalog)
 }
 
 // indexBack 索引对象

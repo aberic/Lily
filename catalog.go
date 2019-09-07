@@ -25,13 +25,12 @@ import (
 //
 // 5位key及16位md5后key及5位起始seek和4位持续seek
 type catalog struct {
-	id             string  // id 索引唯一ID
-	keyStructure   string  // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
-	form           Form    // form 索引所属表对象
-	fileIndex      int     // 数据文件存储编号
-	nodes          []Nodal // 节点
-	seekStartIndex uint32  // 索引最终存储在文件中的起始位置
-	fLock          sync.RWMutex
+	id           string  // id 索引唯一ID
+	keyStructure string  // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	form         Form    // form 索引所属表对象
+	fileIndex    int     // 数据文件存储编号
+	nodes        []Nodal // 节点
+	fLock        sync.RWMutex
 }
 
 // getID 索引唯一ID

@@ -65,17 +65,17 @@ func (c *checkbook) createForm(formName, comment, formType string) error {
 	}
 	indexes := make(map[string]Index)
 	fileIndex := 0
-	// 自增索引ID
-	indexID := c.name2id(strings.Join([]string{formName, indexAutoID}, "_"))
-	indexes[indexID] = &catalog{id: indexID, keyStructure: indexAutoID, form: form, fileIndex: fileIndex}
 	if formType == formTypeSQL {
+		// 自增索引ID
+		indexID := c.name2id(strings.Join([]string{formName, indexAutoID}, "_"))
 		if err := mkFormResourceSQL(c.id, formID, indexID, fileIndex); nil != err {
 			return err
 		}
+		indexes[indexID] = &catalog{id: indexID, keyStructure: indexAutoID, form: form, fileIndex: fileIndex}
 	} else {
 		// 默认自定义Key生成ID
 		customID := c.name2id(strings.Join([]string{formName, indexCustomID}, "_"))
-		if err := mkFormResource(c.id, formID, indexID, customID, fileIndex); nil != err {
+		if err := mkFormResourceDoc(c.id, formID, customID, fileIndex); nil != err {
 			return err
 		}
 		indexes[customID] = &catalog{id: customID, keyStructure: indexCustomID, form: form, fileIndex: fileIndex}
@@ -172,10 +172,11 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 			// 写入5位key及16位md5后key
 			appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
 			gnomon.Log().Debug("insert", gnomon.LogField("appendStr", appendStr), gnomon.LogField("formIndexFilePath", ib.getFormIndexFilePath()))
+			// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
 			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 			wr := store().appendIndex(ib, appendStr, wf)
 			if nil == wr.err {
-				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key))
+				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key), gnomon.LogField("seekStartIndex", wr.seekStartIndex))
 				ib.getThing().md5Key = md5Key
 				ib.getThing().seekStart = wr.seekStart
 				ib.getThing().seekLast = wr.seekLast

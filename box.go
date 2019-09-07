@@ -38,8 +38,27 @@ func (b *box) put(originalKey string, key uint32, value interface{}, update bool
 	if !update && exist {
 		return &indexBack{err: ErrDataExist}
 	}
+	formIndexFilePath := b.getFormIndexFilePath()
+	if exist {
+		return &indexBack{
+			formIndexFilePath: formIndexFilePath,
+			indexNodal:        b.nodal.getPreNodal(),
+			thing:             thg,
+			key:               key,
+			err:               nil,
+		}
+	}
 	//log.Self.Debug("box", log.Uint32("keyStructure", keyStructure), log.Reflect("value", value))
-	return thg.put(originalKey, key, value)
+	return thg.put(originalKey, key, value, formIndexFilePath)
+}
+
+// getFormIndexFilePath 获取表索引文件路径
+func (b *box) getFormIndexFilePath() (formIndexFilePath string) {
+	index := b.nodal.getPreNodal().getPreNodal().getPreNodal().(*catalog)
+	dataID := index.form.getDatabase().getID()
+	formID := index.form.getID()
+	rootNodeDegreeIndex := b.nodal.getPreNodal().getPreNodal().getDegreeIndex()
+	return pathFormIndexFile(dataID, formID, index.id, rootNodeDegreeIndex)
 }
 
 func (b *box) get(originalKey string, key uint32) (interface{}, error) {
@@ -76,7 +95,7 @@ func (b *box) createChildSelf(originalKey string, key uint32, value interface{})
 			}
 		}
 	}
-	thg := &thing{nodal: b}
+	thg := &thing{nodal: b, seekStartIndex: -1}
 	b.things = append(b.things, thg)
 	return thg, false
 }
