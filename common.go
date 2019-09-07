@@ -316,21 +316,52 @@ func pathExist(path string) (bool, error) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func int64ToUint32Index(i64 int64) uint32 {
-	if i64 >= 4294967296 { // 4294967296 = 2 << 31
-		divide := i64 / 4294967296
-		return uint32(i64 - divide*4294967296)
-	} else if i64 < 4294967296 && i64 >= 0 {
-		return uint32(i64)
-	}
-	i64New := 0 - i64
-	return int64ToUint32Index(i64New)
+// int16ToUint32Index int16转uint32
+//
+// 该方法仅对索引有效，在排序或范围查询时，如果有使用int16做索引的对象，都必须按照该方法转换并做内部检索和排序，如thing
+func int16ToUint32Index(i16 int16) uint32 {
+	ui16 := i16 + 32767 + 1 // 32768 = 1 << 15
+	return uint32(ui16)
 }
 
+// int32ToUint32Index int32转uint32
+//
+// 该方法仅对索引有效，在排序或范围查询时，如果有使用int32做索引的对象，都必须按照该方法转换并做内部检索和排序，如thing
+func int32ToUint32Index(i32 int32) uint32 {
+	ui32 := i32 + 2147483647 + 1 // 2147483648 = 1 << 31
+	return uint32(ui32)
+}
+
+// int64ToUint32Index int64转uint32
+//
+// 该方法仅对索引有效，在排序或范围查询时，如果有使用int64做索引的对象，都必须按照该方法转换并做内部检索和排序，如thing
+func int64ToUint32Index(i64 int64) uint32 {
+	ui64 := i64 + 9223372036854775807 + 1 // 9.223372036854776e18 || 9223372036854775808 = 1 << 63
+	return uint64ToUint32Index(uint64(ui64))
+}
+
+// uint64ToUint32Index uint64转uint32
+//
+// 该方法仅对索引有效，在排序或范围查询时，如果有使用uint64做索引的对象，都必须按照该方法转换并做内部检索和排序，如thing
 func uint64ToUint32Index(ui64 uint64) uint32 {
+	return uint64ToUint32IndexDivide(ui64, 0)
+}
+
+// uint64ToUint32Index 毫秒时间戳转uint32
+//
+// divide 除算次数，首次为0
+func uint64ToUint32IndexDivide(ui64 uint64, divide uint64) uint32 {
 	if ui64 >= 4294967296 { // 4294967296 = 2 << 31
-		divide := ui64 / 4294967296
-		return uint32(ui64 - divide*4294967296)
+		if divide == 0 {
+			divide++
+			return uint64ToUint32IndexDivide(ui64, divide)
+		}
+		i64New := ui64 / (10 * divide)
+		if i64New > 4294967296 {
+			divide++
+			return uint64ToUint32IndexDivide(ui64, divide)
+		}
+		return uint32(i64New)
 	}
 	return uint32(ui64)
 }

@@ -26,7 +26,9 @@ import (
 )
 
 const (
+	// moldIndex 存储索引数据类型
 	moldIndex = iota
+	// moldForm 存储表数据类型
 	moldForm
 )
 
@@ -47,11 +49,13 @@ type writeResult struct {
 	err            error
 }
 
+// readResult 数据读取结果
 type readResult struct {
 	value interface{}
 	err   error
 }
 
+// indexTask 执行存储索引对象
 type indexTask struct {
 	key    string
 	result chan *writeResult
@@ -63,6 +67,7 @@ func (i *indexTask) getMold() int                     { return moldIndex }
 func (i *indexTask) getAppendContent() string         { return i.key }
 func (i *indexTask) getChanResult() chan *writeResult { return i.result }
 
+// formTask 执行存储表对象
 type formTask struct {
 	key    string
 	result chan *writeResult
@@ -72,11 +77,15 @@ func (f *formTask) getMold() int                     { return moldForm }
 func (f *formTask) getAppendContent() string         { return f.key }
 func (f *formTask) getChanResult() chan *writeResult { return f.result }
 
+// filed 存储实际操作对象
 type filed struct {
 	file  *os.File
 	tasks chan task
 }
 
+// running 带有有效期的，包含对象写入锁的，持续性存储任务
+//
+// 在任务有效期内，可以随时接收新的持有相同对象的存储
 func (f *filed) running() {
 	to := time.NewTimer(time.Second)
 	for {

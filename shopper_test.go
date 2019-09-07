@@ -185,7 +185,6 @@ func TestPutGets(t *testing.T) {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
-	time.Sleep(5 * time.Second)
 }
 
 func TestQuerySelector(t *testing.T) {

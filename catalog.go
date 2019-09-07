@@ -21,6 +21,22 @@ import (
 	"sync"
 )
 
+const (
+	Int = iota
+	Int8
+	Int16
+	Int32
+	Int64
+	Uint
+	Uint8
+	Uint16
+	Uint32
+	Uint64
+	Float32
+	Float64
+	String
+)
+
 // catalog 索引对象
 //
 // 5位key及16位md5后key及5位起始seek和4位持续seek

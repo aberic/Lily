@@ -132,13 +132,25 @@ func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey
 	switch value.Kind() {
 	default:
 		return "", 0, false
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int8, reflect.Int16:
+		i64 := value.Int()
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int16ToUint32Index(int16(i64))
+	case reflect.Int32:
+		i64 := value.Int()
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int32ToUint32Index(int32(i64))
+	case reflect.Int, reflect.Int64:
 		i64 := value.Int()
 		key = strconv.FormatInt(i64, 10)
 		hashKey = int64ToUint32Index(i64)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		ui64 := value.Uint()
-		key = gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint64ToDDuoString(ui64), 5)
+		key = strconv.FormatUint(ui64, 10)
+		hashKey = uint32(ui64)
+	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
+		ui64 := value.Uint()
+		key = strconv.FormatUint(ui64, 10)
 		hashKey = uint64ToUint32Index(ui64)
 	case reflect.Float32, reflect.Float64:
 		i64 := gnomon.Scale().Wrap(value.Float(), 4)
