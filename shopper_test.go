@@ -79,7 +79,7 @@ func TestCond(t *testing.T) {
 		go func(index int) {
 			cond.L.Lock() //获取锁
 			cond.Wait()   // 等待通知  暂时阻塞
-			fmt.Println("index: ", index)
+			fmt.Println("catalog: ", index)
 			cond.L.Unlock() //释放锁
 		}(i)
 	}
@@ -146,12 +146,13 @@ func TestPutGet(t *testing.T) {
 	if _, err = l.Put(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
 		t.Log(err)
 	}
+	time.Sleep(50 * time.Millisecond)
 	if i, err := l.Get(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
 		t.Log(err)
 	} else {
 		t.Log("get 198 =", i, "err =", err)
 	}
-	if _, err = l.Set(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
+	if _, err = l.Set(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
 		t.Log(err)
 	}
 	if i, err := l.Get(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
@@ -159,7 +160,10 @@ func TestPutGet(t *testing.T) {
 	} else {
 		t.Log("get 198 =", i, "err =", err)
 	}
-	if i, err := l.Put(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
+	if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(198), 201); nil != err {
+		t.Log(err)
+	}
+	if i, err := l.Get(checkbookName, shopperName, strconv.Itoa(198)); nil != err {
 		t.Log(err)
 	} else {
 		t.Log("get 198 =", i, "err =", err)
@@ -229,7 +233,7 @@ func TestPrint(t *testing.T) {
 
 func TestBinaryFind(t *testing.T) {
 	index, err := binaryMatch(150, []uint8{0, 8, 19, 49, 63, 80, 81, 98, 133, 150, 201, 250})
-	t.Log("index = ", index, " | err = ", err)
+	t.Log("catalog = ", index, " | err = ", err)
 }
 
 func TestBinaryFind2(t *testing.T) {
@@ -316,7 +320,7 @@ type submiter struct {
 }
 
 func (s *submiter) doing(key uint32, value interface{}) {
-	fmt.Println("key =", key, "value =", value)
+	fmt.Println("keyStructure =", key, "value =", value)
 }
 
 func (d *dataPool) submitTest(submiter *submiter, key uint32, value interface{}) error {

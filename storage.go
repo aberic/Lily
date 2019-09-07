@@ -157,7 +157,7 @@ func (s *storage) appendIndex(ib IndexBack, key string, wr *writeResult) *writeR
 	return s.writeIndex(ib.getNodal(), ib.getFormIndexFilePath(), key, wr)
 }
 
-func (s *storage) appendForm(form Form, path string, value interface{}) *writeResult {
+func (s *storage) appendForm(form WriteLocker, path string, value interface{}) *writeResult {
 	var (
 		data []byte
 		err  error
@@ -169,7 +169,7 @@ func (s *storage) appendForm(form Form, path string, value interface{}) *writeRe
 	return s.writeForm(form, path, string(data))
 }
 
-func (s *storage) writeIndex(data Data, filePath, appendStr string, wr *writeResult) *writeResult {
+func (s *storage) writeIndex(data WriteLocker, filePath, appendStr string, wr *writeResult) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -178,12 +178,12 @@ func (s *storage) writeIndex(data Data, filePath, appendStr string, wr *writeRes
 		return &writeResult{err: err}
 	}
 	result := make(chan *writeResult, 1)
-	gnomon.Log().Debug("index")
+	gnomon.Log().Debug("catalog")
 	fd.tasks <- &indexTask{key: appendStr, result: result, accept: wr}
 	return <-result
 }
 
-func (s *storage) writeForm(data Data, filePath, appendStr string) *writeResult {
+func (s *storage) writeForm(data WriteLocker, filePath, appendStr string) *writeResult {
 	var (
 		fd  *filed
 		err error
@@ -198,7 +198,7 @@ func (s *storage) writeForm(data Data, filePath, appendStr string) *writeResult 
 }
 
 func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan *readResult) {
-	gnomon.Log().Debug("read", gnomon.LogField("seekStart", seekStart), gnomon.LogField("seekLast", seekLast))
+	gnomon.Log().Debug("read", gnomon.LogField("filePath", filePath), gnomon.LogField("seekStart", seekStart), gnomon.LogField("seekLast", seekLast))
 	f, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
 	if err != nil {
 		gnomon.Log().Debug("read", gnomon.LogErr(err))
@@ -228,7 +228,7 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 	rr <- &readResult{err: err, value: value}
 }
 
-func (s *storage) useFiled(data Data, filePath string) (fd *filed, err error) {
+func (s *storage) useFiled(data WriteLocker, filePath string) (fd *filed, err error) {
 	if fd = s.files[filePath]; nil == fd {
 		defer data.unLock()
 		data.lock()

@@ -26,11 +26,11 @@ type thing struct {
 	value     interface{}
 }
 
-func (t *thing) put(indexID string, originalKey string, key uint32, value interface{}) *indexBack {
-	formIndexFilePath := t.getFormIndexFilePath(indexID)
+func (t *thing) put(originalKey string, key uint32, value interface{}) *indexBack {
+	formIndexFilePath := t.getFormIndexFilePath()
 	gnomon.Log().Debug("box",
 		gnomon.LogField("originalKey", originalKey),
-		gnomon.LogField("key", key),
+		gnomon.LogField("keyStructure", key),
 		gnomon.LogField("value", value),
 		gnomon.LogField("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
@@ -43,10 +43,10 @@ func (t *thing) put(indexID string, originalKey string, key uint32, value interf
 }
 
 func (t *thing) get() (interface{}, error) {
-	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
+	index := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*catalog)
 	rrFormBack := make(chan *readResult, 1)
 	if err := pool().submit(func() {
-		store().read(pathFormDataFile(spr.database.getID(), spr.id, spr.fileIndex), t.seekStart, t.seekLast, rrFormBack)
+		store().read(pathFormDataFile(index.form.getDatabase().getID(), index.form.getID(), index.fileIndex), t.seekStart, t.seekLast, rrFormBack)
 	}); nil != err {
 		return nil, err
 	}
@@ -55,12 +55,12 @@ func (t *thing) get() (interface{}, error) {
 }
 
 // getFormIndexFilePath 获取表索引文件路径
-func (t *thing) getFormIndexFilePath(indexID string) (formIndexFilePath string) {
-	spr := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*shopper)
-	dataID := spr.database.getID()
-	formID := spr.id
+func (t *thing) getFormIndexFilePath() (formIndexFilePath string) {
+	index := t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*catalog)
+	dataID := index.form.getDatabase().getID()
+	formID := index.form.getID()
 	rootNodeDegreeIndex := t.nodal.getPreNodal().getPreNodal().getPreNodal().getDegreeIndex()
-	return pathFormIndexFile(dataID, formID, indexID, rootNodeDegreeIndex)
+	return pathFormIndexFile(dataID, formID, index.id, rootNodeDegreeIndex)
 }
 
 // indexBack 索引对象
@@ -68,7 +68,7 @@ type indexBack struct {
 	formIndexFilePath string // 索引文件所在路径
 	indexNodal        Nodal  // 索引文件所对应level2层级度节点
 	thing             *thing // 索引对应节点对象子集
-	key               uint32 // put hash key
+	key               uint32 // put hash keyStructure
 	err               error
 }
 
@@ -87,7 +87,7 @@ func (i *indexBack) getThing() *thing {
 	return i.thing
 }
 
-// getHashKey put hash key
+// getHashKey put hash keyStructure
 func (i *indexBack) getHashKey() uint32 {
 	return i.key
 }

@@ -21,41 +21,48 @@ import (
 	"sync"
 )
 
-// index 索引对象
+// catalog 索引对象
 //
 // 5位key及16位md5后key及5位起始seek和4位持续seek
 type catalog struct {
-	id        string  // id 索引唯一ID
-	key       string  // 索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
-	fileIndex int     // 数据文件存储编号
-	nodes     []Nodal // 节点
-	fLock     sync.RWMutex
+	id             string  // id 索引唯一ID
+	keyStructure   string  // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	form           Form    // form 索引所属表对象
+	fileIndex      int     // 数据文件存储编号
+	nodes          []Nodal // 节点
+	seekStartIndex uint32  // 索引最终存储在文件中的起始位置
+	fLock          sync.RWMutex
 }
 
-// id 索引唯一ID
+// getID 索引唯一ID
 func (c *catalog) getID() string {
 	return c.id
 }
 
-// 索引字段名称，由对象结构层级字段通过'.'组成，如
-func (c *catalog) getKey() string {
-	return c.key
+// getKey 索引字段名称，由对象结构层级字段通过'.'组成，如
+func (c *catalog) getKeyStructure() string {
+	return c.keyStructure
 }
 
-func (c *catalog) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
+// getForm 索引所属表对象
+func (c *catalog) getForm() Form {
+	return c.form
+}
+
+func (c *catalog) put(originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	index := key / cityDistance
-	//index := uint32(0)
+	//catalog := uint32(0)
 	data := c.createChild(uint8(index))
-	return data.put(indexID, originalKey, key-index*cityDistance, value, update)
+	return data.put(originalKey, key-index*cityDistance, value, update)
 }
 
 func (c *catalog) get(originalKey string, key uint32) (interface{}, error) {
 	index := key / cityDistance
-	//index := uint32(0)
+	//catalog := uint32(0)
 	if realIndex, err := binaryMatchData(uint8(index), c); nil == err {
 		return c.nodes[realIndex].get(originalKey, key-index*cityDistance)
 	}
-	return nil, errors.New(strings.Join([]string{"shopper originalKey =", originalKey, "and key =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
+	return nil, errors.New(strings.Join([]string{"catalog originalKey =", originalKey, "and keyStructure =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
 }
 
 func (c *catalog) existChild(index uint8) bool {

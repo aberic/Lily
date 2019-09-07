@@ -40,7 +40,7 @@ func (p *purse) getFlexibleKey() uint32 {
 	return p.flexibleKey
 }
 
-func (p *purse) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
+func (p *purse) put(originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	var index uint8
 	if p.level == 0 {
 		index = uint8(key / mallDistance)
@@ -52,9 +52,9 @@ func (p *purse) put(indexID string, originalKey string, key uint32, value interf
 	//if p.level == 2 {
 	//
 	//}
-	//log.Self.Debug("purse", log.Uint32("key", key), log.Uint32("index", index))
+	//log.Self.Debug("purse", log.Uint32("keyStructure", keyStructure), log.Uint32("catalog", catalog))
 	data := p.createChild(uint8(index))
-	return data.put(indexID, originalKey, key, value, update)
+	return data.put(originalKey, key, value, update)
 }
 
 func (p *purse) get(originalKey string, key uint32) (interface{}, error) {
@@ -69,7 +69,7 @@ func (p *purse) get(originalKey string, key uint32) (interface{}, error) {
 	if realIndex, err := binaryMatchData(uint8(index), p); nil == err {
 		return p.nodes[realIndex].get(originalKey, key)
 	}
-	return nil, errors.New(strings.Join([]string{"purse key", originalKey, "is nil"}, " "))
+	return nil, errors.New(strings.Join([]string{"purse keyStructure", originalKey, "is nil"}, " "))
 }
 
 func (p *purse) existChild(index uint8) bool {

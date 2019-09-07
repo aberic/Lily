@@ -87,7 +87,7 @@ func binaryMatchData(matchIndex uint8, matcher Nodal) (realIndex int, err error)
 			return middleIndex, nil
 		}
 	}
-	return 0, errors.New("index is nil")
+	return 0, errors.New("catalog is nil")
 }
 
 // binaryMatch 数组内二分查找基本方法
@@ -96,7 +96,7 @@ func binaryMatchData(matchIndex uint8, matcher Nodal) (realIndex int, err error)
 //
 // uintArr 在‘uintArr’数组中检索
 //
-// index 返回查找到的在数组‘uintArr’中的元素下标
+// catalog 返回查找到的在数组‘uintArr’中的元素下标
 //
 // 如果没找到，则返回err
 func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
@@ -120,7 +120,7 @@ func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
 			return middleIndex, nil
 		}
 	}
-	return 0, errors.New("index is nil")
+	return 0, errors.New("catalog is nil")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -177,7 +177,7 @@ func mkFormResourceSQL(dataID, formID, indexID string, fileIndex int) (err error
 //
 // indexID 表索引唯一id
 //
-// customID put key index id
+// customID put keyStructure catalog id
 func mkFormResource(dataID, formID, indexID, customID string, fileIndex int) (err error) {
 	if err = mkFormDir(dataID, formID); nil != err {
 		return
@@ -263,7 +263,7 @@ func rmFormIndexDir(dataID, formID, indexID string) (err error) {
 //
 // indexID 表索引唯一id
 //
-// index 所在表顶层数组中下标
+// catalog 所在表顶层数组中下标
 func mkFormDataFile(dataID, formID string, fileIndex int) (err error) {
 	_, err = os.Create(pathFormDataFile(dataID, formID, fileIndex))
 	return
@@ -297,7 +297,7 @@ func pathFormIndexDir(dataID, formID, indexID string) string {
 //
 // indexID 表索引唯一id
 //
-// index 所在表顶层数组中下标
+// catalog 所在表顶层数组中下标
 func pathFormIndexFile(dataID, formID, indexID string, index uint8) string {
 	return strings.Join([]string{pathFormIndexDir(dataID, formID, indexID), string(filepath.Separator), strconv.Itoa(int(index)), ".idx"}, "")
 }

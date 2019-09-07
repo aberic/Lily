@@ -33,13 +33,13 @@ func (b *box) getFlexibleKey() uint32 {
 	return 0
 }
 
-func (b *box) put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack {
+func (b *box) put(originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	thg, exist := b.createChildSelf(originalKey, key, value)
 	if !update && exist {
 		return &indexBack{err: ErrDataExist}
 	}
-	//log.Self.Debug("box", log.Uint32("key", key), log.Reflect("value", value))
-	return thg.put(indexID, originalKey, key, value)
+	//log.Self.Debug("box", log.Uint32("keyStructure", keyStructure), log.Reflect("value", value))
+	return thg.put(originalKey, key, value)
 }
 
 func (b *box) get(originalKey string, key uint32) (interface{}, error) {
@@ -47,7 +47,7 @@ func (b *box) get(originalKey string, key uint32) (interface{}, error) {
 	if realIndex, exist := b.existChildSelf(originalKey, key); exist {
 		return b.things[realIndex].get()
 	}
-	return nil, errors.New(strings.Join([]string{"box key", originalKey, "is nil"}, " "))
+	return nil, errors.New(strings.Join([]string{"box keyStructure", originalKey, "is nil"}, " "))
 }
 
 func (b *box) existChild(index uint8) bool {

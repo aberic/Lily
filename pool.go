@@ -66,7 +66,7 @@ func (d *dataPool) submitIndex(indexID string, task func(indexID string)) error 
 	})
 }
 
-func (d *dataPool) submitIndexInfo(autoID uint32, indexInfo *index, task func(autoID uint32, indexInfo *index)) error {
+func (d *dataPool) submitIndexInfo(autoID uint32, indexInfo Index, task func(autoID uint32, indexInfo Index)) error {
 	return d.pool.Submit(func() {
 		task(autoID, indexInfo)
 	})

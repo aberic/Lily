@@ -41,7 +41,7 @@ var (
 	// ErrDataIsNil 自定义error信息
 	ErrDataIsNil = errors.New("database had never been created")
 	// ErrKeyIsNil 自定义error信息
-	ErrKeyIsNil = errors.New("put key can not be nil")
+	ErrKeyIsNil = errors.New("put keyStructure can not be nil")
 )
 
 // Lily 祖宗！
@@ -110,7 +110,7 @@ func (l *Lily) initialize() {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(indexForm, "default index form", formTypeSQL); nil != err {
+		if err = data.createForm(indexForm, "default catalog form", formTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
@@ -162,7 +162,7 @@ func (l *Lily) CreateForm(databaseName, formName, comment, formType string) erro
 //
 // 向_default表中新增一条数据，key相同则返回一个Error
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 //
 // value 插入数据对象
 //
@@ -178,7 +178,7 @@ func (l *Lily) PutD(key string, value interface{}) (uint32, error) {
 //
 // 向_default表中新增一条数据，key相同则覆盖
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 //
 // value 插入数据对象
 //
@@ -194,7 +194,7 @@ func (l *Lily) SetD(key string, value interface{}) (uint32, error) {
 //
 // 向_default表中查询一条数据并返回
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 func (l *Lily) GetD(key string) (interface{}, error) {
 	return l.databases[sysDatabase].get(defaultForm, key)
 }
@@ -207,7 +207,7 @@ func (l *Lily) GetD(key string) (interface{}, error) {
 //
 // formName 表名
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 //
 // value 插入数据对象
 //
@@ -230,7 +230,7 @@ func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint3
 //
 // formName 表名
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 //
 // value 插入数据对象
 //
@@ -253,7 +253,7 @@ func (l *Lily) Set(databaseName, formName, key string, value interface{}) (uint3
 //
 // formName 表名
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
@@ -267,7 +267,7 @@ func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 //
 // formName 表名
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 //
 // value 插入数据对象
 func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint32, error) {
@@ -300,7 +300,7 @@ func (l *Lily) Update(databaseName, formName string, value interface{}) error {
 //
 // formName 表名
 //
-// key 插入数据唯一key
+// keyStructure 插入数据唯一key
 func (l *Lily) Query(databaseName, formName string, selector *Selector) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return nil, ErrDataIsNil

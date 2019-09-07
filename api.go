@@ -49,7 +49,7 @@ type API interface {
 	//
 	// 向_default表中新增一条数据，key相同则返回一个Error
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	//
 	// value 插入数据对象
 	//
@@ -59,7 +59,7 @@ type API interface {
 	//
 	// 向_default表中新增或更新一条数据，key相同则覆盖
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	//
 	// value 插入数据对象
 	//
@@ -69,7 +69,7 @@ type API interface {
 	//
 	// 向_default表中查询一条数据并返回
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	GetD(key string) (interface{}, error)
 	// Put 新增数据
 	//
@@ -79,7 +79,7 @@ type API interface {
 	//
 	// formName 表名
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	//
 	// value 插入数据对象
 	//
@@ -93,7 +93,7 @@ type API interface {
 	//
 	// formName 表名
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	//
 	// value 插入数据对象
 	//
@@ -107,7 +107,7 @@ type API interface {
 	//
 	// formName 表名
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	Get(databaseName, formName, key string) (interface{}, error)
 	// Insert 新增数据
 	//
@@ -171,7 +171,7 @@ type Database interface {
 	//
 	// 向_default表中新增一条数据，key相同则覆盖
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	//
 	// value 插入数据对象
 	//
@@ -183,7 +183,7 @@ type Database interface {
 	//
 	// 向_default表中查询一条数据并返回
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	get(formName string, key string) (interface{}, error)
 	// Insert 新增数据
 	//
@@ -191,7 +191,7 @@ type Database interface {
 	//
 	// formName 表名
 	//
-	// key 插入数据唯一key
+	// keyStructure 插入数据唯一key
 	//
 	// value 插入数据对象
 	//
@@ -209,20 +209,21 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	Data                           // Data 表内数据操作接口
-	getAutoID() *uint32            // getAutoID 返回表当前自增ID值
-	getID() string                 // getID 返回表唯一ID
-	getName() string               // getName 返回表名称
-	getFileIndex() int             // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
-	getIndexes() map[string]*index // getIndexes 获取表下索引集合
-	getFormType() string           // getFormType 获取表类型
+	WriteLocker
+	getAutoID() *uint32           // getAutoID 返回表当前自增ID值
+	getID() string                // getID 返回表唯一ID
+	getName() string              // getName 返回表名称
+	getDatabase() Database        // getDatabase 返回数据库对象
+	getFileIndex() int            // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
+	getIndexes() map[string]Index // getIndexes 获取表下索引集合
+	getFormType() string          // getFormType 获取表类型
 }
 
 type Index interface {
 	Data
-	// id 索引唯一ID
+	// getID 索引唯一ID
 	getID() string
-	// 索引字段名称，由对象结构层级字段通过'.'组成，如
+	// getKey 索引字段名称，由对象结构层级字段通过'.'组成，如
 	//
 	// ref := &ref{
 	//		i: 1,
@@ -234,7 +235,10 @@ type Index interface {
 	//	}
 	//
 	// key可取'i','in.s'
-	getKey() string
+	getKeyStructure() string
+
+	// getForm 索引所属表对象
+	getForm() Form
 }
 
 // Nodal 节点对象接口
@@ -251,7 +255,7 @@ type IndexBack interface {
 	getFormIndexFilePath() string // 索引文件所在路径
 	getNodal() Nodal              // 索引文件所对应level2层级度节点
 	getThing() *thing             // 索引对应节点对象子集
-	getHashKey() uint32           // put hash key
+	getHashKey() uint32           // put hash keyStructure
 	getErr() error
 }
 
@@ -259,26 +263,30 @@ type IndexBack interface {
 //
 // 表对象、节点对象、叶子结点对象以及存储节点对象都会实现该接口
 type Data interface {
+	WriteLocker
 	// put 插入数据
 	//
 	// originalKey 真实key，必须string类型
 	//
-	// key 索引key，可通过hash转换string生成
+	// keyStructure 索引key，可通过hash转换string生成
 	//
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	put(indexID string, originalKey string, key uint32, value interface{}, update bool) IndexBack
+	put(originalKey string, key uint32, value interface{}, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型
 	//
-	// key 索引key，可通过hash转换string生成
+	// keyStructure 索引key，可通过hash转换string生成
 	get(originalKey string, key uint32) (interface{}, error)
 	// childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
 	childCount() int
 	// child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
 	child(index int) Nodal
+}
+
+type WriteLocker interface {
 	// lock 写锁
 	lock()
 	// unLock 写解锁
