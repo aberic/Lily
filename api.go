@@ -39,12 +39,22 @@ type API interface {
 	CreateDatabase(name string) (Database, error)
 	// CreateForm 创建表
 	//
+	// databaseName 数据库名
+	//
 	// 默认自增ID索引
 	//
 	// name 表名称
 	//
 	// comment 表描述
 	CreateForm(databaseName, formName, comment, formType string) error
+	// createIndex 新建索引
+	//
+	// databaseName 数据库名
+	//
+	// name 表名称
+	//
+	// keyStructure 索引结构名，按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	CreateIndex(databaseName, formName string, keyStructure string) error
 	// PutD 新增数据
 	//
 	// 向_default表中新增一条数据，key相同则返回一个Error
@@ -129,7 +139,7 @@ type API interface {
 	//
 	// value 插入数据对象
 	Update(databaseName, formName string, value interface{}) error
-	// Query 获取数据
+	// Select 获取数据
 	//
 	// 向指定表中查询一条数据并返回
 	//
@@ -138,7 +148,7 @@ type API interface {
 	// formName 表名
 	//
 	// selector 条件选择器
-	Query(databaseName, formName string, selector *Selector) (interface{}, error)
+	Select(databaseName, formName string, selector *Selector) (interface{}, error)
 	// Delete 删除数据
 	//
 	// 向指定表中删除一条数据并返回
@@ -159,6 +169,8 @@ type Database interface {
 	getID() string
 	// getName 返回数据库名称
 	getName() string
+	// getForms 获取数据库表集合
+	getForms() map[string]Form
 	// createForm 新建表方法
 	//
 	// 默认自增ID索引
@@ -167,6 +179,12 @@ type Database interface {
 	//
 	// comment 表描述
 	createForm(formName, comment, formType string) error
+	// createIndex 新建索引
+	//
+	// name 表名称
+	//
+	// keyStructure 索引结构名，按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	createIndex(formName string, keyStructure string) error
 	// Put 新增数据
 	//
 	// 向_default表中新增一条数据，key相同则覆盖

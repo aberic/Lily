@@ -158,6 +158,13 @@ func (l *Lily) CreateForm(databaseName, formName, comment, formType string) erro
 	return ErrDataIsNil
 }
 
+func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) error {
+	if database := l.databases[databaseName]; nil != database {
+		return database.createIndex(formName, keyStructure)
+	}
+	return ErrDataIsNil
+}
+
 // Put 新增数据
 //
 // 向_default表中新增一条数据，key相同则返回一个Error
@@ -294,14 +301,14 @@ func (l *Lily) Update(databaseName, formName string, value interface{}) error {
 	return err
 }
 
-// Query 获取数据
+// Select 获取数据
 //
 // 向指定表中查询一条数据并返回
 //
 // formName 表名
 //
 // keyStructure 插入数据唯一key
-func (l *Lily) Query(databaseName, formName string, selector *Selector) (interface{}, error) {
+func (l *Lily) Select(databaseName, formName string, selector *Selector) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return nil, ErrDataIsNil
 	}

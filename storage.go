@@ -243,7 +243,6 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		rr <- &readResult{err: err}
 		return
 	}
-	gnomon.Log().Debug("read", gnomon.LogField("Data", string(bytes)))
 	var value interface{}
 	if err = json.Unmarshal(bytes, &value); nil != err {
 		gnomon.Log().Debug("read", gnomon.LogErr(err))

@@ -36,10 +36,10 @@ func BenchmarkInsert(b *testing.B) {
 	now := time.Now().UnixNano()
 	for i := 1; i <= b.N; i++ {
 		go func(formName string, i int) {
-			//_, _ = checkbook.InsertInt(formName, i, i+10)
+			//_, _ = database.InsertInt(formName, i, i+10)
 			_, _ = l.Put(checkbookName, formName, strconv.Itoa(i), i+10)
 		}(shopperName, i)
-		//_, _ = checkbook.InsertInt(formName, i, i+10)
+		//_, _ = database.InsertInt(formName, i, i+10)
 	}
 	b.Log("time =", (time.Now().UnixNano()-now)/1e6)
 }

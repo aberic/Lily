@@ -38,7 +38,7 @@ import (
 //
 // level4间隔 ld3=(1*127+1)/128=1
 //
-// 存储格式 {dataDir}/checkbook/{dataName}/{formName}/{formName}.dat/idx...
+// 存储格式 {dataDir}/database/{dataName}/{formName}/{formName}.dat/idx...
 //
 // 索引格式
 type shopper struct {

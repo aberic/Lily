@@ -15,6 +15,8 @@
 package lily
 
 import (
+	"errors"
+	"github.com/aberic/gnomon"
 	"strconv"
 )
 
@@ -22,14 +24,14 @@ import (
 //
 // 查询顺序 scope -> conditions -> match -> skip -> sort -> limit
 type Selector struct {
-	Scope      []*scope     `json:"scopes"`     // Scope 范围查询
+	Scopes     []*scope     `json:"scopes"`     // Scopes 范围查询
 	Conditions []*condition `json:"conditions"` // Conditions 条件查询
 	Matches    []*match     `json:"matches"`    // Matches 匹配查询
 	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
 	Sort       *sort        `json:"sort"`       // Sort 排序方式
 	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
-	checkbook  *checkbook   // 数据库对象
-	formName   string       // 表名
+	database   Database     // database 数据库对象
+	formName   string       // formName 表名
 }
 
 // scope 范围查询
@@ -49,8 +51,8 @@ type scope struct {
 	//
 	// key可取'i','in.s'
 	Param string `json:"param"`
-	Start int32  `json:"Start"` // 起始位置
-	End   int32  `json:"end"`   // 终止位置
+	Start int64  `json:"Start"` // 起始位置
+	End   int64  `json:"end"`   // 终止位置
 }
 
 // condition 条件查询
@@ -131,15 +133,58 @@ func (s *Selector) match2String(inter interface{}) string {
 }
 
 func (s *Selector) query() ([]interface{}, error) {
-	if len(s.Scope) == 0 && len(s.Conditions) == 0 && len(s.Matches) == 0 && s.Sort == nil {
-		if index := s.checkbook.forms[s.formName].getIndexes()[""]; nil != index {
-			// todo skip & limit 限定
-			return s.leftQuery(index), nil
-		}
-		return nil, shopperIsInvalid(s.formName)
+	var (
+		index     Index
+		leftQuery bool
+		err       error
+	)
+	if index, leftQuery, err = s.getIndex(); nil != err {
+		return nil, err
 	}
-	// todo 条件全开检索
-	return s.rightQuery(s.checkbook.forms[s.formName].getIndexes()[""]), nil
+	gnomon.Log().Debug("query", gnomon.LogField("index", index.getKeyStructure()))
+	if leftQuery {
+		return s.leftQuery(index), nil
+	}
+	return s.rightQuery(index), nil
+}
+
+// getIndex 根据检索条件获取使用索引对象
+//
+// index 已获取索引对象
+//
+// leftQuery 是否顺序查询
+func (s *Selector) getIndex() (index Index, leftQuery bool, err error) {
+	for _, index = range s.database.getForms()[s.formName].getIndexes() {
+		if len(s.Scopes) > 0 {
+			for _, scope := range s.Scopes {
+				if scope.Param == index.getKeyStructure() {
+					return index, true, nil
+				}
+			}
+		}
+		if len(s.Conditions) > 0 {
+			for _, condition := range s.Conditions {
+				if condition.Param == index.getKeyStructure() {
+					return index, true, nil
+				}
+			}
+		}
+		if len(s.Matches) > 0 {
+			for _, match := range s.Matches {
+				if match.Param == index.getKeyStructure() {
+					return index, true, nil
+				}
+			}
+		}
+		if s.Sort != nil && s.Sort.Param == index.getKeyStructure() {
+			return index, s.Sort.ASC, nil
+		}
+	}
+	// 取值默认索引来进行查询操作
+	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
+		return idx, true, nil
+	}
+	return nil, false, errors.New("index not found")
 }
 
 func (s *Selector) leftQuery(data Data) []interface{} {
@@ -153,7 +198,9 @@ func (s *Selector) leftQuery(data Data) []interface{} {
 			thg := child.(*box).things
 			lenThg := len(thg)
 			for ti := 0; ti < lenThg; ti++ {
-				is = append(is, thg[ti].value)
+				if i, err := thg[ti].get(); nil == err {
+					is = append(is, i)
+				}
 			}
 		}
 	}

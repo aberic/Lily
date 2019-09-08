@@ -187,16 +187,70 @@ func TestPutGets(t *testing.T) {
 	}
 }
 
-func TestQuerySelector(t *testing.T) {
+func TestQuerySelector1(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	data, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName)
+	if nil != err {
+		t.Error(err)
+	}
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
+	for i := 1; i <= 10; i++ {
+		_, _ = l.Put(checkbookName, shopperName, strconv.Itoa(i), i)
+	}
+	for i := 1; i <= 10; i++ {
+		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
+		t.Log("get ", i, " = ", j, "err = ", err)
+	}
+	i, err := l.Select(checkbookName, shopperName, &Selector{})
+	t.Log("select = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{}})
+	t.Log("select = ", i, "err = ", err)
+}
+
+type TestValue struct {
+	Id        int   `json:"id"`
+	Timestamp int64 `json:"timestamp"`
+}
+
+func TestQuerySelector2(t *testing.T) {
+	l := ObtainLily()
+	l.Start()
+	_, err := l.CreateDatabase(checkbookName)
+	if nil != err {
+		t.Error(err)
+	}
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
+	//if err = l.CreateIndex(checkbookName, shopperName, "id"); nil != err {
+	//	t.Error(err)
+	//}
+	for i := 1; i <= 10; i++ {
+		_, _ = l.Put(checkbookName, shopperName, strconv.Itoa(i), TestValue{Id: i, Timestamp: time.Now().Local().UnixNano()})
+	}
+	for i := 1; i <= 10; i++ {
+		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
+		if nil != err {
+			t.Error(err)
+		} else {
+			t.Log("get ", i, " = ", j)
+		}
+	}
+	i, err := l.Select(checkbookName, shopperName, &Selector{})
+	t.Log("select = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{}})
+	t.Log("select = ", i, "err = ", err)
+}
+
+func TestQuerySelector3(t *testing.T) {
+	l := ObtainLily()
+	l.Start()
+	_, err := l.CreateDatabase(checkbookName)
 	if nil != err {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
 	//for i := 1; i <= 10; i++ {
-	//	_ = checkbook.InsertInt(formName, i, i+10)
+	//	_ = database.InsertInt(formName, i, i+10)
 	//}
 	_, err = l.Put(checkbookName, shopperName, "1000", 1000)
 	t.Log("err = ", err)
@@ -214,10 +268,43 @@ func TestQuerySelector(t *testing.T) {
 	t.Log("err = ", err)
 	_, err = l.Put(checkbookName, shopperName, "110", 110)
 	t.Log("err = ", err)
-	i, err := data.query(shopperName, &Selector{})
-	t.Log("get ", i, " = ", i, "err = ", err)
-	i, err = data.query(shopperName, &Selector{Sort: &sort{}})
-	t.Log("get ", i, " = ", i, "err = ", err)
+	i, err := l.Select(checkbookName, shopperName, &Selector{})
+	t.Log("select = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{}})
+	t.Log("select = ", i, "err = ", err)
+}
+
+func TestQuerySelector4(t *testing.T) {
+	l := ObtainLily()
+	l.Start()
+	_, err := l.CreateDatabase(checkbookName)
+	if nil != err {
+		t.Error(err)
+	}
+	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
+	//for i := 1; i <= 10; i++ {
+	//	_ = database.InsertInt(formName, i, i+10)
+	//}
+	_, err = l.Put(checkbookName, shopperName, "1000", &TestValue{Id: 1000, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "100", &TestValue{Id: 100, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "110000", &TestValue{Id: 110000, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "1100", &TestValue{Id: 1100, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "10000", &TestValue{Id: 10000, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "1", &TestValue{Id: 1, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "10", &TestValue{Id: 10, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	_, err = l.Put(checkbookName, shopperName, "110", &TestValue{Id: 110, Timestamp: time.Now().Local().Unix()})
+	t.Log("err = ", err)
+	i, err := l.Select(checkbookName, shopperName, &Selector{})
+	t.Log("select = ", i.([]interface{}), "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{}})
+	t.Log("select = ", i.([]interface{}), "err = ", err)
 }
 
 func TestPrint(t *testing.T) {

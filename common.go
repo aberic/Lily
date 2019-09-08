@@ -147,19 +147,13 @@ func rmDataDir(dataName string) (err error) {
 	return nil
 }
 
-// mkFormResourceDoc 创建表资源
+// mkFormResource 创建表资源
 //
 // dataID 数据库唯一id
 //
 // formID 表唯一id
-//
-// indexID 表索引唯一id
-func mkFormResourceSQL(dataID, formID, indexID string, fileIndex int) (err error) {
+func mkFormResource(dataID, formID string, fileIndex int) (err error) {
 	if err = mkFormDir(dataID, formID); nil != err {
-		return
-	}
-	if err = mkFormIndexDir(dataID, formID, indexID); nil != err {
-		_ = rmFormDir(dataID, formID)
 		return
 	}
 	if err = mkFormDataFile(dataID, formID, fileIndex); nil != err {
@@ -169,28 +163,15 @@ func mkFormResourceSQL(dataID, formID, indexID string, fileIndex int) (err error
 	return
 }
 
-// mkFormResourceDoc 创建表资源
+// mkFormIndexResource 创建表索引资源
 //
 // dataID 数据库唯一id
 //
 // formID 表唯一id
 //
 // indexID 表索引唯一id
-//
-// customID put keyStructure catalog id
-func mkFormResourceDoc(dataID, formID, customID string, fileIndex int) (err error) {
-	if err = mkFormDir(dataID, formID); nil != err {
-		return
-	}
-	if err = mkFormIndexDir(dataID, formID, customID); nil != err {
-		_ = rmFormDir(dataID, formID)
-		return
-	}
-	if err = mkFormDataFile(dataID, formID, fileIndex); nil != err {
-		_ = rmFormDir(dataID, formID)
-		return
-	}
-	return
+func mkFormIndexResource(dataID, formID, indexID string) (err error) {
+	return mkFormIndexDir(dataID, formID, indexID)
 }
 
 // mkFormDir 创建表存储目录
