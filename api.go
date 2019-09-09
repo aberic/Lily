@@ -254,39 +254,13 @@ type Index interface {
 	//
 	// key可取'i','in.s'
 	getKeyStructure() string
-
 	// getForm 索引所属表对象
 	getForm() Form
-}
-
-// Nodal 节点对象接口
-type Nodal interface {
-	Data                           // Data 表内数据操作接口
-	existChild(index uint8) bool   // existChild 根据下标判定是否存在子节点
-	createChild(index uint8) Nodal // createChild 根据下标创建新的子节点
-	getFlexibleKey() uint32        // getFlexibleKey 下一级最左最小树所对应真实key
-	getDegreeIndex() uint8         // getDegreeIndex 获取节点所在树中度集合中的数组下标
-	getPreNodal() Nodal            // getPreNodal 获取父节点对象
-}
-
-type IndexBack interface {
-	getFormIndexFilePath() string // 索引文件所在路径
-	getNodal() Nodal              // 索引文件所对应level2层级度节点
-	getThing() *thing             // 索引对应节点对象子集
-	getHashKey() uint32           // put hash keyStructure
-	getErr() error
-}
-
-// Data 表内数据操作接口
-//
-// 表对象、节点对象、叶子结点对象以及存储节点对象都会实现该接口
-type Data interface {
-	WriteLocker
 	// put 插入数据
 	//
 	// originalKey 真实key，必须string类型
 	//
-	// keyStructure 索引key，可通过hash转换string生成
+	// key 索引key，可通过hash转换string生成
 	//
 	// value 存储对象
 	//
@@ -296,12 +270,75 @@ type Data interface {
 	//
 	// originalKey 真实key，必须string类型
 	//
-	// keyStructure 索引key，可通过hash转换string生成
+	// key 索引key，可通过hash转换string生成
 	get(originalKey string, key uint32) (interface{}, error)
-	// childCount binaryMatcher 二分查询辅助方法，获取子节点集合数量
-	childCount() int
-	// child binaryMatcher 二分查询辅助方法，根据子节点集合下标获取树-度对象
-	child(index int) Nodal
+}
+
+// Nodal 节点对象接口
+type Nodal interface {
+	Data             // Data 表内数据操作接口
+	getIndex() Index // 获取索引对象
+	// put 插入数据
+	//
+	// originalKey 真实key，必须string类型
+	//
+	// key 索引key，可通过hash转换string生成
+	//
+	// flexibleKey 下一级最左最小树所对应真实key
+	//
+	// value 存储对象
+	//
+	// update 本次是否执行更新操作
+	put(originalKey string, key, flexibleKey uint32, value interface{}, update bool) IndexBack
+	// get 获取数据，返回存储对象
+	//
+	// originalKey 真实key，必须string类型
+	//
+	// key 索引key，可通过hash转换string生成
+	//
+	// flexibleKey 下一级最左最小树所对应真实key
+	get(originalKey string, key, flexibleKey uint32) (interface{}, error)
+	getDegreeIndex() uint8 // getDegreeIndex 获取节点所在树中度集合中的数组下标
+	getPreNodal() Nodal    // getPreNodal 获取父节点对象
+}
+
+// Leaf 叶子节点对象接口
+type Leaf interface {
+	Nodal
+	getLinks() []Link // getLinks 获取叶子节点下的链表对象集合
+}
+
+// Link 叶子节点下的链表对象接口
+type Link interface {
+	WriteLocker
+	setMD5Key(md5Key string)      // 设置md5Key
+	setSeekStartIndex(seek int64) // 设置索引最终存储在文件中的起始位置
+	setSeekStart(seek uint32)     // 设置value最终存储在文件中的起始位置
+	setSeekLast(seek int)         // 设置value最终存储在文件中的持续长度
+	getNodal() Nodal              // box 所属 node
+	getMD5Key() string            // 获取md5Key
+	getSeekStartIndex() int64     // 索引最终存储在文件中的起始位置
+	getSeekStart() uint32         // value最终存储在文件中的起始位置
+	getSeekLast() int             // value最终存储在文件中的持续长度
+	getValue() interface{}
+	put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack
+	get() (interface{}, error)
+}
+
+type IndexBack interface {
+	getFormIndexFilePath() string // 索引文件所在路径
+	getNodal() Nodal              // 索引文件所对应level2层级度节点
+	getLink() Link                // 索引对应节点对象子集
+	getHashKey() uint32           // put hash keyStructure
+	getErr() error
+}
+
+// Data 表内数据操作接口
+//
+// 表对象、节点对象、叶子结点对象以及存储节点对象都会实现该接口
+type Data interface {
+	WriteLocker
+	getNodes() []Nodal // getNodes 获取下属节点集合
 }
 
 type WriteLocker interface {

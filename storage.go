@@ -16,8 +16,8 @@ package lily
 
 import (
 	"bufio"
-	"encoding/json"
 	"github.com/aberic/gnomon"
+	"github.com/vmihailenco/msgpack"
 	"io"
 	"os"
 	"strings"
@@ -38,6 +38,7 @@ const (
 type task interface {
 	getMold() int             // 获取当前任务类型
 	getAppendContent() string // getAppendContent 获取追加入文件的内容
+	getContent() []byte
 	getChanResult() chan *writeResult
 }
 
@@ -60,21 +61,23 @@ type indexTask struct {
 	key    string
 	result chan *writeResult
 	accept *writeResult
-	thg    *thing // 索引最终存储在文件中的起始位置
+	link   Link // 索引最终存储在文件中的起始位置
 }
 
 func (i *indexTask) getMold() int                     { return moldIndex }
 func (i *indexTask) getAppendContent() string         { return i.key }
+func (i *indexTask) getContent() []byte               { return nil }
 func (i *indexTask) getChanResult() chan *writeResult { return i.result }
 
 // formTask 执行存储表对象
 type formTask struct {
-	key    string
+	key    []byte
 	result chan *writeResult
 }
 
 func (f *formTask) getMold() int                     { return moldForm }
-func (f *formTask) getAppendContent() string         { return f.key }
+func (f *formTask) getAppendContent() string         { return "" }
+func (f *formTask) getContent() []byte               { return f.key }
 func (f *formTask) getChanResult() chan *writeResult { return f.result }
 
 // filed 存储实际操作对象
@@ -106,20 +109,20 @@ func (f *filed) running() {
 			case moldIndex:
 				it := task.(*indexTask)
 				var seekEnd int64
-				gnomon.Log().Debug("running", gnomon.LogField("type", "moldIndex"), gnomon.LogField("seekStartIndex", it.thg.seekStartIndex))
-				it.thg.lock.Lock()
-				if it.thg.seekStartIndex == -1 {
+				gnomon.Log().Debug("running", gnomon.LogField("type", "moldIndex"), gnomon.LogField("seekStartIndex", it.link.getSeekStartIndex()))
+				it.link.lock()
+				if it.link.getSeekStartIndex() == -1 {
 					if seekEnd, err = f.file.Seek(0, io.SeekEnd); nil != err {
 						gnomon.Log().Debug("running", gnomon.LogErr(err))
 						goto WriteResult
 					}
-					gnomon.Log().Debug("running", gnomon.LogField("it.thg.seekStartIndex == -1", seekEnd))
+					gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex == -1", seekEnd))
 				} else {
-					if seekEnd, err = f.file.Seek(it.thg.seekStartIndex, io.SeekStart); nil != err { // 寻址到原索引起始位置
+					if seekEnd, err = f.file.Seek(it.link.getSeekStartIndex(), io.SeekStart); nil != err { // 寻址到原索引起始位置
 						gnomon.Log().Debug("running", gnomon.LogErr(err))
 						goto WriteResult
 					}
-					gnomon.Log().Debug("running", gnomon.LogField("seekStartIndex", it.thg.seekStartIndex), gnomon.LogField("it.thg.seekStartIndex != -1", seekEnd))
+					gnomon.Log().Debug("running", gnomon.LogField("seekStartIndex", it.link.getSeekStartIndex()), gnomon.LogField("it.link.seekStartIndex != -1", seekEnd))
 				}
 				// 写入5位key及16位md5后key及5位起始seek和4位持续seek
 				if _, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(),
@@ -128,9 +131,9 @@ func (f *filed) running() {
 					gnomon.Log().Debug("running", gnomon.LogField("seekStartIndex", seekEnd), gnomon.LogErr(err))
 					goto WriteResult
 				}
-				it.thg.seekStartIndex = seekEnd
-				gnomon.Log().Debug("running", gnomon.LogField("it.thg.seekStartIndex", seekEnd), gnomon.LogErr(err))
-				it.thg.lock.Unlock()
+				it.link.setSeekStartIndex(seekEnd)
+				gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex", seekEnd), gnomon.LogErr(err))
+				it.link.unLock()
 				goto WriteResult
 			WriteResult:
 				task.getChanResult() <- &writeResult{
@@ -140,7 +143,7 @@ func (f *filed) running() {
 					err:            err}
 			case moldForm:
 				gnomon.Log().Debug("running", gnomon.LogField("type", "moldForm"))
-				seekLast, err = f.file.WriteString(task.getAppendContent())
+				seekLast, err = f.file.Write(task.getContent())
 				gnomon.Log().Debug("running", gnomon.LogErr(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: uint32(seekStart),
@@ -178,8 +181,8 @@ type storage struct {
 }
 
 func (s *storage) appendIndex(ib IndexBack, key string, wr *writeResult) *writeResult {
-	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", ib.getFormIndexFilePath()), gnomon.LogField("seekStartIndex", ib.getThing().seekStartIndex))
-	return s.writeIndex(ib.getNodal(), ib.getFormIndexFilePath(), key, ib.getThing(), wr)
+	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", ib.getFormIndexFilePath()), gnomon.LogField("seekStartIndex", ib.getLink().getSeekStartIndex()))
+	return s.writeIndex(ib.getNodal(), ib.getFormIndexFilePath(), key, ib.getLink(), wr)
 }
 
 func (s *storage) appendForm(form WriteLocker, path string, value interface{}) *writeResult {
@@ -188,37 +191,37 @@ func (s *storage) appendForm(form WriteLocker, path string, value interface{}) *
 		err  error
 	)
 	gnomon.Log().Debug("appendForm", gnomon.LogField("path", path))
-	if data, err = json.Marshal(value); nil != err {
+	if data, err = msgpack.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	}
-	return s.writeForm(form, path, string(data))
+	return s.writeForm(form, path, data)
 }
 
-func (s *storage) writeIndex(data WriteLocker, filePath, appendStr string, thg *thing, wr *writeResult) *writeResult {
+func (s *storage) writeIndex(locker WriteLocker, filePath, data string, link Link, wr *writeResult) *writeResult {
 	var (
 		fd  *filed
 		err error
 	)
-	if fd, err = s.useFiled(data, filePath, moldIndex); nil != err {
+	if fd, err = s.useFiled(locker, filePath, moldIndex); nil != err {
 		return &writeResult{err: err}
 	}
 	result := make(chan *writeResult, 1)
-	gnomon.Log().Debug("catalog")
-	fd.tasks <- &indexTask{key: appendStr, result: result, accept: wr, thg: thg}
+	gnomon.Log().Debug("index")
+	fd.tasks <- &indexTask{key: data, result: result, accept: wr, link: link}
 	return <-result
 }
 
-func (s *storage) writeForm(data WriteLocker, filePath, appendStr string) *writeResult {
+func (s *storage) writeForm(locker WriteLocker, filePath string, data []byte) *writeResult {
 	var (
 		fd  *filed
 		err error
 	)
-	if fd, err = s.useFiled(data, filePath, moldForm); nil != err {
+	if fd, err = s.useFiled(locker, filePath, moldForm); nil != err {
 		return &writeResult{err: err}
 	}
 	result := make(chan *writeResult, 1)
 	gnomon.Log().Debug("form")
-	fd.tasks <- &formTask{key: appendStr, result: result}
+	fd.tasks <- &formTask{key: data, result: result}
 	return <-result
 }
 
@@ -244,7 +247,7 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		return
 	}
 	var value interface{}
-	if err = json.Unmarshal(bytes, &value); nil != err {
+	if err = msgpack.Unmarshal(bytes, &value); nil != err {
 		gnomon.Log().Debug("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return

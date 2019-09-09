@@ -24,7 +24,7 @@
 //
 // {dataDir}/data/{dataName}.../{formName}.../ 表目录，目录下为表头部Hash数组对应数据目录集合以及索引目录集合
 //
-// {dataDir}/data/{dataName}.../{formName}.../{catalog}.../ 表头部Hash数组对应索引数据文件集合
+// {dataDir}/data/{dataName}.../{formName}.../{index}.../ 表头部Hash数组对应索引数据文件集合
 //
 // {dataDir}/data/{dataName}.../{formName}.../[0, 1, ... , 15]/ 表头部Hash数组对应数据文件集合
 //

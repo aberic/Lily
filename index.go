@@ -37,10 +37,10 @@ const (
 	String
 )
 
-// catalog 索引对象
+// index 索引对象
 //
 // 5位key及16位md5后key及5位起始seek和4位持续seek
-type catalog struct {
+type index struct {
 	id           string  // id 索引唯一ID
 	keyStructure string  // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
 	form         Form    // form 索引所属表对象
@@ -50,50 +50,51 @@ type catalog struct {
 }
 
 // getID 索引唯一ID
-func (c *catalog) getID() string {
+func (c *index) getID() string {
 	return c.id
 }
 
 // getKey 索引字段名称，由对象结构层级字段通过'.'组成，如
-func (c *catalog) getKeyStructure() string {
+func (c *index) getKeyStructure() string {
 	return c.keyStructure
 }
 
 // getForm 索引所属表对象
-func (c *catalog) getForm() Form {
+func (c *index) getForm() Form {
 	return c.form
 }
 
-func (c *catalog) put(originalKey string, key uint32, value interface{}, update bool) IndexBack {
+func (c *index) put(originalKey string, key uint32, value interface{}, update bool) IndexBack {
 	index := key / cityDistance
-	//catalog := uint32(0)
-	data := c.createChild(uint8(index))
-	return data.put(originalKey, key-index*cityDistance, value, update)
+	//index := uint32(0)
+	node := c.createNode(uint8(index))
+	return node.put(originalKey, key-index*cityDistance, 0, value, update)
 }
 
-func (c *catalog) get(originalKey string, key uint32) (interface{}, error) {
+func (c *index) get(originalKey string, key uint32) (interface{}, error) {
 	index := key / cityDistance
-	//catalog := uint32(0)
-	if realIndex, err := binaryMatchData(uint8(index), c); nil == err {
-		return c.nodes[realIndex].get(originalKey, key-index*cityDistance)
+	//index := uint32(0)
+	if realIndex, err := c.existNode(uint8(index)); nil == err {
+		return c.nodes[realIndex].get(originalKey, key-index*cityDistance, 0)
 	}
-	return nil, errors.New(strings.Join([]string{"catalog originalKey =", originalKey, "and keyStructure =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
+	return nil, errors.New(strings.Join([]string{"index originalKey =", originalKey, "and keyStructure =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
 }
 
-func (c *catalog) existChild(index uint8) bool {
-	return matchableData(index, c)
+func (c *index) existNode(index uint8) (realIndex int, err error) {
+	return binaryMatchData(uint8(index), c)
 }
 
-func (c *catalog) createChild(index uint8) Nodal {
+func (c *index) createNode(index uint8) Nodal {
 	var (
 		realIndex int
 		err       error
 	)
-	if realIndex, err = binaryMatchData(index, c); nil != err {
-		nd := &purse{
+	if realIndex, err = c.existNode(uint8(index)); nil != err {
+		nd := &node{
 			level:       0,
 			degreeIndex: index,
-			nodal:       c,
+			index:       c,
+			nodal:       nil,
 			nodes:       []Nodal{},
 		}
 		lenData := len(c.nodes)
@@ -116,38 +117,22 @@ func (c *catalog) createChild(index uint8) Nodal {
 	return c.nodes[realIndex]
 }
 
-func (c *catalog) childCount() int {
-	return len(c.nodes)
+func (c *index) getNodes() []Nodal {
+	return c.nodes
 }
 
-func (c *catalog) child(index int) Nodal {
-	return c.nodes[index]
-}
-
-func (c *catalog) getDegreeIndex() uint8 {
-	return 0
-}
-
-func (c *catalog) getFlexibleKey() uint32 {
-	return 0
-}
-
-func (c *catalog) getPreNodal() Nodal {
-	return nil
-}
-
-func (c *catalog) lock() {
+func (c *index) lock() {
 	c.fLock.Lock()
 }
 
-func (c *catalog) unLock() {
+func (c *index) unLock() {
 	c.fLock.Unlock()
 }
 
-func (c *catalog) rLock() {
+func (c *index) rLock() {
 	c.fLock.RLock()
 }
 
-func (c *catalog) rUnLock() {
+func (c *index) rUnLock() {
 	c.fLock.RUnlock()
 }

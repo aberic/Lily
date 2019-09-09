@@ -31,26 +31,26 @@ const (
 // database 数据库对象
 //
 // 存储格式 {dataDir}/database/{dataName}/{formName}/{formName}.dat/idx...
-type checkbook struct {
+type database struct {
 	name  string          // 数据库名称，根据需求可以随时变化
 	id    string          // 数据库唯一ID，不能改变
 	forms map[string]Form // 表集合
 }
 
-func (c *checkbook) getID() string {
+func (c *database) getID() string {
 	return c.id
 }
 
-func (c *checkbook) getName() string {
+func (c *database) getName() string {
 	return c.name
 }
 
 // getForms 获取数据库表集合
-func (c *checkbook) getForms() map[string]Form {
+func (c *database) getForms() map[string]Form {
 	return c.forms
 }
 
-func (c *checkbook) createForm(formName, comment, formType string) error {
+func (c *database) createForm(formName, comment, formType string) error {
 	// 确定库名不重复
 	for k := range c.forms {
 		if k == formName {
@@ -59,7 +59,7 @@ func (c *checkbook) createForm(formName, comment, formType string) error {
 	}
 	// 确保表唯一ID不重复
 	formID := c.name2id(formName)
-	form := &shopper{
+	form := &form{
 		autoID:   0,
 		name:     formName,
 		id:       formID,
@@ -79,21 +79,21 @@ func (c *checkbook) createForm(formName, comment, formType string) error {
 		if err = mkFormIndexResource(c.id, formID, indexID); nil != err {
 			return err
 		}
-		indexes[indexID] = &catalog{id: indexID, keyStructure: indexAutoID, form: form, fileIndex: 0}
+		indexes[indexID] = &index{id: indexID, keyStructure: indexAutoID, form: form, fileIndex: 0}
 	} else {
 		// 默认自定义Key生成ID
 		defaultID := c.name2id(strings.Join([]string{formName, indexDefaultID}, "_"))
 		if err = mkFormIndexResource(c.id, formID, defaultID); nil != err {
 			return err
 		}
-		indexes[defaultID] = &catalog{id: defaultID, keyStructure: indexDefaultID, form: form, fileIndex: 0}
+		indexes[defaultID] = &index{id: defaultID, keyStructure: indexDefaultID, form: form, fileIndex: 0}
 	}
 	form.indexes = indexes
 	c.forms[formName] = form
 	return nil
 }
 
-func (c *checkbook) createIndex(formName string, keyStructure string) error {
+func (c *database) createIndex(formName string, keyStructure string) error {
 	form := c.forms[formName]
 	// 自定义Key生成ID
 	customID := c.name2id(strings.Join([]string{formName, keyStructure}, "_"))
@@ -101,11 +101,11 @@ func (c *checkbook) createIndex(formName string, keyStructure string) error {
 	if err := mkFormIndexResource(c.id, form.getID(), customID); nil != err {
 		return err
 	}
-	form.getIndexes()[customID] = &catalog{id: customID, keyStructure: keyStructure, form: form, fileIndex: 0}
+	form.getIndexes()[customID] = &index{id: customID, keyStructure: keyStructure, form: form, fileIndex: 0}
 	return nil
 }
 
-func (c *checkbook) put(formName string, key string, value interface{}, update bool) (uint32, error) {
+func (c *database) put(formName string, key string, value interface{}, update bool) (uint32, error) {
 	form := c.forms[formName] // 获取待操作表
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
@@ -118,7 +118,7 @@ func (c *checkbook) put(formName string, key string, value interface{}, update b
 	return c.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
 }
 
-func (c *checkbook) get(formName string, key string) (interface{}, error) {
+func (c *database) get(formName string, key string) (interface{}, error) {
 	form := c.forms[formName]
 	if nil == form {
 		return nil, shopperIsInvalid(formName)
@@ -131,12 +131,12 @@ func (c *checkbook) get(formName string, key string) (interface{}, error) {
 	return nil, errors.New("no key for custom id index")
 }
 
-func (c *checkbook) insert(formName string, value interface{}, update bool) (uint32, error) {
+func (c *database) insert(formName string, value interface{}, update bool) (uint32, error) {
 	// todo
 	return 0, nil
 }
 
-func (c *checkbook) query(formName string, selector *Selector) (interface{}, error) {
+func (c *database) query(formName string, selector *Selector) (interface{}, error) {
 	if nil == c {
 		return nil, ErrDataIsNil
 	}
@@ -145,7 +145,7 @@ func (c *checkbook) query(formName string, selector *Selector) (interface{}, err
 	return selector.query()
 }
 
-func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey uint32, support bool) {
+func (c *database) valueTypeCheckKey(value *reflect.Value) (key string, hashKey uint32, support bool) {
 	support = true
 	switch value.Kind() {
 	default:
@@ -182,7 +182,7 @@ func (c *checkbook) valueTypeCheckKey(value *reflect.Value) (key string, hashKey
 	return
 }
 
-func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) (uint32, error) {
+func (c *database) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) (uint32, error) {
 	var (
 		ibs []IndexBack
 		err error
@@ -208,9 +208,9 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 			wr := store().appendIndex(ib, appendStr, wf)
 			if nil == wr.err {
 				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key), gnomon.LogField("seekStartIndex", wr.seekStartIndex))
-				ib.getThing().md5Key = md5Key
-				ib.getThing().seekStart = wr.seekStart
-				ib.getThing().seekLast = wr.seekLast
+				ib.getLink().setMD5Key(md5Key)
+				ib.getLink().setSeekStart(wr.seekStart)
+				ib.getLink().setSeekLast(wr.seekLast)
 			}
 			wrIndexBack <- wr
 		}); nil != err {
@@ -230,7 +230,7 @@ func (c *checkbook) insertDataWithIndexInfo(form Form, key string, autoID uint32
 }
 
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
-func (c *checkbook) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
+func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
 	var (
 		chanIndex chan IndexBack
 		err       error
@@ -248,10 +248,9 @@ func (c *checkbook) rangeIndexes(form Form, key string, autoID uint32, indexes m
 			} else {
 				reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
 				params := strings.Split(index.getKeyStructure(), ".")
-				checkValue := reflectObj.Elem()
-				gnomon.Log().Debug("rangeIndexes", gnomon.LogField("reflectObj", reflectObj), gnomon.LogField("params", params), gnomon.LogField("checkValue", checkValue))
+				var checkValue reflect.Value
 				for _, param := range params {
-					checkNewValue := checkValue.FieldByName(param)
+					checkNewValue := reflectObj.Elem().FieldByName(param)
 					if checkNewValue.IsValid() { // 子字段有效
 						checkValue = checkNewValue
 						continue
@@ -286,12 +285,12 @@ func shopperIsInvalid(formName string) error {
 }
 
 // indexID 索引ID新的组合名称
-func (c *checkbook) indexID(formName, indexName string) string {
+func (c *database) indexID(formName, indexName string) string {
 	return strings.Join([]string{formName, indexName}, "_")
 }
 
 // name2id 确保数据库唯一ID不重复
-func (c *checkbook) name2id(name string) string {
+func (c *database) name2id(name string) string {
 	id := gnomon.CryptoHash().MD516(name)
 	have := true
 	for have {

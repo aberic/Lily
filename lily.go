@@ -110,7 +110,7 @@ func (l *Lily) initialize() {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(indexForm, "default catalog form", formTypeSQL); nil != err {
+		if err = data.createForm(indexForm, "default index form", formTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
@@ -139,7 +139,7 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 	if err := mkDataDir(id); nil != err {
 		return nil, err
 	}
-	l.databases[name] = &checkbook{name: name, id: id, forms: map[string]Form{}}
+	l.databases[name] = &database{name: name, id: id, forms: map[string]Form{}}
 	//l.defaultDatabase.insert(databaseForm, id, )
 	return l.databases[name], nil
 }

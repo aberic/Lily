@@ -18,13 +18,13 @@ import (
 	"sync"
 )
 
-// shopper The Shopper
+// form The Shopper
 //
 // hash array 模型 [00, 01, 02, 03, 04, 05, 06, 07, 08, 09, a, b, c, d, e, f]
 //
 // b+tree 模型 degree=128;level=4;nodes=[degree^level]/(degree-1)=2113665;
 //
-// purse 内范围控制数量 keyStructure=127
+// node 内范围控制数量 keyStructure=127
 //
 // tree 内范围控制数量 treeCount=nodes*keyStructure=268435455
 //
@@ -41,7 +41,7 @@ import (
 // 存储格式 {dataDir}/database/{dataName}/{formName}/{formName}.dat/idx...
 //
 // 索引格式
-type shopper struct {
+type form struct {
 	autoID    uint32           // 自增id
 	database  Database         // 数据库对象
 	name      string           // 表名，根据需求可以随时变化
@@ -54,50 +54,50 @@ type shopper struct {
 	fLock     sync.RWMutex
 }
 
-func (s *shopper) getAutoID() *uint32 {
+func (s *form) getAutoID() *uint32 {
 	return &s.autoID
 }
 
-func (s *shopper) getID() string {
+func (s *form) getID() string {
 	return s.id
 }
 
-func (s *shopper) getName() string {
+func (s *form) getName() string {
 	return s.name
 }
 
-func (s *shopper) getDatabase() Database {
+func (s *form) getDatabase() Database {
 	return s.database
 }
 
-func (s *shopper) getFileIndex() int {
+func (s *form) getFileIndex() int {
 	return s.fileIndex
 }
 
-func (s *shopper) getIndexes() map[string]Index {
+func (s *form) getIndexes() map[string]Index {
 	return s.indexes
 }
 
-func (s *shopper) getFormType() string {
+func (s *form) getFormType() string {
 	return s.formType
 }
 
-func (s *shopper) getDatabaseID() string {
+func (s *form) getDatabaseID() string {
 	return s.database.getID()
 }
 
-func (s *shopper) lock() {
+func (s *form) lock() {
 	s.fLock.Lock()
 }
 
-func (s *shopper) unLock() {
+func (s *form) unLock() {
 	s.fLock.Unlock()
 }
 
-func (s *shopper) rLock() {
+func (s *form) rLock() {
 	s.fLock.RLock()
 }
 
-func (s *shopper) rUnLock() {
+func (s *form) rUnLock() {
 	s.fLock.RUnlock()
 }

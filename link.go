@@ -19,36 +19,92 @@ import (
 	"sync"
 )
 
-type thing struct {
-	nodal          Nodal // box 所属 purse
+type link struct {
+	nodal          Nodal // box 所属 node
 	md5Key         string
 	seekStartIndex int64  // 索引最终存储在文件中的起始位置
 	seekStart      uint32 // value最终存储在文件中的起始位置
 	seekLast       int    // value最终存储在文件中的持续长度
 	value          interface{}
-	lock           sync.Mutex
+	tLock          sync.RWMutex
 }
 
-func (t *thing) put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack {
+func (t *link) setMD5Key(md5Key string) {
+	t.md5Key = md5Key
+}
+
+func (t *link) setSeekStartIndex(seek int64) {
+	t.seekStartIndex = seek
+}
+
+func (t *link) setSeekStart(seek uint32) {
+	t.seekStart = seek
+}
+
+func (t *link) setSeekLast(seek int) {
+	t.seekLast = seek
+}
+
+func (t *link) getNodal() Nodal {
+	return t.nodal
+}
+
+func (t *link) getMD5Key() string {
+	return t.md5Key
+}
+
+func (t *link) getSeekStartIndex() int64 {
+	return t.seekStartIndex
+}
+
+func (t *link) getSeekStart() uint32 {
+	return t.seekStart
+}
+
+func (t *link) getSeekLast() int {
+	return t.seekLast
+}
+
+func (t *link) getValue() interface{} {
+	return t.value
+}
+
+func (t *link) lock() {
+	t.tLock.Lock()
+}
+
+func (t *link) unLock() {
+	t.tLock.Unlock()
+}
+
+func (t *link) rLock() {
+	t.tLock.RLock()
+}
+
+func (t *link) rUnLock() {
+	t.tLock.RUnlock()
+}
+
+func (t *link) put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack {
 	gnomon.Log().Debug("box",
 		gnomon.LogField("originalKey", originalKey),
-		gnomon.LogField("keyStructure", key),
+		gnomon.LogField("key", key),
 		gnomon.LogField("value", value),
 		gnomon.LogField("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
 		indexNodal:        t.nodal.getPreNodal().getPreNodal(),
-		thing:             t,
+		link:              t,
 		key:               key,
 		err:               nil,
 	}
 }
 
-func (t *thing) get() (interface{}, error) {
-	index := t.getIndex()
+func (t *link) get() (interface{}, error) {
+	index := t.nodal.getIndex()
 	rrFormBack := make(chan *readResult, 1)
 	if err := pool().submit(func() {
-		store().read(pathFormDataFile(index.form.getDatabase().getID(), index.form.getID(), index.form.getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
+		store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
 	}); nil != err {
 		return nil, err
 	}
@@ -56,16 +112,12 @@ func (t *thing) get() (interface{}, error) {
 	return rr.value, rr.err
 }
 
-func (t *thing) getIndex() *catalog {
-	return t.nodal.getPreNodal().getPreNodal().getPreNodal().getPreNodal().(*catalog)
-}
-
 // indexBack 索引对象
 type indexBack struct {
 	formIndexFilePath string // 索引文件所在路径
 	indexNodal        Nodal  // 索引文件所对应level2层级度节点
-	thing             *thing // 索引对应节点对象子集
-	key               uint32 // put hash keyStructure
+	link              Link   // 索引对应节点对象子集
+	key               uint32 // put hash key
 	err               error
 }
 
@@ -79,9 +131,9 @@ func (i *indexBack) getNodal() Nodal {
 	return i.indexNodal
 }
 
-// getThing 索引对应节点对象子集
-func (i *indexBack) getThing() *thing {
-	return i.thing
+// getLink 索引对应节点对象子集
+func (i *indexBack) getLink() Link {
+	return i.link
 }
 
 // getHashKey put hash keyStructure

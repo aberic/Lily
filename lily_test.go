@@ -79,7 +79,7 @@ func TestCond(t *testing.T) {
 		go func(index int) {
 			cond.L.Lock() //获取锁
 			cond.Wait()   // 等待通知  暂时阻塞
-			fmt.Println("catalog: ", index)
+			fmt.Println("index: ", index)
 			cond.L.Unlock() //释放锁
 		}(i)
 	}
@@ -209,8 +209,8 @@ func TestQuerySelector1(t *testing.T) {
 }
 
 type TestValue struct {
-	Id        int   `json:"id"`
-	Timestamp int64 `json:"timestamp"`
+	Id        int
+	Timestamp int64
 }
 
 func TestQuerySelector2(t *testing.T) {
@@ -221,11 +221,13 @@ func TestQuerySelector2(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
-	//if err = l.CreateIndex(checkbookName, shopperName, "id"); nil != err {
-	//	t.Error(err)
-	//}
+	if err = l.CreateIndex(checkbookName, shopperName, "Id"); nil != err {
+		t.Error(err)
+	}
 	for i := 1; i <= 10; i++ {
-		_, _ = l.Put(checkbookName, shopperName, strconv.Itoa(i), TestValue{Id: i, Timestamp: time.Now().Local().UnixNano()})
+		if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Timestamp: time.Now().Local().UnixNano()}); nil != err {
+			t.Log(err)
+		}
 	}
 	for i := 1; i <= 10; i++ {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
@@ -237,7 +239,9 @@ func TestQuerySelector2(t *testing.T) {
 	}
 	i, err := l.Select(checkbookName, shopperName, &Selector{})
 	t.Log("select = ", i, "err = ", err)
-	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{}})
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: true}})
+	t.Log("select = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
 	t.Log("select = ", i, "err = ", err)
 }
 
@@ -317,7 +321,7 @@ func TestPrint(t *testing.T) {
 
 func TestBinaryFind(t *testing.T) {
 	index, err := binaryMatch(150, []uint8{0, 8, 19, 49, 63, 80, 81, 98, 133, 150, 201, 250})
-	t.Log("catalog = ", index, " | err = ", err)
+	t.Log("index = ", index, " | err = ", err)
 }
 
 func TestBinaryFind2(t *testing.T) {

@@ -22,11 +22,11 @@ import (
 
 // Selector 检索选择器
 //
-// 查询顺序 scope -> conditions -> match -> skip -> sort -> limit
+// 查询顺序 scope -> match -> conditions -> skip -> sort -> limit
 type Selector struct {
 	Scopes     []*scope     `json:"scopes"`     // Scopes 范围查询
-	Conditions []*condition `json:"conditions"` // Conditions 条件查询
 	Matches    []*match     `json:"matches"`    // Matches 匹配查询
+	Conditions []*condition `json:"conditions"` // Conditions 条件查询
 	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
 	Sort       *sort        `json:"sort"`       // Sort 排序方式
 	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
@@ -114,10 +114,6 @@ type sort struct {
 	ASC   bool   `json:"asc"` // 是否升序
 }
 
-//func (s *Selector) formName(formName string) string {
-//
-//}
-
 func (s *Selector) match2String(inter interface{}) string {
 	switch inter.(type) {
 	case string:
@@ -136,16 +132,17 @@ func (s *Selector) query() ([]interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
+		sortIndex bool
 		err       error
 	)
-	if index, leftQuery, err = s.getIndex(); nil != err {
+	if index, leftQuery, sortIndex, err = s.getIndex(); nil != err {
 		return nil, err
 	}
 	gnomon.Log().Debug("query", gnomon.LogField("index", index.getKeyStructure()))
 	if leftQuery {
-		return s.leftQuery(index), nil
+		return s.leftQueryIndex(index, sortIndex), nil
 	}
-	return s.rightQuery(index), nil
+	return s.rightQueryIndex(index), nil
 }
 
 // getIndex 根据检索条件获取使用索引对象
@@ -153,73 +150,116 @@ func (s *Selector) query() ([]interface{}, error) {
 // index 已获取索引对象
 //
 // leftQuery 是否顺序查询
-func (s *Selector) getIndex() (index Index, leftQuery bool, err error) {
+func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err error) {
 	for _, index = range s.database.getForms()[s.formName].getIndexes() {
 		if len(s.Scopes) > 0 {
 			for _, scope := range s.Scopes {
 				if scope.Param == index.getKeyStructure() {
-					return index, true, nil
-				}
-			}
-		}
-		if len(s.Conditions) > 0 {
-			for _, condition := range s.Conditions {
-				if condition.Param == index.getKeyStructure() {
-					return index, true, nil
+					return index, true, false, nil
 				}
 			}
 		}
 		if len(s.Matches) > 0 {
 			for _, match := range s.Matches {
 				if match.Param == index.getKeyStructure() {
-					return index, true, nil
+					return index, true, false, nil
+				}
+			}
+		}
+		if len(s.Conditions) > 0 {
+			for _, condition := range s.Conditions {
+				if condition.Param == index.getKeyStructure() {
+					return index, true, false, nil
 				}
 			}
 		}
 		if s.Sort != nil && s.Sort.Param == index.getKeyStructure() {
-			return index, s.Sort.ASC, nil
+			return index, s.Sort.ASC, true, nil
 		}
 	}
 	// 取值默认索引来进行查询操作
 	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
-		return idx, true, nil
+		return idx, true, false, nil
 	}
-	return nil, false, errors.New("index not found")
+	return nil, false, false, errors.New("index not found")
 }
 
-func (s *Selector) leftQuery(data Data) []interface{} {
+func (s *Selector) sort(is []interface{}) []interface{} {
+	if s.Sort != nil {
+		// todo 排序
+		return is
+	}
+	return is
+}
+
+func (s *Selector) leftQueryIndex(index Index, sortIndex bool) []interface{} {
 	is := make([]interface{}, 0)
-	count := data.childCount()
-	for i := 0; i < count; i++ {
-		child := data.child(i)
-		if child.childCount() > 0 {
-			is = append(is, s.leftQuery(child)...)
-		} else if child.childCount() == -1 {
-			thg := child.(*box).things
-			lenThg := len(thg)
-			for ti := 0; ti < lenThg; ti++ {
-				if i, err := thg[ti].get(); nil == err {
-					is = append(is, i)
-				}
-			}
+	if nodes := index.getNodes(); nil != nodes {
+		for _, node := range index.getNodes() {
+			is = append(is, s.leftQueryNode(node)...)
+		}
+	}
+	gnomon.Log().Debug("leftQueryIndex", gnomon.LogField("is", is))
+	if sortIndex {
+		return is
+	}
+	return s.sort(is)
+}
+
+func (s *Selector) leftQueryNode(node Nodal) []interface{} {
+	is := make([]interface{}, 0)
+	if nodes := node.getNodes(); nil != nodes {
+		for _, node := range node.getNodes() {
+			is = append(is, s.leftQueryNode(node)...)
+		}
+	} else {
+		return s.leftQueryLeaf(node.(Leaf))
+	}
+	return is
+}
+
+func (s *Selector) leftQueryLeaf(leaf Leaf) []interface{} {
+	is := make([]interface{}, 0)
+	for _, link := range leaf.getLinks() {
+		if inter, err := link.get(); nil == err {
+			is = append(is, inter)
 		}
 	}
 	return is
 }
 
-func (s *Selector) rightQuery(data Data) []interface{} {
+func (s *Selector) rightQueryIndex(index Index) []interface{} {
 	is := make([]interface{}, 0)
-	count := data.childCount()
-	for i := count - 1; i >= 0; i-- {
-		child := data.child(i)
-		if child.childCount() > 0 {
-			is = append(is, s.rightQuery(child)...)
-		} else if child.childCount() == -1 {
-			thg := child.(*box).things
-			lenThg := len(thg)
-			for ti := lenThg - 1; ti >= 0; ti-- {
-				is = append(is, thg[ti].value)
-			}
+	if nodes := index.getNodes(); nil != nodes {
+		lenNode := len(nodes)
+		for i := lenNode - 1; i >= 0; i-- {
+			is = append(is, s.rightQueryNode(nodes[i])...)
+		}
+	}
+	gnomon.Log().Debug("rightQueryIndex", gnomon.LogField("is", is))
+	return is
+}
+
+func (s *Selector) rightQueryNode(node Nodal) []interface{} {
+	is := make([]interface{}, 0)
+	if nodes := node.getNodes(); nil != nodes {
+		lenNode := len(nodes)
+		for i := lenNode - 1; i >= 0; i-- {
+			is = append(is, s.rightQueryNode(nodes[i])...)
+		}
+	} else {
+		return s.rightQueryLeaf(node.(Leaf))
+	}
+	return is
+}
+
+func (s *Selector) rightQueryLeaf(leaf Leaf) []interface{} {
+	is := make([]interface{}, 0)
+	links := leaf.getLinks()
+	lenLink := len(links)
+	for i := lenLink - 1; i >= 0; i-- {
+		if inter, err := links[i].get(); nil == err {
+			is = append(is, inter)
 		}
 	}
 	return is
