@@ -16,10 +16,12 @@ package lily
 
 import (
 	"errors"
+	"github.com/aberic/gnomon"
 	"hash/crc32"
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -130,9 +132,7 @@ func binaryMatch(matchVal uint8, uintArr []uint8) (index int, err error) {
 // mkDataDir 创建库存储目录
 func mkDataDir(dataName string) (err error) {
 	dataPath := filepath.Join(dataDir, dataName)
-	if exist, err := pathExist(dataPath); nil != err {
-		return err
-	} else if exist {
+	if gnomon.File().PathExists(dataPath) {
 		return ErrDatabaseExist
 	}
 	return os.MkdirAll(dataPath, os.ModePerm)
@@ -141,9 +141,7 @@ func mkDataDir(dataName string) (err error) {
 // rmDataDir 删除库存储目录
 func rmDataDir(dataName string) (err error) {
 	dataPath := filepath.Join(dataDir, dataName)
-	if exist, err := pathExist(dataPath); nil != err {
-		return err
-	} else if exist {
+	if gnomon.File().PathExists(dataPath) {
 		return os.Remove(dataPath)
 	}
 	return nil
@@ -183,9 +181,7 @@ func mkFormIndexResource(dataID, formID, indexID string) (err error) {
 // formID 表唯一id
 func mkFormDir(dataID, formID string) (err error) {
 	dataPath := pathFormDir(dataID, formID)
-	if exist, err := pathExist(dataPath); nil != err {
-		return err
-	} else if exist {
+	if gnomon.File().PathExists(dataPath) {
 		return ErrFormExist
 	}
 	return os.MkdirAll(dataPath, os.ModePerm)
@@ -198,9 +194,7 @@ func mkFormDir(dataID, formID string) (err error) {
 // formID 表唯一id
 func rmFormDir(dataID, formID string) (err error) {
 	formPath := pathFormDir(dataID, formID)
-	if exist, err := pathExist(formPath); nil != err {
-		return err
-	} else if exist {
+	if gnomon.File().PathExists(formPath) {
 		return os.Remove(formPath)
 	}
 	return nil
@@ -226,9 +220,7 @@ func mkFormIndexDir(dataID, formID, indexID string) (err error) {
 // indexID 表索引唯一id
 func rmFormIndexDir(dataID, formID, indexID string) (err error) {
 	indexPath := pathFormIndexDir(dataID, formID, indexID)
-	if exist, err := pathExist(indexPath); nil != err {
-		return err
-	} else if exist {
+	if gnomon.File().PathExists(indexPath) {
 		return os.Remove(indexPath)
 	}
 	return nil
@@ -285,18 +277,6 @@ func pathFormDataFile(dataID, formID string, fileIndex int) string {
 	return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), strconv.Itoa(fileIndex), ".dat"}, "")
 }
 
-// pathExist 检查路径是否存在
-func pathExist(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // int16ToUint32Index int16转uint32
@@ -343,6 +323,75 @@ func uint64ToUint32IndexDivide(ui64 uint64, divide int) uint32 {
 		return uint32(i64New)
 	}
 	return uint32(ui64)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func valueType2index(value *reflect.Value) (key string, hashKey uint32, support bool) {
+	support = true
+	switch value.Kind() {
+	default:
+		return "", 0, false
+	case reflect.Int8, reflect.Int16:
+		i64 := value.Int()
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int16ToUint32Index(int16(i64))
+	case reflect.Int32:
+		i64 := value.Int()
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int32ToUint32Index(int32(i64))
+	case reflect.Int, reflect.Int64:
+		i64 := value.Int()
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int64ToUint32Index(i64)
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		ui64 := value.Uint()
+		key = strconv.FormatUint(ui64, 10)
+		hashKey = uint32(ui64)
+	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
+		ui64 := value.Uint()
+		key = strconv.FormatUint(ui64, 10)
+		hashKey = uint64ToUint32Index(ui64)
+	case reflect.Float32, reflect.Float64:
+		i64 := gnomon.Scale().Wrap(value.Float(), 4)
+		key = strconv.FormatInt(i64, 10)
+		hashKey = int64ToUint32Index(i64)
+	case reflect.String:
+		// todo 字符串索引按照字母及大小写顺序，待完善
+		key = value.String()
+		hashKey = hash(key)
+	}
+	return
+}
+
+func value2hashKey(value *reflect.Value) (hashKey uint32, support bool) {
+	support = true
+	switch value.Kind() {
+	default:
+		return 0, false
+	case reflect.Int8, reflect.Int16:
+		i64 := value.Int()
+		hashKey = int16ToUint32Index(int16(i64))
+	case reflect.Int32:
+		i64 := value.Int()
+		hashKey = int32ToUint32Index(int32(i64))
+	case reflect.Int, reflect.Int64:
+		i64 := value.Int()
+		hashKey = int64ToUint32Index(i64)
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		ui64 := value.Uint()
+		hashKey = uint32(ui64)
+	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
+		ui64 := value.Uint()
+		hashKey = uint64ToUint32Index(ui64)
+	case reflect.Float32, reflect.Float64:
+		i64 := gnomon.Scale().Wrap(value.Float(), 4)
+		hashKey = int64ToUint32Index(i64)
+	case reflect.String:
+		// todo 字符串索引按照字母及大小写顺序，待完善
+		hashKey = hash(value.String())
+	}
+	return
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

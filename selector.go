@@ -17,7 +17,9 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"reflect"
 	"strconv"
+	"strings"
 )
 
 // Selector 检索选择器
@@ -184,14 +186,7 @@ func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err 
 	return nil, false, false, errors.New("index not found")
 }
 
-func (s *Selector) sort(is []interface{}) []interface{} {
-	if s.Sort != nil {
-		// todo 排序
-		return is
-	}
-	return is
-}
-
+// leftQueryIndex 索引顺序检索
 func (s *Selector) leftQueryIndex(index Index, sortIndex bool) []interface{} {
 	is := make([]interface{}, 0)
 	if nodes := index.getNodes(); nil != nodes {
@@ -203,9 +198,10 @@ func (s *Selector) leftQueryIndex(index Index, sortIndex bool) []interface{} {
 	if sortIndex {
 		return is
 	}
-	return s.sort(is)
+	return s.shellSort(is)
 }
 
+// leftQueryNode 节点顺序检索
 func (s *Selector) leftQueryNode(node Nodal) []interface{} {
 	is := make([]interface{}, 0)
 	if nodes := node.getNodes(); nil != nodes {
@@ -218,6 +214,7 @@ func (s *Selector) leftQueryNode(node Nodal) []interface{} {
 	return is
 }
 
+// leftQueryLeaf 叶子节点顺序检索
 func (s *Selector) leftQueryLeaf(leaf Leaf) []interface{} {
 	is := make([]interface{}, 0)
 	for _, link := range leaf.getLinks() {
@@ -228,6 +225,7 @@ func (s *Selector) leftQueryLeaf(leaf Leaf) []interface{} {
 	return is
 }
 
+// rightQueryIndex 索引倒序检索
 func (s *Selector) rightQueryIndex(index Index) []interface{} {
 	is := make([]interface{}, 0)
 	if nodes := index.getNodes(); nil != nodes {
@@ -240,6 +238,7 @@ func (s *Selector) rightQueryIndex(index Index) []interface{} {
 	return is
 }
 
+// rightQueryNode 节点倒序检索
 func (s *Selector) rightQueryNode(node Nodal) []interface{} {
 	is := make([]interface{}, 0)
 	if nodes := node.getNodes(); nil != nodes {
@@ -253,6 +252,7 @@ func (s *Selector) rightQueryNode(node Nodal) []interface{} {
 	return is
 }
 
+// rightQueryLeaf 叶子节点倒序检索
 func (s *Selector) rightQueryLeaf(leaf Leaf) []interface{} {
 	is := make([]interface{}, 0)
 	links := leaf.getLinks()
@@ -263,4 +263,63 @@ func (s *Selector) rightQueryLeaf(leaf Leaf) []interface{} {
 		}
 	}
 	return is
+}
+
+// shellSort 希尔排序
+func (s *Selector) shellSort(is []interface{}) []interface{} {
+	if s.Sort != nil {
+		var (
+			temp   uint32
+			gap    uint32
+			lenArr uint32
+		)
+		lenArr = uint32(len(is))
+		gap = lenArr / 2
+		for gap > 0 {
+			for i := gap; i < lenArr; i++ {
+				var support bool
+				if temp, support = s.getInterValue(s.Sort.Param, is[i]); !support {
+					return is
+				}
+				preIndex := i - gap
+				for preIndex > 0 {
+					var preIndexTemp uint32
+					if preIndexTemp, support = s.getInterValue(s.Sort.Param, is[preIndex]); !support {
+						return is
+					}
+					if preIndexTemp <= temp {
+						break
+					}
+					is[preIndex+gap] = is[preIndex]
+					preIndex -= gap
+				}
+				is[preIndex+gap] = is[i]
+			}
+			gap /= 2
+		}
+		return is
+	}
+	return is
+}
+
+// getInterValue 根据索引描述和当前检索到的value对象获取当前value对象所在索引的hashKey
+func (s *Selector) getInterValue(param string, value interface{}) (hashKey uint32, support bool) {
+	reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
+	if reflectObj.Kind() == reflect.Map {
+		interMap := value.(map[string]interface{})
+		params := strings.Split(param, ".")
+		lenParams := len(params)
+		var valueResult interface{}
+		for i, param := range params {
+			if i == lenParams-1 {
+				valueResult = interMap[param]
+				break
+			}
+			interMap = interMap[param].(map[string]interface{})
+		}
+		gnomon.Log().Debug("getInterValue", gnomon.LogField("valueResult", valueResult))
+		checkValue := reflect.ValueOf(valueResult)
+		return value2hashKey(&checkValue)
+	}
+	return 0, false
 }

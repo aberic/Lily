@@ -145,43 +145,6 @@ func (c *database) query(formName string, selector *Selector) (interface{}, erro
 	return selector.query()
 }
 
-func (c *database) valueTypeCheckKey(value *reflect.Value) (key string, hashKey uint32, support bool) {
-	support = true
-	switch value.Kind() {
-	default:
-		return "", 0, false
-	case reflect.Int8, reflect.Int16:
-		i64 := value.Int()
-		key = strconv.FormatInt(i64, 10)
-		hashKey = int16ToUint32Index(int16(i64))
-	case reflect.Int32:
-		i64 := value.Int()
-		key = strconv.FormatInt(i64, 10)
-		hashKey = int32ToUint32Index(int32(i64))
-	case reflect.Int, reflect.Int64:
-		i64 := value.Int()
-		key = strconv.FormatInt(i64, 10)
-		hashKey = int64ToUint32Index(i64)
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
-		ui64 := value.Uint()
-		key = strconv.FormatUint(ui64, 10)
-		hashKey = uint32(ui64)
-	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
-		ui64 := value.Uint()
-		key = strconv.FormatUint(ui64, 10)
-		hashKey = uint64ToUint32Index(ui64)
-	case reflect.Float32, reflect.Float64:
-		i64 := gnomon.Scale().Wrap(value.Float(), 4)
-		key = strconv.FormatInt(i64, 10)
-		hashKey = int64ToUint32Index(i64)
-	case reflect.String:
-		// todo 字符串索引按照字母及大小写顺序，待完善
-		key = value.String()
-		hashKey = hash(key)
-	}
-	return
-}
-
 func (c *database) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) (uint32, error) {
 	var (
 		ibs []IndexBack
@@ -259,7 +222,7 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 					return
 				}
 				gnomon.Log().Debug("rangeIndexes", gnomon.LogField("checkValue", checkValue))
-				if keyNew, hashKeyNew, valid := c.valueTypeCheckKey(&checkValue); valid {
+				if keyNew, hashKeyNew, valid := valueType2index(&checkValue); valid {
 					chanIndex <- form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, value, update)
 				}
 			}

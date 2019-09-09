@@ -224,6 +224,9 @@ func TestQuerySelector2(t *testing.T) {
 	if err = l.CreateIndex(checkbookName, shopperName, "Id"); nil != err {
 		t.Error(err)
 	}
+	if err = l.CreateIndex(checkbookName, shopperName, "Timestamp"); nil != err {
+		t.Error(err)
+	}
 	for i := 1; i <= 10; i++ {
 		if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 			t.Log(err)
@@ -239,7 +242,7 @@ func TestQuerySelector2(t *testing.T) {
 	}
 	i, err := l.Select(checkbookName, shopperName, &Selector{})
 	t.Log("select = ", i, "err = ", err)
-	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: true}})
+	i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}, Sort: &sort{Param: "Id", ASC: true}})
 	t.Log("select = ", i, "err = ", err)
 	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
 	t.Log("select = ", i, "err = ", err)
