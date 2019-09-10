@@ -299,7 +299,7 @@ type Nodal interface {
 	// flexibleKey 下一级最左最小树所对应真实key
 	get(originalKey string, key, flexibleKey uint32) (interface{}, error)
 	getDegreeIndex() uint8 // getDegreeIndex 获取节点所在树中度集合中的数组下标
-	getPreNodal() Nodal    // getPreNodal 获取父节点对象
+	getPreNode() Nodal     // getPreNode 获取父节点对象
 }
 
 // Leaf 叶子节点对象接口
@@ -327,7 +327,7 @@ type Link interface {
 
 type IndexBack interface {
 	getFormIndexFilePath() string // 索引文件所在路径
-	getNodal() Nodal              // 索引文件所对应level2层级度节点
+	getLocker() WriteLocker       // 索引文件所对应level2层级度节点
 	getLink() Link                // 索引对应节点对象子集
 	getHashKey() uint32           // put hash keyStructure
 	getErr() error

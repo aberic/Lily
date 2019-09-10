@@ -32,7 +32,7 @@ type node struct {
 	level       uint8 // 当前节点所在树层级
 	degreeIndex uint8 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
 	index       Index // 所属索引对象
-	nodal       Nodal // node 所属 trolley
+	preNode     Nodal // node 所属 trolley
 	nodes       []Nodal
 	links       []Link
 	pLock       sync.RWMutex
@@ -61,7 +61,7 @@ func (p *node) put(originalKey string, key, flexibleKey uint32, value interface{
 		if exist {
 			return &indexBack{
 				formIndexFilePath: formIndexFilePath,
-				indexNodal:        p.nodal.getPreNodal(),
+				locker:            p.index,
 				link:              link,
 				key:               key,
 				err:               nil,
@@ -122,7 +122,7 @@ func (p *node) createNode(index uint8) Nodal {
 			level:       level,
 			degreeIndex: index,
 			index:       p.index,
-			nodal:       p,
+			preNode:     p,
 			nodes:       []Nodal{},
 		}
 		return p.appendNodal(index, n)
@@ -143,7 +143,7 @@ func (p *node) createLeaf(index uint8) Nodal {
 			level:       level,
 			degreeIndex: index,
 			index:       p.index,
-			nodal:       p,
+			preNode:     p,
 			links:       []Link{},
 		}
 		return p.appendNodal(index, n)
@@ -161,7 +161,7 @@ func (p *node) createLink(originalKey string, key uint32, value interface{}) (Li
 			}
 		}
 	}
-	thg := &link{nodal: p, seekStartIndex: -1}
+	thg := &link{preNode: p, seekStartIndex: -1}
 	p.links = append(p.links, thg)
 	return thg, false
 }
@@ -181,8 +181,7 @@ func (p *node) getFormIndexFilePath() (formIndexFilePath string) {
 	index := p.getIndex()
 	dataID := index.getForm().getDatabase().getID()
 	formID := index.getForm().getID()
-	rootNodeDegreeIndex := p.nodal.getPreNodal().getPreNodal().getDegreeIndex()
-	return pathFormIndexFile(dataID, formID, index.getID(), rootNodeDegreeIndex)
+	return pathFormIndexFile(dataID, formID, index.getID(), index.getKeyStructure())
 }
 
 func (p *node) appendNodal(index uint8, n Nodal) Nodal {
@@ -218,8 +217,8 @@ func (p *node) getDegreeIndex() uint8 {
 	return p.degreeIndex
 }
 
-func (p *node) getPreNodal() Nodal {
-	return p.nodal
+func (p *node) getPreNode() Nodal {
+	return p.preNode
 }
 
 func (p *node) lock() {

@@ -111,7 +111,6 @@ func (f *filed) running() {
 				it := task.(*indexTask)
 				var seekEnd int64
 				gnomon.Log().Debug("running", gnomon.LogField("type", "moldIndex"), gnomon.LogField("seekStartIndex", it.link.getSeekStartIndex()))
-				it.link.lock()
 				if it.link.getSeekStartIndex() == -1 {
 					if seekEnd, err = f.file.Seek(0, io.SeekEnd); nil != err {
 						gnomon.Log().Error("running", gnomon.LogErr(err))
@@ -136,7 +135,6 @@ func (f *filed) running() {
 				gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex", seekEnd), gnomon.LogErr(err))
 				goto WriteResult
 			WriteResult:
-				it.link.unLock()
 				task.getChanResult() <- &writeResult{
 					seekStartIndex: seekEnd,
 					seekStart:      it.accept.seekStart,
@@ -184,7 +182,7 @@ type storage struct {
 
 func (s *storage) appendIndex(ib IndexBack, key string, wr *writeResult) *writeResult {
 	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", ib.getFormIndexFilePath()), gnomon.LogField("seekStartIndex", ib.getLink().getSeekStartIndex()))
-	return s.writeIndex(ib.getNodal(), ib.getFormIndexFilePath(), key, ib.getLink(), wr)
+	return s.writeIndex(ib.getLocker(), ib.getFormIndexFilePath(), key, ib.getLink(), wr)
 }
 
 func (s *storage) appendForm(form WriteLocker, path string, value interface{}) *writeResult {
@@ -257,12 +255,12 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 	rr <- &readResult{err: err, value: value}
 }
 
-func (s *storage) useFiled(data WriteLocker, filePath string, mold int) (fd *filed, err error) {
+func (s *storage) useFiled(locker WriteLocker, filePath string, mold int) (fd *filed, err error) {
 	if fd = s.files[filePath]; nil != fd {
 		return
 	}
-	defer data.unLock()
-	data.lock()
+	defer locker.unLock()
+	locker.lock()
 	gnomon.Log().Debug("useFiled", gnomon.LogField("filePath", filePath))
 	if fd = s.files[filePath]; nil != fd {
 		fd.to.Reset(5 * time.Second)

@@ -268,9 +268,9 @@ func pathFormIndexDir(dataID, formID, indexID string) string {
 //
 // indexID 表索引唯一id
 //
-// index 所在表顶层数组中下标
-func pathFormIndexFile(dataID, formID, indexID string, index uint8) string {
-	return strings.Join([]string{pathFormIndexDir(dataID, formID, indexID), string(filepath.Separator), strconv.Itoa(int(index)), ".idx"}, "")
+// indexKeyStructure 索引字段名称，由对象结构层级字段通过'.'组成
+func pathFormIndexFile(dataID, formID, indexID, indexKeyStructure string) string {
+	return strings.Join([]string{pathFormIndexDir(dataID, formID, indexID), string(filepath.Separator), indexKeyStructure, ".idx"}, "")
 }
 
 func pathFormDataFile(dataID, formID string, fileIndex int) string {

@@ -20,7 +20,7 @@ import (
 )
 
 type link struct {
-	nodal          Nodal // box 所属 node
+	preNode        Nodal // box 所属 node
 	md5Key         string
 	seekStartIndex int64  // 索引最终存储在文件中的起始位置
 	seekStart      uint32 // value最终存储在文件中的起始位置
@@ -46,7 +46,7 @@ func (t *link) setSeekLast(seek int) {
 }
 
 func (t *link) getNodal() Nodal {
-	return t.nodal
+	return t.preNode
 }
 
 func (t *link) getMD5Key() string {
@@ -93,7 +93,7 @@ func (t *link) put(originalKey string, key uint32, value interface{}, formIndexF
 		gnomon.LogField("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
-		indexNodal:        t.nodal.getPreNodal().getPreNodal(),
+		locker:            t.preNode.getIndex(),
 		link:              t,
 		key:               key,
 		err:               nil,
@@ -101,7 +101,7 @@ func (t *link) put(originalKey string, key uint32, value interface{}, formIndexF
 }
 
 func (t *link) get() (interface{}, error) {
-	index := t.nodal.getIndex()
+	index := t.preNode.getIndex()
 	rrFormBack := make(chan *readResult, 1)
 	if err := pool().submit(func() {
 		store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
@@ -114,10 +114,10 @@ func (t *link) get() (interface{}, error) {
 
 // indexBack 索引对象
 type indexBack struct {
-	formIndexFilePath string // 索引文件所在路径
-	indexNodal        Nodal  // 索引文件所对应level2层级度节点
-	link              Link   // 索引对应节点对象子集
-	key               uint32 // put hash key
+	formIndexFilePath string      // 索引文件所在路径
+	locker            WriteLocker // 索引文件所对应level2层级度节点
+	link              Link        // 索引对应节点对象子集
+	key               uint32      // put hash key
 	err               error
 }
 
@@ -126,9 +126,9 @@ func (i *indexBack) getFormIndexFilePath() string {
 	return i.formIndexFilePath
 }
 
-// getNodal 索引文件所对应level2层级度节点
-func (i *indexBack) getNodal() Nodal {
-	return i.indexNodal
+// getLocker 索引文件所对应level2层级度节点
+func (i *indexBack) getLocker() WriteLocker {
+	return i.locker
 }
 
 // getLink 索引对应节点对象子集

@@ -236,8 +236,10 @@ func TestQuerySelector2(t *testing.T) {
 	}
 	gnomon.Log().Debug("TestQuerySelector2 Put")
 	for i := 97; i > 0; i-- {
-		if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
+		if id, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 			t.Log(err)
+		} else {
+			gnomon.Log().Debug("TestQuerySelector2", gnomon.LogField("id", id))
 		}
 	}
 	gnomon.Log().Debug("TestQuerySelector2 Get")

@@ -94,7 +94,7 @@ func (c *index) createNode(index uint8) Nodal {
 			level:       0,
 			degreeIndex: index,
 			index:       c,
-			nodal:       nil,
+			preNode:     nil,
 			nodes:       []Nodal{},
 		}
 		lenData := len(c.nodes)
