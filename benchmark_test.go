@@ -25,7 +25,7 @@ import (
 )
 
 func BenchmarkInsert(b *testing.B) {
-	gnomon.Log().Set(gnomon.ErrorLevel, false)
+	gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName)

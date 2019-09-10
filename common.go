@@ -283,6 +283,9 @@ func pathFormDataFile(dataID, formID string, fileIndex int) string {
 //
 // 该方法仅对索引有效，在排序或范围查询时，如果有使用int16做索引的对象，都必须按照该方法转换并做内部检索和排序，如link
 func int16ToUint32Index(i16 int16) uint32 {
+	if i16 > 0 && i16 < 32767 {
+		return uint32(i16)
+	}
 	ui16 := i16 + 32767 + 1 // 32768 = 1 << 15
 	return uint32(ui16)
 }
@@ -291,6 +294,9 @@ func int16ToUint32Index(i16 int16) uint32 {
 //
 // 该方法仅对索引有效，在排序或范围查询时，如果有使用int32做索引的对象，都必须按照该方法转换并做内部检索和排序，如link
 func int32ToUint32Index(i32 int32) uint32 {
+	if i32 > 0 && i32 < 2147483647 {
+		return uint32(i32)
+	}
 	ui32 := i32 + 2147483647 + 1 // 2147483648 = 1 << 31
 	return uint32(ui32)
 }
@@ -299,6 +305,9 @@ func int32ToUint32Index(i32 int32) uint32 {
 //
 // 该方法仅对索引有效，在排序或范围查询时，如果有使用int64做索引的对象，都必须按照该方法转换并做内部检索和排序，如link
 func int64ToUint32Index(i64 int64) uint32 {
+	if i64 > 0 && i64 < 4294967296 {
+		return uint32(i64)
+	}
 	ui64 := i64 + 9223372036854775807 + 1 // 9.223372036854776e18 || 9223372036854775808 = 1 << 63
 	return uint64ToUint32Index(uint64(ui64))
 }
@@ -307,6 +316,9 @@ func int64ToUint32Index(i64 int64) uint32 {
 //
 // 该方法仅对索引有效，在排序或范围查询时，如果有使用uint64做索引的对象，都必须按照该方法转换并做内部检索和排序，如link
 func uint64ToUint32Index(ui64 uint64) uint32 {
+	if ui64 > 0 && ui64 < 4294967296 {
+		return uint32(ui64)
+	}
 	return uint64ToUint32IndexDivide(ui64, 1)
 }
 

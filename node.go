@@ -52,7 +52,7 @@ func (p *node) put(originalKey string, key, flexibleKey uint32, value interface{
 		index = uint8(key / mallDistance)
 		flexibleNewKey = key - uint32(index)*mallDistance
 		data = p.createNode(uint8(index))
-	} else if p.level == 3 {
+	} else if p.level == 4 {
 		link, exist := p.createLink(originalKey, key, value)
 		if !update && exist {
 			return &indexBack{err: ErrDataExist}
@@ -72,7 +72,7 @@ func (p *node) put(originalKey string, key, flexibleKey uint32, value interface{
 	} else {
 		index = uint8(flexibleKey / distance(p.level))
 		flexibleNewKey = flexibleKey - uint32(index)*distance(p.level)
-		if p.level == 2 {
+		if p.level == 3 {
 			data = p.createLeaf(uint8(index))
 		} else {
 			data = p.createNode(uint8(index))
@@ -89,7 +89,7 @@ func (p *node) get(originalKey string, key, flexibleKey uint32) (interface{}, er
 	if p.level == 0 {
 		index = uint8(key / mallDistance)
 		flexibleNewKey = key - uint32(index)*mallDistance
-	} else if p.level == 3 {
+	} else if p.level == 4 {
 		gnomon.Log().Debug("box-get", gnomon.LogField("originalKey", originalKey))
 		if realIndex, exist := p.existLink(originalKey, key); exist {
 			return p.links[realIndex].get()

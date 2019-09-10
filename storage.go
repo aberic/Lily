@@ -84,13 +84,14 @@ func (f *formTask) getChanResult() chan *writeResult { return f.result }
 type filed struct {
 	file  *os.File
 	tasks chan task
+	to    *time.Timer
 }
 
 // running 带有有效期的，包含对象写入锁的，持续性存储任务
 //
 // 在任务有效期内，可以随时接收新的持有相同对象的存储
 func (f *filed) running() {
-	to := time.NewTimer(time.Second)
+	f.to = time.NewTimer(5 * time.Second)
 	for {
 		select {
 		case task := <-f.tasks:
@@ -99,7 +100,7 @@ func (f *filed) running() {
 				seekLast  int
 				err       error
 			)
-			to.Reset(time.Second)
+			f.to.Reset(5 * time.Second)
 			seekStart, err = f.file.Seek(0, io.SeekEnd)
 			if err != nil {
 				task.getChanResult() <- &writeResult{err: err}
@@ -113,13 +114,13 @@ func (f *filed) running() {
 				it.link.lock()
 				if it.link.getSeekStartIndex() == -1 {
 					if seekEnd, err = f.file.Seek(0, io.SeekEnd); nil != err {
-						gnomon.Log().Debug("running", gnomon.LogErr(err))
+						gnomon.Log().Error("running", gnomon.LogErr(err))
 						goto WriteResult
 					}
 					gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex == -1", seekEnd))
 				} else {
 					if seekEnd, err = f.file.Seek(it.link.getSeekStartIndex(), io.SeekStart); nil != err { // 寻址到原索引起始位置
-						gnomon.Log().Debug("running", gnomon.LogErr(err))
+						gnomon.Log().Error("running", gnomon.LogErr(err))
 						goto WriteResult
 					}
 					gnomon.Log().Debug("running", gnomon.LogField("seekStartIndex", it.link.getSeekStartIndex()), gnomon.LogField("it.link.seekStartIndex != -1", seekEnd))
@@ -128,14 +129,14 @@ func (f *filed) running() {
 				if _, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(),
 					gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(it.accept.seekStart), 5),
 					gnomon.String().PrefixSupplementZero(gnomon.Scale().IntToDDuoString(it.accept.seekLast), 4)}, "")); nil != err {
-					gnomon.Log().Debug("running", gnomon.LogField("seekStartIndex", seekEnd), gnomon.LogErr(err))
+					gnomon.Log().Error("running", gnomon.LogField("seekStartIndex", seekEnd), gnomon.LogErr(err))
 					goto WriteResult
 				}
 				it.link.setSeekStartIndex(seekEnd)
 				gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex", seekEnd), gnomon.LogErr(err))
-				it.link.unLock()
 				goto WriteResult
 			WriteResult:
+				it.link.unLock()
 				task.getChanResult() <- &writeResult{
 					seekStartIndex: seekEnd,
 					seekStart:      it.accept.seekStart,
@@ -151,9 +152,10 @@ func (f *filed) running() {
 					err:       err,
 				}
 			}
-		case <-to.C:
+		case <-f.to.C:
 			// todo 需要优雅关闭，暂时暴力操作
 			gnomon.Log().Debug("timeout")
+			f.tasks = nil
 			_ = f.file.Close()
 			return
 		}
@@ -235,20 +237,20 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 	}
 	_, err = f.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
-		gnomon.Log().Debug("read", gnomon.LogErr(err))
+		gnomon.Log().Error("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	inputReader := bufio.NewReader(f)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
-		gnomon.Log().Debug("read", gnomon.LogErr(err))
+		gnomon.Log().Error("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	var value interface{}
 	if err = msgpack.Unmarshal(bytes, &value); nil != err {
-		gnomon.Log().Debug("read", gnomon.LogErr(err))
+		gnomon.Log().Error("read", gnomon.LogErr(err))
 		rr <- &readResult{err: err}
 		return
 	}
@@ -263,18 +265,19 @@ func (s *storage) useFiled(data WriteLocker, filePath string, mold int) (fd *fil
 	data.lock()
 	gnomon.Log().Debug("useFiled", gnomon.LogField("filePath", filePath))
 	if fd = s.files[filePath]; nil != fd {
+		fd.to.Reset(5 * time.Second)
 		return
 	}
 	var f *os.File
 	switch mold {
 	case moldIndex:
 		if f, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0644); nil != err {
-			gnomon.Log().Debug("useFiled", gnomon.LogErr(err))
+			gnomon.Log().Error("useFiled", gnomon.LogErr(err))
 			return
 		}
 	case moldForm:
 		if f, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); nil != err {
-			gnomon.Log().Debug("useFiled", gnomon.LogErr(err))
+			gnomon.Log().Error("useFiled", gnomon.LogErr(err))
 			return
 		}
 	}

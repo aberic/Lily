@@ -153,34 +153,41 @@ func (s *Selector) query() ([]interface{}, error) {
 //
 // leftQuery 是否顺序查询
 func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err error) {
-	for _, index = range s.database.getForms()[s.formName].getIndexes() {
-		if len(s.Scopes) > 0 {
-			for _, scope := range s.Scopes {
+	if len(s.Scopes) > 0 {
+		for _, scope := range s.Scopes {
+			for _, index = range s.database.getForms()[s.formName].getIndexes() {
 				if scope.Param == index.getKeyStructure() {
 					return index, true, false, nil
 				}
 			}
 		}
-		if len(s.Matches) > 0 {
-			for _, match := range s.Matches {
+	}
+	if len(s.Matches) > 0 {
+		for _, match := range s.Matches {
+			for _, index = range s.database.getForms()[s.formName].getIndexes() {
 				if match.Param == index.getKeyStructure() {
 					return index, true, false, nil
 				}
 			}
 		}
-		if len(s.Conditions) > 0 {
-			for _, condition := range s.Conditions {
+	}
+	if len(s.Conditions) > 0 {
+		for _, condition := range s.Conditions {
+			for _, index = range s.database.getForms()[s.formName].getIndexes() {
 				if condition.Param == index.getKeyStructure() {
 					return index, true, false, nil
 				}
 			}
 		}
+	}
+	for _, index = range s.database.getForms()[s.formName].getIndexes() {
 		if s.Sort != nil && s.Sort.Param == index.getKeyStructure() {
 			return index, s.Sort.ASC, true, nil
 		}
 	}
 	// 取值默认索引来进行查询操作
 	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
+		gnomon.Log().Debug("getIndex", gnomon.LogField("index", index))
 		return idx, true, false, nil
 	}
 	return nil, false, false, errors.New("index not found")
@@ -195,7 +202,8 @@ func (s *Selector) leftQueryIndex(index Index, sortIndex bool) []interface{} {
 		}
 	}
 	gnomon.Log().Debug("leftQueryIndex", gnomon.LogField("is", is))
-	if sortIndex {
+	if sortIndex || s.Sort == nil {
+		gnomon.Log().Debug("leftQueryIndex", gnomon.LogField("sortIndex", sortIndex), gnomon.LogField("s.Sort", s.Sort))
 		return is
 	}
 	return s.shellSort(is)
@@ -267,39 +275,61 @@ func (s *Selector) rightQueryLeaf(leaf Leaf) []interface{} {
 
 // shellSort 希尔排序
 func (s *Selector) shellSort(is []interface{}) []interface{} {
-	if s.Sort != nil {
-		var (
-			temp   uint32
-			gap    uint32
-			lenArr uint32
-		)
-		lenArr = uint32(len(is))
-		gap = lenArr / 2
-		for gap > 0 {
-			for i := gap; i < lenArr; i++ {
-				var support bool
-				if temp, support = s.getInterValue(s.Sort.Param, is[i]); !support {
-					return is
-				}
-				preIndex := i - gap
-				for preIndex > 0 {
-					var preIndexTemp uint32
-					if preIndexTemp, support = s.getInterValue(s.Sort.Param, is[preIndex]); !support {
-						return is
-					}
-					if preIndexTemp <= temp {
-						break
-					}
-					is[preIndex+gap] = is[preIndex]
-					preIndex -= gap
-				}
-				is[preIndex+gap] = is[i]
+	gnomon.Log().Debug("shellSort 希尔排序")
+	if s.Sort.ASC {
+		return s.shellAsc(is)
+	}
+	return s.shellDesc(is)
+}
+
+// shellAsc 希尔顺序排序
+func (s *Selector) shellAsc(is []interface{}) []interface{} {
+	gnomon.Log().Debug("shellAsc 希尔顺序排序")
+	length := len(is)
+	gap := length / 2
+	for gap > 0 {
+		for i := gap; i < length; i++ {
+			tempI := is[i]
+			temp := s.hashKeyFromValue(is[i])
+			preIndex := i - gap
+			for preIndex >= 0 && s.hashKeyFromValue(is[preIndex]) > temp {
+				is[preIndex+gap] = is[preIndex]
+				preIndex -= gap
 			}
-			gap /= 2
+			is[preIndex+gap] = tempI
 		}
-		return is
+		gap /= 2
 	}
 	return is
+}
+
+// shellDesc 希尔倒序排序
+func (s *Selector) shellDesc(is []interface{}) []interface{} {
+	gnomon.Log().Debug("shellDesc 希尔倒序排序")
+	length := len(is)
+	gap := length / 2
+	for gap > 0 {
+		for i := gap; i < length; i++ {
+			tempI := is[i]
+			temp := s.hashKeyFromValue(is[i])
+			preIndex := i - gap
+			for preIndex >= 0 && s.hashKeyFromValue(is[preIndex]) < temp {
+				is[preIndex+gap] = is[preIndex]
+				preIndex -= gap
+			}
+			is[preIndex+gap] = tempI
+		}
+		gap /= 2
+	}
+	return is
+}
+
+func (s *Selector) hashKeyFromValue(i interface{}) uint32 {
+	hashKey, support := s.getInterValue(s.Sort.Param, i)
+	if !support {
+		return 0
+	}
+	return hashKey
 }
 
 // getInterValue 根据索引描述和当前检索到的value对象获取当前value对象所在索引的hashKey
@@ -321,5 +351,6 @@ func (s *Selector) getInterValue(param string, value interface{}) (hashKey uint3
 		checkValue := reflect.ValueOf(valueResult)
 		return value2hashKey(&checkValue)
 	}
+	gnomon.Log().Debug("getInterValue", gnomon.LogField("kind", reflectObj.Kind()), gnomon.LogField("support", false))
 	return 0, false
 }

@@ -20,7 +20,9 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
+	"github.com/aberic/gnomon"
 	"github.com/ennoo/rivet/utils/log"
+	"github.com/vmihailenco/msgpack"
 	"io"
 	"os"
 	"path/filepath"
@@ -178,10 +180,10 @@ func TestPutGets(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", formTypeDoc)
-	for i := 1; i <= 255; i++ {
+	for i := 255; i > 0; i-- {
 		_, _ = l.Put(checkbookName, shopperName, strconv.Itoa(i), i)
 	}
-	for i := 1; i <= 255; i++ {
+	for i := 255; i > 0; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		t.Log("get ", i, " = ", j, "err = ", err)
 	}
@@ -210,10 +212,12 @@ func TestQuerySelector1(t *testing.T) {
 
 type TestValue struct {
 	Id        int
+	Age       int
 	Timestamp int64
 }
 
 func TestQuerySelector2(t *testing.T) {
+	gnomon.Log().Debug("TestQuerySelector2 Start")
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName)
@@ -227,12 +231,17 @@ func TestQuerySelector2(t *testing.T) {
 	if err = l.CreateIndex(checkbookName, shopperName, "Timestamp"); nil != err {
 		t.Error(err)
 	}
-	for i := 1; i <= 10; i++ {
-		if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Timestamp: time.Now().Local().UnixNano()}); nil != err {
+	if err = l.CreateIndex(checkbookName, shopperName, "Age"); nil != err {
+		t.Error(err)
+	}
+	gnomon.Log().Debug("TestQuerySelector2 Put")
+	for i := 97; i > 0; i-- {
+		if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 			t.Log(err)
 		}
 	}
-	for i := 1; i <= 10; i++ {
+	gnomon.Log().Debug("TestQuerySelector2 Get")
+	for i := 97; i > 0; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		if nil != err {
 			t.Error(err)
@@ -240,12 +249,24 @@ func TestQuerySelector2(t *testing.T) {
 			t.Log("get ", i, " = ", j)
 		}
 	}
-	i, err := l.Select(checkbookName, shopperName, &Selector{})
-	t.Log("select = ", i, "err = ", err)
+	gnomon.Log().Debug("TestQuerySelector2 Select")
+	var i interface{}
+	i, err = l.Select(checkbookName, shopperName, &Selector{})
+	t.Log("select nil = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}})
+	t.Log("select time = ", i, "err = ", err)
 	i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}, Sort: &sort{Param: "Id", ASC: true}})
-	t.Log("select = ", i, "err = ", err)
+	t.Log("select time id true = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}, Sort: &sort{Param: "Id", ASC: false}})
+	t.Log("select time id false = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: true}})
+	t.Log("select id true = ", i, "err = ", err)
 	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
-	t.Log("select = ", i, "err = ", err)
+	t.Log("select id false = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: true}})
+	t.Log("select time true = ", i, "err = ", err)
+	i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: false}})
+	t.Log("select time false = ", i, "err = ", err)
 }
 
 func TestQuerySelector3(t *testing.T) {
@@ -763,6 +784,29 @@ func TestMap(t *testing.T) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var is []interface{}
+
+func TestShell(t *testing.T) {
+	for i := 10; i > 0; i-- {
+		tv := &TestValue{Id: i, Timestamp: time.Now().Local().UnixNano()}
+		b, err := msgpack.Marshal(tv)
+		if err != nil {
+			panic(err)
+		}
+		var inter interface{}
+		err = msgpack.Unmarshal(b, &inter)
+		if err != nil {
+			panic(err)
+		}
+		is = append(is, inter)
+	}
+	t.Log(is)
+	selector := &Selector{Sort: &sort{Param: "Id", ASC: true}}
+	t.Log(selector.shellAsc(is))
+	t.Log(selector.shellDesc(is))
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
