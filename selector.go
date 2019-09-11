@@ -140,7 +140,7 @@ func (s *Selector) query() ([]interface{}, error) {
 	if index, leftQuery, sortIndex, err = s.getIndex(); nil != err {
 		return nil, err
 	}
-	gnomon.Log().Debug("query", gnomon.LogField("index", index.getKeyStructure()))
+	gnomon.Log().Debug("query", gnomon.Log().Field("index", index.getKeyStructure()))
 	if leftQuery {
 		return s.leftQueryIndex(index, sortIndex), nil
 	}
@@ -187,7 +187,7 @@ func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err 
 	}
 	// 取值默认索引来进行查询操作
 	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
-		gnomon.Log().Debug("getIndex", gnomon.LogField("index", index))
+		gnomon.Log().Debug("getIndex", gnomon.Log().Field("index", index))
 		return idx, true, false, nil
 	}
 	return nil, false, false, errors.New("index not found")
@@ -201,9 +201,9 @@ func (s *Selector) leftQueryIndex(index Index, sortIndex bool) []interface{} {
 			is = append(is, s.leftQueryNode(node)...)
 		}
 	}
-	gnomon.Log().Debug("leftQueryIndex", gnomon.LogField("is", is))
+	gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("is", is))
 	if sortIndex || s.Sort == nil {
-		gnomon.Log().Debug("leftQueryIndex", gnomon.LogField("sortIndex", sortIndex), gnomon.LogField("s.Sort", s.Sort))
+		gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("sortIndex", sortIndex), gnomon.Log().Field("s.Sort", s.Sort))
 		return is
 	}
 	return s.shellSort(is)
@@ -242,7 +242,7 @@ func (s *Selector) rightQueryIndex(index Index) []interface{} {
 			is = append(is, s.rightQueryNode(nodes[i])...)
 		}
 	}
-	gnomon.Log().Debug("rightQueryIndex", gnomon.LogField("is", is))
+	gnomon.Log().Debug("rightQueryIndex", gnomon.Log().Field("is", is))
 	return is
 }
 
@@ -347,10 +347,10 @@ func (s *Selector) getInterValue(param string, value interface{}) (hashKey uint3
 			}
 			interMap = interMap[param].(map[string]interface{})
 		}
-		gnomon.Log().Debug("getInterValue", gnomon.LogField("valueResult", valueResult))
+		gnomon.Log().Debug("getInterValue", gnomon.Log().Field("valueResult", valueResult))
 		checkValue := reflect.ValueOf(valueResult)
 		return value2hashKey(&checkValue)
 	}
-	gnomon.Log().Debug("getInterValue", gnomon.LogField("kind", reflectObj.Kind()), gnomon.LogField("support", false))
+	gnomon.Log().Debug("getInterValue", gnomon.Log().Field("kind", reflectObj.Kind()), gnomon.Log().Field("support", false))
 	return 0, false
 }

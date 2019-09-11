@@ -97,7 +97,7 @@ func (c *database) createIndex(formName string, keyStructure string) error {
 	form := c.forms[formName]
 	// 自定义Key生成ID
 	customID := c.name2id(strings.Join([]string{formName, keyStructure}, "_"))
-	gnomon.Log().Debug("createIndex", gnomon.LogField("customID", customID))
+	gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
 	if err := mkFormIndexResource(c.id, form.getID(), customID); nil != err {
 		return err
 	}
@@ -165,12 +165,12 @@ func (c *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 			md5Key := gnomon.CryptoHash().MD516(key) // hash(keyStructure) 会发生碰撞，因此这里存储md5结果进行反向验证
 			// 写入5位key及16位md5后key
 			appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
-			gnomon.Log().Debug("insert", gnomon.LogField("appendStr", appendStr), gnomon.LogField("formIndexFilePath", ib.getFormIndexFilePath()))
+			gnomon.Log().Debug("insert", gnomon.Log().Field("appendStr", appendStr), gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()))
 			// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
 			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 			wr := store().appendIndex(ib, appendStr, wf)
 			if nil == wr.err {
-				gnomon.Log().Debug("insert", gnomon.LogField("md5Key", md5Key), gnomon.LogField("seekStartIndex", wr.seekStartIndex))
+				gnomon.Log().Debug("insert", gnomon.Log().Field("md5Key", md5Key), gnomon.Log().Field("seekStartIndex", wr.seekStartIndex))
 				ib.getLink().setMD5Key(md5Key)
 				ib.getLink().setSeekStart(wr.seekStart)
 				ib.getLink().setSeekLast(wr.seekLast)
@@ -203,7 +203,7 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	for _, info := range indexes {
 		if err = pool().submitIndexInfo(autoID, info, func(autoID uint32, index Index) {
-			gnomon.Log().Debug("rangeIndexes", gnomon.LogField("index.id", index.getID()), gnomon.LogField("index.keyStructure", index.getKeyStructure()))
+			gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
 				chanIndex <- form.getIndexes()[index.getID()].put(strconv.Itoa(int(autoID)), autoID, value, update)
 			} else if index.getKeyStructure() == indexDefaultID {
@@ -221,7 +221,7 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 					chanIndex <- &indexBack{err: errors.New(strings.Join([]string{"index", index.getKeyStructure(), "is invalid"}, " "))}
 					return
 				}
-				gnomon.Log().Debug("rangeIndexes", gnomon.LogField("checkValue", checkValue))
+				gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("checkValue", checkValue))
 				if keyNew, hashKeyNew, valid := valueType2index(&checkValue); valid {
 					chanIndex <- form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, value, update)
 				}
@@ -233,7 +233,7 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 	var ibs []IndexBack
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex
-		gnomon.Log().Debug("rangeIndexes", gnomon.LogField("ib.formIndexFilePath", ib.getFormIndexFilePath()))
+		gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("ib.formIndexFilePath", ib.getFormIndexFilePath()))
 		if err = ib.getErr(); nil != err {
 			return nil, err
 		}

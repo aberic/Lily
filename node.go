@@ -90,7 +90,7 @@ func (p *node) get(originalKey string, key, flexibleKey uint32) (interface{}, er
 		index = uint8(key / mallDistance)
 		flexibleNewKey = key - uint32(index)*mallDistance
 	} else if p.level == 4 {
-		gnomon.Log().Debug("box-get", gnomon.LogField("originalKey", originalKey))
+		gnomon.Log().Debug("box-get", gnomon.Log().Field("originalKey", originalKey))
 		if realIndex, exist := p.existLink(originalKey, key); exist {
 			return p.links[realIndex].get()
 		}
@@ -168,7 +168,7 @@ func (p *node) createLink(originalKey string, key uint32, value interface{}) (Li
 
 func (p *node) existLink(originalKey string, key uint32) (int, bool) {
 	for index, thg := range p.links {
-		gnomon.Log().Debug("existChildSelf", gnomon.LogField("link.md5Key", thg.getMD5Key()), gnomon.LogField("md516", gnomon.CryptoHash().MD516(originalKey)))
+		gnomon.Log().Debug("existChildSelf", gnomon.Log().Field("link.md5Key", thg.getMD5Key()), gnomon.Log().Field("md516", gnomon.CryptoHash().MD516(originalKey)))
 		if strings.EqualFold(thg.getMD5Key(), gnomon.CryptoHash().MD516(originalKey)) {
 			return index, true
 		}

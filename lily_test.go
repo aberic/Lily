@@ -172,7 +172,7 @@ func TestPutGet(t *testing.T) {
 }
 
 func TestPutGets(t *testing.T) {
-	//gnomon.Log().Set(gnomon.ErrorLevel, false)
+	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName)
@@ -239,7 +239,7 @@ func TestQuerySelector2(t *testing.T) {
 		if id, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 			t.Log(err)
 		} else {
-			gnomon.Log().Debug("TestQuerySelector2", gnomon.LogField("id", id))
+			gnomon.Log().Debug("TestQuerySelector2", gnomon.Log().Field("id", id))
 		}
 	}
 	gnomon.Log().Debug("TestQuerySelector2 Get")

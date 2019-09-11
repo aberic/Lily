@@ -87,10 +87,10 @@ func (t *link) rUnLock() {
 
 func (t *link) put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack {
 	gnomon.Log().Debug("box",
-		gnomon.LogField("originalKey", originalKey),
-		gnomon.LogField("key", key),
-		gnomon.LogField("value", value),
-		gnomon.LogField("formIndexFilePath", formIndexFilePath))
+		gnomon.Log().Field("originalKey", originalKey),
+		gnomon.Log().Field("key", key),
+		gnomon.Log().Field("value", value),
+		gnomon.Log().Field("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
 		locker:            t.preNode.getIndex(),

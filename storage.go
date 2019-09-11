@@ -110,29 +110,29 @@ func (f *filed) running() {
 			case moldIndex:
 				it := task.(*indexTask)
 				var seekEnd int64
-				gnomon.Log().Debug("running", gnomon.LogField("type", "moldIndex"), gnomon.LogField("seekStartIndex", it.link.getSeekStartIndex()))
+				gnomon.Log().Debug("running", gnomon.Log().Field("type", "moldIndex"), gnomon.Log().Field("seekStartIndex", it.link.getSeekStartIndex()))
 				if it.link.getSeekStartIndex() == -1 {
 					if seekEnd, err = f.file.Seek(0, io.SeekEnd); nil != err {
-						gnomon.Log().Error("running", gnomon.LogErr(err))
+						gnomon.Log().Error("running", gnomon.Log().Err(err))
 						goto WriteResult
 					}
-					gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex == -1", seekEnd))
+					gnomon.Log().Debug("running", gnomon.Log().Field("it.link.seekStartIndex == -1", seekEnd))
 				} else {
 					if seekEnd, err = f.file.Seek(it.link.getSeekStartIndex(), io.SeekStart); nil != err { // 寻址到原索引起始位置
-						gnomon.Log().Error("running", gnomon.LogErr(err))
+						gnomon.Log().Error("running", gnomon.Log().Err(err))
 						goto WriteResult
 					}
-					gnomon.Log().Debug("running", gnomon.LogField("seekStartIndex", it.link.getSeekStartIndex()), gnomon.LogField("it.link.seekStartIndex != -1", seekEnd))
+					gnomon.Log().Debug("running", gnomon.Log().Field("seekStartIndex", it.link.getSeekStartIndex()), gnomon.Log().Field("it.link.seekStartIndex != -1", seekEnd))
 				}
 				// 写入5位key及16位md5后key及5位起始seek和4位持续seek
 				if _, err = f.file.WriteString(strings.Join([]string{task.getAppendContent(),
 					gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(it.accept.seekStart), 5),
 					gnomon.String().PrefixSupplementZero(gnomon.Scale().IntToDDuoString(it.accept.seekLast), 4)}, "")); nil != err {
-					gnomon.Log().Error("running", gnomon.LogField("seekStartIndex", seekEnd), gnomon.LogErr(err))
+					gnomon.Log().Error("running", gnomon.Log().Field("seekStartIndex", seekEnd), gnomon.Log().Err(err))
 					goto WriteResult
 				}
 				it.link.setSeekStartIndex(seekEnd)
-				gnomon.Log().Debug("running", gnomon.LogField("it.link.seekStartIndex", seekEnd), gnomon.LogErr(err))
+				gnomon.Log().Debug("running", gnomon.Log().Field("it.link.seekStartIndex", seekEnd), gnomon.Log().Err(err))
 				goto WriteResult
 			WriteResult:
 				task.getChanResult() <- &writeResult{
@@ -141,9 +141,9 @@ func (f *filed) running() {
 					seekLast:       it.accept.seekLast,
 					err:            err}
 			case moldForm:
-				gnomon.Log().Debug("running", gnomon.LogField("type", "moldForm"))
+				gnomon.Log().Debug("running", gnomon.Log().Field("type", "moldForm"))
 				seekLast, err = f.file.Write(task.getContent())
-				gnomon.Log().Debug("running", gnomon.LogErr(err))
+				gnomon.Log().Debug("running", gnomon.Log().Err(err))
 				task.getChanResult() <- &writeResult{
 					seekStart: uint32(seekStart),
 					seekLast:  seekLast,
@@ -181,7 +181,7 @@ type storage struct {
 }
 
 func (s *storage) appendIndex(ib IndexBack, key string, wr *writeResult) *writeResult {
-	gnomon.Log().Debug("appendIndex", gnomon.LogField("path", ib.getFormIndexFilePath()), gnomon.LogField("seekStartIndex", ib.getLink().getSeekStartIndex()))
+	gnomon.Log().Debug("appendIndex", gnomon.Log().Field("path", ib.getFormIndexFilePath()), gnomon.Log().Field("seekStartIndex", ib.getLink().getSeekStartIndex()))
 	return s.writeIndex(ib.getLocker(), ib.getFormIndexFilePath(), key, ib.getLink(), wr)
 }
 
@@ -190,7 +190,7 @@ func (s *storage) appendForm(form WriteLocker, path string, value interface{}) *
 		data []byte
 		err  error
 	)
-	gnomon.Log().Debug("appendForm", gnomon.LogField("path", path))
+	gnomon.Log().Debug("appendForm", gnomon.Log().Field("path", path))
 	if data, err = msgpack.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	}
@@ -226,29 +226,29 @@ func (s *storage) writeForm(locker WriteLocker, filePath string, data []byte) *w
 }
 
 func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan *readResult) {
-	gnomon.Log().Debug("read", gnomon.LogField("filePath", filePath), gnomon.LogField("seekStart", seekStart), gnomon.LogField("seekLast", seekLast))
+	gnomon.Log().Debug("read", gnomon.Log().Field("filePath", filePath), gnomon.Log().Field("seekStart", seekStart), gnomon.Log().Field("seekLast", seekLast))
 	f, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
 	if err != nil {
-		gnomon.Log().Debug("read", gnomon.LogErr(err))
+		gnomon.Log().Debug("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	_, err = f.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
-		gnomon.Log().Error("read", gnomon.LogErr(err))
+		gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	inputReader := bufio.NewReader(f)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
-		gnomon.Log().Error("read", gnomon.LogErr(err))
+		gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	var value interface{}
 	if err = msgpack.Unmarshal(bytes, &value); nil != err {
-		gnomon.Log().Error("read", gnomon.LogErr(err))
+		gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
@@ -261,7 +261,7 @@ func (s *storage) useFiled(locker WriteLocker, filePath string, mold int) (fd *f
 	}
 	defer locker.unLock()
 	locker.lock()
-	gnomon.Log().Debug("useFiled", gnomon.LogField("filePath", filePath))
+	gnomon.Log().Debug("useFiled", gnomon.Log().Field("filePath", filePath))
 	if fd = s.files[filePath]; nil != fd {
 		fd.to.Reset(5 * time.Second)
 		return
@@ -270,12 +270,12 @@ func (s *storage) useFiled(locker WriteLocker, filePath string, mold int) (fd *f
 	switch mold {
 	case moldIndex:
 		if f, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0644); nil != err {
-			gnomon.Log().Error("useFiled", gnomon.LogErr(err))
+			gnomon.Log().Error("useFiled", gnomon.Log().Err(err))
 			return
 		}
 	case moldForm:
 		if f, err = os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); nil != err {
-			gnomon.Log().Error("useFiled", gnomon.LogErr(err))
+			gnomon.Log().Error("useFiled", gnomon.Log().Err(err))
 			return
 		}
 	}
