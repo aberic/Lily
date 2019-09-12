@@ -15,8 +15,8 @@
 package lily
 
 const (
-	formTypeSQL = "FORM_TYPE_SQL" // formTypeSQL 关系型数据存储方式
-	formTypeDoc = "FORM_TYPE_DOC" // formTypeDoc 文档型数据存储方式
+	FormTypeSQL = "FORM_TYPE_SQL" // FormTypeSQL 关系型数据存储方式
+	FormTypeDoc = "FORM_TYPE_DOC" // FormTypeDoc 文档型数据存储方式
 )
 
 // API 暴露公共API接口
@@ -148,7 +148,7 @@ type API interface {
 	// formName 表名
 	//
 	// selector 条件选择器
-	Select(databaseName, formName string, selector *Selector) (interface{}, error)
+	Select(databaseName, formName string, selector *Selector) (int, interface{}, error)
 	// Delete 删除数据
 	//
 	// 向指定表中删除一条数据并返回
@@ -220,7 +220,9 @@ type Database interface {
 	// formName 表名
 	//
 	// selector 条件选择器
-	query(formName string, selector *Selector) (interface{}, error)
+	//
+	// int 返回检索条目数量
+	query(formName string, selector *Selector) (int, interface{}, error)
 }
 
 // Form 表接口
@@ -280,24 +282,24 @@ type Nodal interface {
 	getIndex() Index // 获取索引对象
 	// put 插入数据
 	//
-	// originalKey 真实key，必须string类型
+	// key 真实key，必须string类型
 	//
-	// key 索引key，可通过hash转换string生成
+	// hashKey 索引key，可通过hash转换string生成
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
 	//
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	put(originalKey string, key, flexibleKey uint32, value interface{}, update bool) IndexBack
+	put(key string, hashKey, flexibleKey uint32, value interface{}, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
-	// originalKey 真实key，必须string类型
+	// key 真实key，必须string类型
 	//
-	// key 索引key，可通过hash转换string生成
+	// hashKey 索引key，可通过hash转换string生成
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
-	get(originalKey string, key, flexibleKey uint32) (interface{}, error)
+	get(key string, hashKey, flexibleKey uint32) (interface{}, error)
 	getDegreeIndex() uint8 // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNode() Nodal     // getPreNode 获取父节点对象
 }
@@ -321,7 +323,7 @@ type Link interface {
 	getSeekStart() uint32         // value最终存储在文件中的起始位置
 	getSeekLast() int             // value最终存储在文件中的持续长度
 	getValue() interface{}
-	put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack
+	put(key string, hashKey uint32, value interface{}, formIndexFilePath string) *indexBack
 	get() (interface{}, error)
 }
 
@@ -329,6 +331,7 @@ type IndexBack interface {
 	getFormIndexFilePath() string // 索引文件所在路径
 	getLocker() WriteLocker       // 索引文件所对应level2层级度节点
 	getLink() Link                // 索引对应节点对象子集
+	getKey() string               // 索引对应字符串key
 	getHashKey() uint32           // put hash keyStructure
 	getErr() error
 }

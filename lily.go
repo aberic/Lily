@@ -36,8 +36,6 @@ var (
 	ErrDatabaseExist = errors.New("database already exist")
 	// ErrFormExist 自定义error信息
 	ErrFormExist = errors.New("form already exist")
-	// ErrDataExist 自定义error信息
-	ErrDataExist = errors.New("data already exist")
 	// ErrDataIsNil 自定义error信息
 	ErrDataIsNil = errors.New("database had never been created")
 	// ErrKeyIsNil 自定义error信息
@@ -102,19 +100,19 @@ func (l *Lily) initialize() {
 			}
 			panic(err)
 		}
-		if err = data.createForm(userForm, "default user form", formTypeSQL); nil != err {
+		if err = data.createForm(userForm, "default user form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(databaseForm, "default database form", formTypeSQL); nil != err {
+		if err = data.createForm(databaseForm, "default database form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(indexForm, "default index form", formTypeSQL); nil != err {
+		if err = data.createForm(indexForm, "default index form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		if err = data.createForm(defaultForm, "default Data form", formTypeDoc); nil != err {
+		if err = data.createForm(defaultForm, "default Data form", FormTypeDoc); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
@@ -308,9 +306,9 @@ func (l *Lily) Update(databaseName, formName string, value interface{}) error {
 // formName 表名
 //
 // keyStructure 插入数据唯一key
-func (l *Lily) Select(databaseName, formName string, selector *Selector) (interface{}, error) {
+func (l *Lily) Select(databaseName, formName string, selector *Selector) (int, interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
-		return nil, ErrDataIsNil
+		return 0, nil, ErrDataIsNil
 	}
 	return l.databases[databaseName].query(formName, selector)
 }
@@ -329,7 +327,7 @@ func (l *Lily) Delete(databaseName, formName string, selector *Selector) error {
 	if nil == l || nil == l.databases[databaseName] {
 		return ErrDataIsNil
 	}
-	_, err := l.databases[databaseName].query(formName, selector)
+	_, _, err := l.databases[databaseName].query(formName, selector)
 	return err
 }
 

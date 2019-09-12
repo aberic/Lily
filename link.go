@@ -85,10 +85,10 @@ func (t *link) rUnLock() {
 	t.tLock.RUnlock()
 }
 
-func (t *link) put(originalKey string, key uint32, value interface{}, formIndexFilePath string) *indexBack {
+func (t *link) put(key string, hashKey uint32, value interface{}, formIndexFilePath string) *indexBack {
 	gnomon.Log().Debug("box",
-		gnomon.Log().Field("originalKey", originalKey),
 		gnomon.Log().Field("key", key),
+		gnomon.Log().Field("hashKey", hashKey),
 		gnomon.Log().Field("value", value),
 		gnomon.Log().Field("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
@@ -96,6 +96,7 @@ func (t *link) put(originalKey string, key uint32, value interface{}, formIndexF
 		locker:            t.preNode.getIndex(),
 		link:              t,
 		key:               key,
+		hashKey:           hashKey,
 		err:               nil,
 	}
 }
@@ -103,11 +104,7 @@ func (t *link) put(originalKey string, key uint32, value interface{}, formIndexF
 func (t *link) get() (interface{}, error) {
 	index := t.preNode.getIndex()
 	rrFormBack := make(chan *readResult, 1)
-	if err := pool().submit(func() {
-		store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
-	}); nil != err {
-		return nil, err
-	}
+	go store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
 	rr := <-rrFormBack
 	return rr.value, rr.err
 }
@@ -117,7 +114,8 @@ type indexBack struct {
 	formIndexFilePath string      // 索引文件所在路径
 	locker            WriteLocker // 索引文件所对应level2层级度节点
 	link              Link        // 索引对应节点对象子集
-	key               uint32      // put hash key
+	key               string      // 索引对应字符串key
+	hashKey           uint32      // put hash hashKey
 	err               error
 }
 
@@ -136,9 +134,14 @@ func (i *indexBack) getLink() Link {
 	return i.link
 }
 
+// getKey 索引对应字符串key
+func (i *indexBack) getKey() string {
+	return i.key
+}
+
 // getHashKey put hash keyStructure
 func (i *indexBack) getHashKey() uint32 {
-	return i.key
+	return i.hashKey
 }
 
 // getErr error信息

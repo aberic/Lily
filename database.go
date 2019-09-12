@@ -21,11 +21,13 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 const (
 	indexAutoID    = "lily_biexuewo_id"
 	indexDefaultID = "lily_biexuewo_default"
+	IndexTimestamp = "lily_biexuewo_timestamp"
 )
 
 // database 数据库对象
@@ -73,7 +75,7 @@ func (c *database) createForm(formName, comment, formType string) error {
 		return err
 	}
 	indexes := make(map[string]Index)
-	if formType == formTypeSQL {
+	if formType == FormTypeSQL {
 		// 自增索引ID
 		indexID := c.name2id(strings.Join([]string{formName, indexAutoID}, "_"))
 		if err = mkFormIndexResource(c.id, formID, indexID); nil != err {
@@ -97,7 +99,7 @@ func (c *database) createIndex(formName string, keyStructure string) error {
 	form := c.forms[formName]
 	// 自定义Key生成ID
 	customID := c.name2id(strings.Join([]string{formName, keyStructure}, "_"))
-	gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
+	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
 	if err := mkFormIndexResource(c.id, form.getID(), customID); nil != err {
 		return err
 	}
@@ -110,7 +112,7 @@ func (c *database) put(formName string, key string, value interface{}, update bo
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
 	}
-	if form.getFormType() != formTypeDoc {
+	if form.getFormType() != FormTypeDoc {
 		return 0, errors.New("put method only support doc")
 	}
 	indexes := form.getIndexes()                    // 获取表索引ID集合
@@ -136,9 +138,9 @@ func (c *database) insert(formName string, value interface{}, update bool) (uint
 	return 0, nil
 }
 
-func (c *database) query(formName string, selector *Selector) (interface{}, error) {
+func (c *database) query(formName string, selector *Selector) (int, interface{}, error) {
 	if nil == c {
-		return nil, ErrDataIsNil
+		return 0, nil, ErrDataIsNil
 	}
 	selector.formName = formName
 	selector.database = c
@@ -156,29 +158,14 @@ func (c *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 	}
 	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
 	// 存储数据到表文件
-	wf := store().appendForm(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value)
-	if nil != wf.err {
-		return 0, wf.err
+	wrf := store().storeData(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value)
+	if nil != wrf.err {
+		return 0, wrf.err
 	}
 	for _, ib := range ibs {
-		if err = pool().submitChanIndex(key, ib, func(key string, ib IndexBack) {
-			md5Key := gnomon.CryptoHash().MD516(key) // hash(keyStructure) 会发生碰撞，因此这里存储md5结果进行反向验证
-			// 写入5位key及16位md5后key
-			appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
-			gnomon.Log().Debug("insert", gnomon.Log().Field("appendStr", appendStr), gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()))
-			// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
-			// 写入5位key及16位md5后key及16位起始seek和8位持续seek
-			wr := store().appendIndex(ib, appendStr, wf)
-			if nil == wr.err {
-				gnomon.Log().Debug("insert", gnomon.Log().Field("md5Key", md5Key), gnomon.Log().Field("seekStartIndex", wr.seekStartIndex))
-				ib.getLink().setMD5Key(md5Key)
-				ib.getLink().setSeekStart(wr.seekStart)
-				ib.getLink().setSeekLast(wr.seekLast)
-			}
-			wrIndexBack <- wr
-		}); nil != err {
-			return 0, err
-		}
+		go func(key string, ib IndexBack) {
+			wrIndexBack <- store().storeIndex(ib, wrf)
+		}(key, ib)
 	}
 	for {
 		select {
@@ -201,13 +188,27 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 	indexLen := len(indexes)
 	chanIndex = make(chan IndexBack, indexLen) // 创建索引ID结果返回通道
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
-	for _, info := range indexes {
-		if err = pool().submitIndexInfo(autoID, info, func(autoID uint32, index Index) {
-			gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
+	for _, index := range indexes {
+		go func(autoID uint32, index Index) {
+			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
 				chanIndex <- form.getIndexes()[index.getID()].put(strconv.Itoa(int(autoID)), autoID, value, update)
 			} else if index.getKeyStructure() == indexDefaultID {
 				chanIndex <- form.getIndexes()[index.getID()].put(key, hash(key), value, update)
+			} else if index.getKeyStructure() == IndexTimestamp {
+				timestamp := time.Now().Local().UnixNano()
+				var ib IndexBack
+				checkErr := true
+				for checkErr {
+					timestamp += 1
+					keyNew := strconv.FormatInt(timestamp, 10)
+					hashKeyNew := timestamp2Uint32Index(timestamp)
+					gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("keyNew", keyNew), gnomon.Log().Field("hashKeyNew", hashKeyNew))
+					if ib = form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, value, update); ib.getErr() == nil {
+						chanIndex <- ib
+						checkErr = false
+					}
+				}
 			} else {
 				reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
 				params := strings.Split(index.getKeyStructure(), ".")
@@ -221,20 +222,19 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 					chanIndex <- &indexBack{err: errors.New(strings.Join([]string{"index", index.getKeyStructure(), "is invalid"}, " "))}
 					return
 				}
-				gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("checkValue", checkValue))
+				//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("checkValue", checkValue))
 				if keyNew, hashKeyNew, valid := valueType2index(&checkValue); valid {
 					chanIndex <- form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, value, update)
 				}
 			}
-		}); nil != err {
-			return nil, err
-		}
+		}(autoID, index)
 	}
 	var ibs []IndexBack
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex
-		gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("ib.formIndexFilePath", ib.getFormIndexFilePath()))
+		//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("ib.formIndexFilePath", ib.getFormIndexFilePath()))
 		if err = ib.getErr(); nil != err {
+			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Err(err))
 			return nil, err
 		}
 		ibs = append(ibs, ib)
