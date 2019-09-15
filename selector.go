@@ -134,17 +134,16 @@ func (s *Selector) query() (int, []interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
-		sortIndex bool
 		count     int
 		is        []interface{}
 		err       error
 	)
-	if index, leftQuery, sortIndex, err = s.getIndex(); nil != err {
+	if index, leftQuery, _, err = s.getIndex(); nil != err {
 		return 0, nil, err
 	}
 	gnomon.Log().Debug("query", gnomon.Log().Field("index", index.getKeyStructure()))
 	if leftQuery {
-		count, is = s.leftQueryIndex(index, sortIndex)
+		count, is = s.leftQueryIndex(index)
 	} else {
 		count, is = s.rightQueryIndex(index)
 	}
@@ -198,7 +197,7 @@ func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err 
 }
 
 // leftQueryIndex 索引顺序检索
-func (s *Selector) leftQueryIndex(index Index, sortIndex bool) (int, []interface{}) {
+func (s *Selector) leftQueryIndex(index Index) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
 	if nodes := index.getNodes(); nil != nodes {
@@ -209,11 +208,11 @@ func (s *Selector) leftQueryIndex(index Index, sortIndex bool) (int, []interface
 		}
 	}
 	gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("is", is))
-	if sortIndex || s.Sort == nil {
-		gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("sortIndex", sortIndex), gnomon.Log().Field("s.Sort", s.Sort))
+	if s.Sort == nil {
+		gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("s.Sort", s.Sort))
 		return count, is
 	}
-	return count, s.shellSort(index, is)
+	return count, s.shellSort(is)
 }
 
 // leftQueryNode 节点顺序检索
@@ -290,16 +289,10 @@ func (s *Selector) rightQueryLeaf(leaf Leaf) (int, []interface{}) {
 }
 
 // shellSort 希尔排序
-func (s *Selector) shellSort(index Index, is []interface{}) []interface{} {
+func (s *Selector) shellSort(is []interface{}) []interface{} {
 	gnomon.Log().Debug("shellSort 希尔排序")
 	if s.Sort.ASC {
-		if index.getKeyStructure() == IndexTimestamp {
-			return s.shellInt64Asc(is)
-		}
 		return s.shellAsc(is)
-	}
-	if index.getKeyStructure() == IndexTimestamp {
-		return s.shellInt64Desc(is)
 	}
 	return s.shellDesc(is)
 }
@@ -336,48 +329,6 @@ func (s *Selector) shellDesc(is []interface{}) []interface{} {
 			temp := s.hashKeyFromValue(is[i])
 			preIndex := i - gap
 			for preIndex >= 0 && s.hashKeyFromValue(is[preIndex]) < temp {
-				is[preIndex+gap] = is[preIndex]
-				preIndex -= gap
-			}
-			is[preIndex+gap] = tempI
-		}
-		gap /= 2
-	}
-	return is
-}
-
-// shellAsc 希尔顺序排序
-func (s *Selector) shellInt64Asc(is []interface{}) []interface{} {
-	gnomon.Log().Debug("shellAsc 希尔顺序排序")
-	length := len(is)
-	gap := length / 2
-	for gap > 0 {
-		for i := gap; i < length; i++ {
-			tempI := is[i]
-			temp := s.timestampFromValue(is[i])
-			preIndex := i - gap
-			for preIndex >= 0 && s.timestampFromValue(is[preIndex]) > temp {
-				is[preIndex+gap] = is[preIndex]
-				preIndex -= gap
-			}
-			is[preIndex+gap] = tempI
-		}
-		gap /= 2
-	}
-	return is
-}
-
-// shellDesc 希尔倒序排序
-func (s *Selector) shellInt64Desc(is []interface{}) []interface{} {
-	gnomon.Log().Debug("shellDesc 希尔倒序排序")
-	length := len(is)
-	gap := length / 2
-	for gap > 0 {
-		for i := gap; i < length; i++ {
-			tempI := is[i]
-			temp := s.timestampFromValue(is[i])
-			preIndex := i - gap
-			for preIndex >= 0 && s.timestampFromValue(is[preIndex]) < temp {
 				is[preIndex+gap] = is[preIndex]
 				preIndex -= gap
 			}

@@ -343,8 +343,7 @@ func uint64ToUint32IndexDivide(ui64 uint64, divide int) uint32 {
 //
 // 该方法仅对索引有效，在排序或范围查询时，如果有使用int64做索引的对象，都必须按照该方法转换并做内部检索和排序，如link
 func timestamp2Uint32Index(i64 int64) uint32 {
-	timestampSec := i64 / 1e9
-	return uint32(timestampSec - 554050800)
+	return uint32(i64 / 1e9)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
