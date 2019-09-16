@@ -156,6 +156,13 @@ func (l *Lily) CreateForm(databaseName, formName, comment, formType string) erro
 	return ErrDataIsNil
 }
 
+func (l *Lily) CreateKey(databaseName, formName string, keyStructure string) error {
+	if database := l.databases[databaseName]; nil != database {
+		return database.createIndex(formName, keyStructure)
+	}
+	return ErrDataIsNil
+}
+
 func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) error {
 	if database := l.databases[databaseName]; nil != database {
 		return database.createIndex(formName, keyStructure)

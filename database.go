@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019. Aberic - All Rights Reservec.
+ * Copyright (c) 2019. Aberic - All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7,7 +7,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliec.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -21,13 +21,11 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"time"
 )
 
 const (
 	indexAutoID    = "lily_biexuewo_id"
 	indexDefaultID = "lily_biexuewo_default"
-	IndexTimestamp = "lily_biexuewo_timestamp"
 )
 
 // database 数据库对象
@@ -39,76 +37,83 @@ type database struct {
 	forms map[string]Form // 表集合
 }
 
-func (c *database) getID() string {
-	return c.id
+func (d *database) getID() string {
+	return d.id
 }
 
-func (c *database) getName() string {
-	return c.name
+func (d *database) getName() string {
+	return d.name
 }
 
 // getForms 获取数据库表集合
-func (c *database) getForms() map[string]Form {
-	return c.forms
+func (d *database) getForms() map[string]Form {
+	return d.forms
 }
 
-func (c *database) createForm(formName, comment, formType string) error {
+func (d *database) createForm(formName, comment, formType string) error {
 	// 确定库名不重复
-	for k := range c.forms {
+	for k := range d.forms {
 		if k == formName {
 			return ErrFormExist
 		}
 	}
 	// 确保表唯一ID不重复
-	formID := c.name2id(formName)
+	formID := d.name2id(formName)
 	form := &form{
 		autoID:   0,
 		name:     formName,
 		id:       formID,
 		comment:  comment,
-		database: c,
+		database: d,
+		indexes:  map[string]Index{},
 		nodes:    []Nodal{},
 		formType: formType,
 	}
-	err := mkFormResource(c.id, formID, 0)
+	err := mkFormResource(d.id, formID, 0)
 	if nil != err {
 		return err
 	}
-	indexes := make(map[string]Index)
+	d.forms[formName] = form
 	if formType == FormTypeSQL {
 		// 自增索引ID
-		indexID := c.name2id(strings.Join([]string{formName, indexAutoID}, "_"))
-		if err = mkFormIndexResource(c.id, formID, indexID); nil != err {
+		if err = d.createKey(formName, indexAutoID); nil != err {
 			return err
 		}
-		indexes[indexID] = &index{id: indexID, keyStructure: indexAutoID, form: form, fileIndex: 0}
 	} else {
 		// 默认自定义Key生成ID
-		defaultID := c.name2id(strings.Join([]string{formName, indexDefaultID}, "_"))
-		if err = mkFormIndexResource(c.id, formID, defaultID); nil != err {
+		if err = d.createKey(formName, indexDefaultID); nil != err {
 			return err
 		}
-		indexes[defaultID] = &index{id: defaultID, keyStructure: indexDefaultID, form: form, fileIndex: 0}
 	}
-	form.indexes = indexes
-	c.forms[formName] = form
 	return nil
 }
 
-func (c *database) createIndex(formName string, keyStructure string) error {
-	form := c.forms[formName]
+func (d *database) createKey(formName string, keyStructure string) error {
+	form := d.forms[formName]
 	// 自定义Key生成ID
-	customID := c.name2id(strings.Join([]string{formName, keyStructure}, "_"))
+	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	if err := mkFormIndexResource(c.id, form.getID(), customID); nil != err {
+	if err := mkFormIndexResource(d.id, form.getID(), customID); nil != err {
 		return err
 	}
-	form.getIndexes()[customID] = &index{id: customID, keyStructure: keyStructure, form: form, fileIndex: 0}
+	form.getIndexes()[customID] = &index{id: customID, primary: true, keyStructure: keyStructure, form: form, fileIndex: 0}
 	return nil
 }
 
-func (c *database) put(formName string, key string, value interface{}, update bool) (uint32, error) {
-	form := c.forms[formName] // 获取待操作表
+func (d *database) createIndex(formName string, keyStructure string) error {
+	form := d.forms[formName]
+	// 自定义Key生成ID
+	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
+	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
+	if err := mkFormIndexResource(d.id, form.getID(), customID); nil != err {
+		return err
+	}
+	form.getIndexes()[customID] = &index{id: customID, primary: false, keyStructure: keyStructure, form: form, fileIndex: 0}
+	return nil
+}
+
+func (d *database) put(formName string, key string, value interface{}, update bool) (uint32, error) {
+	form := d.forms[formName] // 获取待操作表
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
 	}
@@ -117,11 +122,11 @@ func (c *database) put(formName string, key string, value interface{}, update bo
 	}
 	indexes := form.getIndexes()                    // 获取表索引ID集合
 	autoID := atomic.AddUint32(form.getAutoID(), 1) // ID自增
-	return c.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
+	return d.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
 }
 
-func (c *database) get(formName string, key string) (interface{}, error) {
-	form := c.forms[formName]
+func (d *database) get(formName string, key string) (interface{}, error) {
+	form := d.forms[formName]
 	if nil == form {
 		return nil, shopperIsInvalid(formName)
 	}
@@ -133,32 +138,32 @@ func (c *database) get(formName string, key string) (interface{}, error) {
 	return nil, errors.New("no key for custom id index")
 }
 
-func (c *database) insert(formName string, value interface{}, update bool) (uint32, error) {
+func (d *database) insert(formName string, value interface{}, update bool) (uint32, error) {
 	// todo
 	return 0, nil
 }
 
-func (c *database) query(formName string, selector *Selector) (int, interface{}, error) {
-	if nil == c {
+func (d *database) query(formName string, selector *Selector) (int, interface{}, error) {
+	if nil == d {
 		return 0, nil, ErrDataIsNil
 	}
 	selector.formName = formName
-	selector.database = c
+	selector.database = d
 	return selector.query()
 }
 
-func (c *database) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) (uint32, error) {
+func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) (uint32, error) {
 	var (
 		ibs []IndexBack
 		err error
 	)
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
-	if ibs, err = c.rangeIndexes(form, key, autoID, indexes, value, update); nil != err {
+	if ibs, err = d.rangeIndexes(form, key, autoID, indexes, value, update); nil != err {
 		return 0, err
 	}
 	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
 	// 存储数据到表文件
-	wrf := store().storeData(form, pathFormDataFile(c.id, form.getID(), form.getFileIndex()), value)
+	wrf := store().storeData(form, pathFormDataFile(d.id, form.getID(), form.getFileIndex()), value)
 	if nil != wrf.err {
 		return 0, wrf.err
 	}
@@ -180,7 +185,7 @@ func (c *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 }
 
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
-func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
+func (d *database) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
 	var (
 		chanIndex chan IndexBack
 		err       error
@@ -192,23 +197,9 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 		go func(autoID uint32, index Index) {
 			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
-				chanIndex <- form.getIndexes()[index.getID()].put(strconv.Itoa(int(autoID)), autoID, value, update)
+				chanIndex <- form.getIndexes()[index.getID()].put(strconv.Itoa(int(autoID)), autoID, update)
 			} else if index.getKeyStructure() == indexDefaultID {
-				chanIndex <- form.getIndexes()[index.getID()].put(key, hash(key), value, update)
-			} else if index.getKeyStructure() == IndexTimestamp {
-				timestamp := time.Now().Local().UnixNano()
-				var ib IndexBack
-				checkErr := true
-				for checkErr {
-					timestamp += 1
-					keyNew := strconv.FormatInt(timestamp, 10)
-					hashKeyNew := timestamp2Uint32Index(timestamp)
-					gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("keyNew", keyNew), gnomon.Log().Field("hashKeyNew", hashKeyNew))
-					if ib = form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, value, update); ib.getErr() == nil {
-						chanIndex <- ib
-						checkErr = false
-					}
-				}
+				chanIndex <- form.getIndexes()[index.getID()].put(key, hash(key), update)
 			} else {
 				reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
 				params := strings.Split(index.getKeyStructure(), ".")
@@ -224,7 +215,7 @@ func (c *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 				}
 				//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("checkValue", checkValue))
 				if keyNew, hashKeyNew, valid := valueType2index(&checkValue); valid {
-					chanIndex <- form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, value, update)
+					chanIndex <- form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, update)
 				}
 			}
 		}(autoID, index)
@@ -248,17 +239,17 @@ func shopperIsInvalid(formName string) error {
 }
 
 // indexID 索引ID新的组合名称
-func (c *database) indexID(formName, indexName string) string {
+func (d *database) indexID(formName, indexName string) string {
 	return strings.Join([]string{formName, indexName}, "_")
 }
 
 // name2id 确保数据库唯一ID不重复
-func (c *database) name2id(name string) string {
+func (d *database) name2id(name string) string {
 	id := gnomon.CryptoHash().MD516(name)
 	have := true
 	for have {
 		have = false
-		for _, v := range c.forms {
+		for _, v := range d.forms {
 			if v.getID() == id {
 				have = true
 				id = gnomon.CryptoHash().MD516(strings.Join([]string{id, gnomon.String().RandSeq(3)}, ""))

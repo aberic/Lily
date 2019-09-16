@@ -226,10 +226,7 @@ func TestQuerySelector2(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
-	if err = l.CreateIndex(checkbookName, shopperName, "Id"); nil != err {
-		t.Error(err)
-	}
-	if err = l.CreateIndex(checkbookName, shopperName, IndexTimestamp); nil != err {
+	if err = l.CreateKey(checkbookName, shopperName, "Id"); nil != err {
 		t.Error(err)
 	}
 	if err = l.CreateIndex(checkbookName, shopperName, "Age"); nil != err {
@@ -270,10 +267,6 @@ func TestQuerySelector2(t *testing.T) {
 	t.Log("select id true count =", count, "i =", i, "err = ", err)
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
 	t.Log("select id false count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: IndexTimestamp, ASC: true}})
-	t.Log("select time true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: IndexTimestamp, ASC: false}})
-	t.Log("select time false = ", i, "err = ", err)
 }
 
 func TestQuerySelector3(t *testing.T) {

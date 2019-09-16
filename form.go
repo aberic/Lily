@@ -54,50 +54,50 @@ type form struct {
 	fLock     sync.RWMutex
 }
 
-func (s *form) getAutoID() *uint32 {
-	return &s.autoID
+func (f *form) getAutoID() *uint32 {
+	return &f.autoID
 }
 
-func (s *form) getID() string {
-	return s.id
+func (f *form) getID() string {
+	return f.id
 }
 
-func (s *form) getName() string {
-	return s.name
+func (f *form) getName() string {
+	return f.name
 }
 
-func (s *form) getDatabase() Database {
-	return s.database
+func (f *form) getDatabase() Database {
+	return f.database
 }
 
-func (s *form) getFileIndex() int {
-	return s.fileIndex
+func (f *form) getFileIndex() int {
+	return f.fileIndex
 }
 
-func (s *form) getIndexes() map[string]Index {
-	return s.indexes
+func (f *form) getIndexes() map[string]Index {
+	return f.indexes
 }
 
-func (s *form) getFormType() string {
-	return s.formType
+func (f *form) getFormType() string {
+	return f.formType
 }
 
-func (s *form) getDatabaseID() string {
-	return s.database.getID()
+func (f *form) getDatabaseID() string {
+	return f.database.getID()
 }
 
-func (s *form) lock() {
-	s.fLock.Lock()
+func (f *form) lock() {
+	f.fLock.Lock()
 }
 
-func (s *form) unLock() {
-	s.fLock.Unlock()
+func (f *form) unLock() {
+	f.fLock.Unlock()
 }
 
-func (s *form) rLock() {
-	s.fLock.RLock()
+func (f *form) rLock() {
+	f.fLock.RLock()
 }
 
-func (s *form) rUnLock() {
-	s.fLock.RUnlock()
+func (f *form) rUnLock() {
+	f.fLock.RUnlock()
 }

@@ -47,6 +47,14 @@ type API interface {
 	//
 	// comment 表描述
 	CreateForm(databaseName, formName, comment, formType string) error
+	// CreateKey 新建主键
+	//
+	// databaseName 数据库名
+	//
+	// name 表名称
+	//
+	// keyStructure 主键结构名，按照规范结构组成的主键字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	CreateKey(databaseName, formName string, keyStructure string) error
 	// createIndex 新建索引
 	//
 	// databaseName 数据库名
@@ -179,6 +187,12 @@ type Database interface {
 	//
 	// comment 表描述
 	createForm(formName, comment, formType string) error
+	// createIndex 新建主键
+	//
+	// name 表名称
+	//
+	// keyStructure 主键结构名，按照规范结构组成的主键字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	createKey(formName string, keyStructure string) error
 	// createIndex 新建索引
 	//
 	// name 表名称
@@ -243,6 +257,8 @@ type Index interface {
 	Data
 	// getID 索引唯一ID
 	getID() string
+	// isPrimary 是否主键
+	isPrimary() bool
 	// getKey 索引字段名称，由对象结构层级字段通过'.'组成，如
 	//
 	// ref := &ref{
@@ -267,7 +283,7 @@ type Index interface {
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	put(originalKey string, key uint32, value interface{}, update bool) IndexBack
+	put(originalKey string, key uint32, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型
@@ -291,7 +307,7 @@ type Nodal interface {
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	put(key string, hashKey, flexibleKey uint32, value interface{}, update bool) IndexBack
+	put(key string, hashKey, flexibleKey uint32, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
 	// key 真实key，必须string类型
@@ -323,7 +339,7 @@ type Link interface {
 	getSeekStart() uint32         // value最终存储在文件中的起始位置
 	getSeekLast() int             // value最终存储在文件中的持续长度
 	getValue() interface{}
-	put(key string, hashKey uint32, value interface{}, formIndexFilePath string) *indexBack
+	put(key string, hashKey uint32) *indexBack
 	get() (interface{}, error)
 }
 

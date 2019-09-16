@@ -29,84 +29,92 @@ type link struct {
 	tLock          sync.RWMutex
 }
 
-func (t *link) setMD5Key(md5Key string) {
-	t.md5Key = md5Key
+func (l *link) setMD5Key(md5Key string) {
+	l.md5Key = md5Key
 }
 
-func (t *link) setSeekStartIndex(seek int64) {
-	t.seekStartIndex = seek
+func (l *link) setSeekStartIndex(seek int64) {
+	l.seekStartIndex = seek
 }
 
-func (t *link) setSeekStart(seek uint32) {
-	t.seekStart = seek
+func (l *link) setSeekStart(seek uint32) {
+	l.seekStart = seek
 }
 
-func (t *link) setSeekLast(seek int) {
-	t.seekLast = seek
+func (l *link) setSeekLast(seek int) {
+	l.seekLast = seek
 }
 
-func (t *link) getNodal() Nodal {
-	return t.preNode
+func (l *link) getNodal() Nodal {
+	return l.preNode
 }
 
-func (t *link) getMD5Key() string {
-	return t.md5Key
+func (l *link) getMD5Key() string {
+	return l.md5Key
 }
 
-func (t *link) getSeekStartIndex() int64 {
-	return t.seekStartIndex
+func (l *link) getSeekStartIndex() int64 {
+	return l.seekStartIndex
 }
 
-func (t *link) getSeekStart() uint32 {
-	return t.seekStart
+func (l *link) getSeekStart() uint32 {
+	return l.seekStart
 }
 
-func (t *link) getSeekLast() int {
-	return t.seekLast
+func (l *link) getSeekLast() int {
+	return l.seekLast
 }
 
-func (t *link) getValue() interface{} {
-	return t.value
+func (l *link) getValue() interface{} {
+	return l.value
 }
 
-func (t *link) lock() {
-	t.tLock.Lock()
+func (l *link) lock() {
+	l.tLock.Lock()
 }
 
-func (t *link) unLock() {
-	t.tLock.Unlock()
+func (l *link) unLock() {
+	l.tLock.Unlock()
 }
 
-func (t *link) rLock() {
-	t.tLock.RLock()
+func (l *link) rLock() {
+	l.tLock.RLock()
 }
 
-func (t *link) rUnLock() {
-	t.tLock.RUnlock()
+func (l *link) rUnLock() {
+	l.tLock.RUnlock()
 }
 
-func (t *link) put(key string, hashKey uint32, value interface{}, formIndexFilePath string) *indexBack {
+func (l *link) put(key string, hashKey uint32) *indexBack {
+	formIndexFilePath := l.getFormIndexFilePath()
 	gnomon.Log().Debug("box",
 		gnomon.Log().Field("key", key),
 		gnomon.Log().Field("hashKey", hashKey),
-		gnomon.Log().Field("value", value),
 		gnomon.Log().Field("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
-		locker:            t.preNode.getIndex(),
-		link:              t,
+		locker:            l.preNode.getIndex(),
+		link:              l,
 		key:               key,
 		hashKey:           hashKey,
 		err:               nil,
 	}
 }
 
-func (t *link) get() (interface{}, error) {
-	index := t.preNode.getIndex()
+func (l *link) get() (interface{}, error) {
+	index := l.preNode.getIndex()
 	rrFormBack := make(chan *readResult, 1)
-	go store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), t.seekStart, t.seekLast, rrFormBack)
+	go store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), l.seekStart, l.seekLast, rrFormBack)
 	rr := <-rrFormBack
 	return rr.value, rr.err
+}
+
+// getFormIndexFilePath 获取表索引文件路径
+func (l *link) getFormIndexFilePath() (formIndexFilePath string) {
+	index := l.preNode.getIndex()
+	dataID := index.getForm().getDatabase().getID()
+	formID := index.getForm().getID()
+	return pathFormIndexFile(dataID, formID, index.getID(), index.getKeyStructure())
 }
 
 // indexBack 索引对象

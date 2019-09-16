@@ -42,6 +42,7 @@ const (
 // 5位key及16位md5后key及5位起始seek和4位持续seek
 type index struct {
 	id           string  // id 索引唯一ID
+	primary      bool    // 是否主键
 	keyStructure string  // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
 	form         Form    // form 索引所属表对象
 	fileIndex    int     // 数据文件存储编号
@@ -50,89 +51,94 @@ type index struct {
 }
 
 // getID 索引唯一ID
-func (c *index) getID() string {
-	return c.id
+func (i *index) getID() string {
+	return i.id
+}
+
+// isPrimary 是否主键
+func (i *index) isPrimary() bool {
+	return i.primary
 }
 
 // getKey 索引字段名称，由对象结构层级字段通过'.'组成，如
-func (c *index) getKeyStructure() string {
-	return c.keyStructure
+func (i *index) getKeyStructure() string {
+	return i.keyStructure
 }
 
 // getForm 索引所属表对象
-func (c *index) getForm() Form {
-	return c.form
+func (i *index) getForm() Form {
+	return i.form
 }
 
-func (c *index) put(originalKey string, key uint32, value interface{}, update bool) IndexBack {
+func (i *index) put(originalKey string, key uint32, update bool) IndexBack {
 	index := key / cityDistance
 	//index := uint32(0)
-	node := c.createNode(uint8(index))
-	return node.put(originalKey, key-index*cityDistance, 0, value, update)
+	node := i.createNode(uint8(index))
+	return node.put(originalKey, key-index*cityDistance, 0, update)
 }
 
-func (c *index) get(originalKey string, key uint32) (interface{}, error) {
+func (i *index) get(originalKey string, key uint32) (interface{}, error) {
 	index := key / cityDistance
 	//index := uint32(0)
-	if realIndex, err := c.existNode(uint8(index)); nil == err {
-		return c.nodes[realIndex].get(originalKey, key-index*cityDistance, 0)
+	if realIndex, err := i.existNode(uint8(index)); nil == err {
+		return i.nodes[realIndex].get(originalKey, key-index*cityDistance, 0)
 	}
 	return nil, errors.New(strings.Join([]string{"index originalKey =", originalKey, "and keyStructure =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
 }
 
-func (c *index) existNode(index uint8) (realIndex int, err error) {
-	return binaryMatchData(uint8(index), c)
+func (i *index) existNode(index uint8) (realIndex int, err error) {
+	return binaryMatchData(uint8(index), i)
 }
 
-func (c *index) createNode(index uint8) Nodal {
+func (i *index) createNode(index uint8) Nodal {
 	var (
 		realIndex int
 		err       error
 	)
-	if realIndex, err = c.existNode(uint8(index)); nil != err {
+	if realIndex, err = i.existNode(uint8(index)); nil != err {
 		nd := &node{
 			level:       0,
 			degreeIndex: index,
-			index:       c,
+			index:       i,
 			preNode:     nil,
 			nodes:       []Nodal{},
 		}
-		lenData := len(c.nodes)
+		lenData := len(i.nodes)
 		if lenData == 0 {
-			c.nodes = append(c.nodes, nd)
+			i.nodes = append(i.nodes, nd)
 			return nd
 		}
-		c.nodes = append(c.nodes, nd)
-		for i := lenData - 1; i >= 0; i-- {
-			if c.nodes[i].getDegreeIndex() < index {
+		i.nodes = append(i.nodes, nd)
+		for j := lenData - 1; j >= 0; j-- {
+			if i.nodes[j].getDegreeIndex() < index {
 				break
-			} else if c.nodes[i].getDegreeIndex() > index {
-				c.nodes[i+1] = c.nodes[i]
-				c.nodes[i] = nd
+			} else if i.nodes[j].getDegreeIndex() > index {
+				i.nodes[j+1] = i.nodes[j]
+				i.nodes[j] = nd
 				continue
 			}
 		}
 		return nd
 	}
-	return c.nodes[realIndex]
+	return i.nodes[realIndex]
 }
 
-func (c *index) getNodes() []Nodal {
-	return c.nodes
+func (i *index) getNodes() []Nodal {
+	return i.nodes
 }
 
-func (c *index) lock() {
-	c.fLock.Lock()
+func (i *index) lock() {
+	i.fLock.Lock()
 }
 
-func (c *index) unLock() {
-	c.fLock.Unlock()
+func (i *index) unLock() {
+	i.fLock.Unlock()
 }
 
-func (c *index) rLock() {
-	c.fLock.RLock()
+func (i *index) rLock() {
+	i.fLock.RLock()
 }
 
-func (c *index) rUnLock() {
-	c.fLock.RUnlock()
+func (i *index) rUnLock() {
+	i.fLock.RUnlock()
 }

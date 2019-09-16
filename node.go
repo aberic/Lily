@@ -38,138 +38,127 @@ type node struct {
 	pLock       sync.RWMutex
 }
 
-func (p *node) getIndex() Index {
-	return p.index
+func (n *node) getIndex() Index {
+	return n.index
 }
 
-func (p *node) put(key string, hashKey, flexibleKey uint32, value interface{}, update bool) IndexBack {
+func (n *node) put(key string, hashKey, flexibleKey uint32, update bool) IndexBack {
 	var (
 		index          uint8
 		flexibleNewKey uint32
 		data           Nodal
 	)
-	if p.level == 0 {
+	if n.level == 0 {
 		index = uint8(hashKey / mallDistance)
 		flexibleNewKey = hashKey - uint32(index)*mallDistance
-		data = p.createNode(uint8(index))
-	} else if p.level == 4 {
-		link, exist := p.createLink(key)
+		data = n.createNode(uint8(index))
+	} else if n.level == 4 {
+		link, exist := n.createLink(key)
 		if !update && exist {
-			return &indexBack{err: p.errDataExist(key)}
-		}
-		formIndexFilePath := p.getFormIndexFilePath()
-		if exist {
-			return &indexBack{
-				formIndexFilePath: formIndexFilePath,
-				locker:            p.index,
-				link:              link,
-				key:               key,
-				hashKey:           hashKey,
-				err:               nil,
-			}
+			return &indexBack{err: n.errDataExist(key)}
 		}
 		//log.Self.Debug("box", log.Uint32("keyStructure", keyStructure), log.Reflect("value", value))
-		return link.put(key, hashKey, value, formIndexFilePath)
+		return link.put(key, hashKey)
 	} else {
-		index = uint8(flexibleKey / distance(p.level))
-		flexibleNewKey = flexibleKey - uint32(index)*distance(p.level)
-		if p.level == 3 {
-			data = p.createLeaf(uint8(index))
+		index = uint8(flexibleKey / distance(n.level))
+		flexibleNewKey = flexibleKey - uint32(index)*distance(n.level)
+		if n.level == 3 {
+			data = n.createLeaf(uint8(index))
 		} else {
-			data = p.createNode(uint8(index))
+			data = n.createNode(uint8(index))
 		}
 	}
-	return data.put(key, hashKey, flexibleNewKey, value, update)
+	return data.put(key, hashKey, flexibleNewKey, update)
 }
 
-func (p *node) get(key string, hashKey, flexibleKey uint32) (interface{}, error) {
+func (n *node) get(key string, hashKey, flexibleKey uint32) (interface{}, error) {
 	var (
 		index          uint8
 		flexibleNewKey uint32
 	)
-	if p.level == 0 {
+	if n.level == 0 {
 		index = uint8(hashKey / mallDistance)
 		flexibleNewKey = hashKey - uint32(index)*mallDistance
-	} else if p.level == 4 {
+	} else if n.level == 4 {
 		//gnomon.Log().Debug("box-get", gnomon.Log().Field("key", key))
-		if realIndex, exist := p.existLink(key, hashKey); exist {
-			return p.links[realIndex].get()
+		if realIndex, exist := n.existLink(key, hashKey); exist {
+			return n.links[realIndex].get()
 		}
 		return nil, errors.New(strings.Join([]string{"box key", key, "is nil"}, " "))
 	} else {
-		index = uint8(flexibleKey / distance(p.level))
-		flexibleNewKey = flexibleKey - uint32(index)*distance(p.level)
+		index = uint8(flexibleKey / distance(n.level))
+		flexibleNewKey = flexibleKey - uint32(index)*distance(n.level)
 	}
-	if realIndex, err := p.existNode(uint8(index)); nil == err {
-		return p.nodes[realIndex].get(key, hashKey, flexibleNewKey)
+	if realIndex, err := n.existNode(uint8(index)); nil == err {
+		return n.nodes[realIndex].get(key, hashKey, flexibleNewKey)
 	}
 	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
 }
 
-func (p *node) existNode(index uint8) (realIndex int, err error) {
-	return binaryMatchData(uint8(index), p)
+func (n *node) existNode(index uint8) (realIndex int, err error) {
+	return binaryMatchData(uint8(index), n)
 }
 
-func (p *node) createNode(index uint8) Nodal {
+func (n *node) createNode(index uint8) Nodal {
 	var (
 		realIndex int
 		err       error
 	)
-	defer p.unLock()
-	p.lock()
-	if realIndex, err = p.existNode(uint8(index)); nil != err {
-		level := p.level + 1
-		n := &node{
+	defer n.unLock()
+	n.lock()
+	if realIndex, err = n.existNode(uint8(index)); nil != err {
+		level := n.level + 1
+		newNode := &node{
 			level:       level,
 			degreeIndex: index,
-			index:       p.index,
-			preNode:     p,
+			index:       n.index,
+			preNode:     n,
 			nodes:       []Nodal{},
 		}
-		return p.appendNodal(index, n)
+		return n.appendNodal(index, newNode)
 	}
-	return p.nodes[realIndex]
+	return n.nodes[realIndex]
 }
 
-func (p *node) createLeaf(index uint8) Nodal {
+func (n *node) createLeaf(index uint8) Nodal {
 	var (
 		realIndex int
 		err       error
 	)
-	defer p.unLock()
-	p.lock()
-	if realIndex, err = binaryMatchData(index, p); nil != err {
-		level := p.level + 1
-		n := &node{
+	defer n.unLock()
+	n.lock()
+	if realIndex, err = binaryMatchData(index, n); nil != err {
+		level := n.level + 1
+		leaf := &node{
 			level:       level,
 			degreeIndex: index,
-			index:       p.index,
-			preNode:     p,
+			index:       n.index,
+			preNode:     n,
 			links:       []Link{},
 		}
-		return p.appendNodal(index, n)
+		return n.appendNodal(index, leaf)
 	}
-	return p.nodes[realIndex]
+	return n.nodes[realIndex]
 }
 
-func (p *node) createLink(key string) (Link, bool) {
-	defer p.unLock()
-	p.lock()
-	if len(p.links) > 0 {
-		for _, link := range p.links {
+func (n *node) createLink(key string) (Link, bool) {
+	defer n.unLock()
+	n.lock()
+	if n.index.isPrimary() && len(n.links) > 0 {
+		for _, link := range n.links {
 			//gnomon.Log().Debug("createLink", gnomon.Log().Field("exist", true))
 			if strings.EqualFold(link.getMD5Key(), gnomon.CryptoHash().MD516(key)) {
 				return link, true
 			}
 		}
 	}
-	link := &link{preNode: p, seekStartIndex: -1}
-	p.links = append(p.links, link)
+	link := &link{preNode: n, seekStartIndex: -1}
+	n.links = append(n.links, link)
 	return link, false
 }
 
-func (p *node) existLink(key string, hashKey uint32) (int, bool) {
-	for index, link := range p.links {
+func (n *node) existLink(key string, hashKey uint32) (int, bool) {
+	for index, link := range n.links {
 		//gnomon.Log().Debug("existLink", gnomon.Log().Field("link.md5Key", link.getMD5Key()), gnomon.Log().Field("md516", gnomon.CryptoHash().MD516(key)))
 		if strings.EqualFold(link.getMD5Key(), gnomon.CryptoHash().MD516(key)) {
 			return index, true
@@ -178,68 +167,60 @@ func (p *node) existLink(key string, hashKey uint32) (int, bool) {
 	return 0, false
 }
 
-// getFormIndexFilePath 获取表索引文件路径
-func (p *node) getFormIndexFilePath() (formIndexFilePath string) {
-	index := p.getIndex()
-	dataID := index.getForm().getDatabase().getID()
-	formID := index.getForm().getID()
-	return pathFormIndexFile(dataID, formID, index.getID(), index.getKeyStructure())
-}
-
-func (p *node) appendNodal(index uint8, n Nodal) Nodal {
-	lenData := len(p.nodes)
+func (n *node) appendNodal(index uint8, nodal Nodal) Nodal {
+	lenData := len(n.nodes)
 	if lenData == 0 {
-		p.nodes = append(p.nodes, n)
-		return n
+		n.nodes = append(n.nodes, nodal)
+		return nodal
 	}
-	p.nodes = append(p.nodes, nil)
-	for i := len(p.nodes) - 2; i >= 0; i-- {
-		if p.nodes[i].getDegreeIndex() < index {
-			p.nodes[i+1] = n
+	n.nodes = append(n.nodes, nil)
+	for i := len(n.nodes) - 2; i >= 0; i-- {
+		if n.nodes[i].getDegreeIndex() < index {
+			n.nodes[i+1] = nodal
 			break
-		} else if p.nodes[i].getDegreeIndex() > index {
-			p.nodes[i+1] = p.nodes[i]
-			p.nodes[i] = n
+		} else if n.nodes[i].getDegreeIndex() > index {
+			n.nodes[i+1] = n.nodes[i]
+			n.nodes[i] = nodal
 		} else {
-			return p.nodes[i]
+			return n.nodes[i]
 		}
 	}
-	return n
+	return nodal
 }
 
-func (p *node) getNodes() []Nodal {
-	return p.nodes
+func (n *node) getNodes() []Nodal {
+	return n.nodes
 }
 
-func (p *node) getLinks() []Link {
-	return p.links
+func (n *node) getLinks() []Link {
+	return n.links
 }
 
-func (p *node) getDegreeIndex() uint8 {
-	return p.degreeIndex
+func (n *node) getDegreeIndex() uint8 {
+	return n.degreeIndex
 }
 
-func (p *node) getPreNode() Nodal {
-	return p.preNode
+func (n *node) getPreNode() Nodal {
+	return n.preNode
 }
 
-func (p *node) lock() {
-	p.pLock.Lock()
+func (n *node) lock() {
+	n.pLock.Lock()
 }
 
-func (p *node) unLock() {
-	p.pLock.Unlock()
+func (n *node) unLock() {
+	n.pLock.Unlock()
 }
 
-func (p *node) rLock() {
-	p.pLock.RLock()
+func (n *node) rLock() {
+	n.pLock.RLock()
 }
 
-func (p *node) rUnLock() {
-	p.pLock.RUnlock()
+func (n *node) rUnLock() {
+	n.pLock.RUnlock()
 }
 
 // // errDataExist 自定义error信息
-func (p *node) errDataExist(key string) error {
+func (n *node) errDataExist(key string) error {
 	return errors.New(strings.Join([]string{"data ", key, " already exist"}, ""))
 }
