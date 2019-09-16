@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aberic/gnomon"
-	"github.com/ennoo/rivet/utils/log"
 	"github.com/vmihailenco/msgpack"
 	"io"
 	"os"
@@ -70,7 +69,7 @@ func TestChan(t *testing.T) {
 	}()
 	for i := 0; i < 3; i++ {
 		x := <-chanTest
-		log.Self.Debug("TestChan", log.Int("x", x))
+		gnomon.Log().Debug("TestChan", gnomon.Log().Field("x", x))
 	}
 }
 
@@ -523,7 +522,7 @@ func TestRLock1(t *testing.T) {
 		defer lock.RUnlock()
 		lock.RLock()
 		for i := 1; i <= 10; i++ {
-			log.Self.Debug("持有", log.Int("i = ", i))
+			gnomon.Log().Debug("持有", gnomon.Log().Field("i = ", i))
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -531,7 +530,7 @@ func TestRLock1(t *testing.T) {
 	go func() {
 		defer lock.Unlock()
 		lock.Lock()
-		log.Self.Debug("获取锁")
+		gnomon.Log().Debug("获取锁")
 	}()
 	time.Sleep(12 * time.Second)
 }
@@ -541,7 +540,7 @@ func TestRLock2(t *testing.T) {
 		defer lock.RUnlock()
 		lock.RLock()
 		for i := 1; i <= 10; i++ {
-			log.Self.Debug("1持有", log.Int("i = ", i))
+			gnomon.Log().Debug("1持有", gnomon.Log().Field("i = ", i))
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -549,7 +548,7 @@ func TestRLock2(t *testing.T) {
 		defer lock.RUnlock()
 		lock.RLock()
 		for i := 1; i <= 10; i++ {
-			log.Self.Debug("2持有", log.Int("i = ", i))
+			gnomon.Log().Debug("2持有", gnomon.Log().Field("i = ", i))
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -557,7 +556,7 @@ func TestRLock2(t *testing.T) {
 	go func() {
 		defer lock.Unlock()
 		lock.Lock()
-		log.Self.Debug("获取锁")
+		gnomon.Log().Debug("获取锁")
 	}()
 	time.Sleep(12 * time.Second)
 }
@@ -567,7 +566,7 @@ func TestLock(t *testing.T) {
 		defer lock.Unlock()
 		lock.Lock()
 		for i := 1; i <= 10; i++ {
-			log.Self.Debug("持有", log.Int("i = ", i))
+			gnomon.Log().Debug("持有", gnomon.Log().Field("i = ", i))
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -575,7 +574,7 @@ func TestLock(t *testing.T) {
 	go func() {
 		defer lock.RUnlock()
 		lock.RLock()
-		log.Self.Debug("获取锁")
+		gnomon.Log().Debug("获取锁")
 	}()
 	time.Sleep(12 * time.Second)
 }
