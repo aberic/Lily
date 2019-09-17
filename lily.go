@@ -120,6 +120,15 @@ func (l *Lily) initialize() {
 	})
 }
 
+// GetDatabases 获取数据库集合
+func (l *Lily) GetDatabases() []Database {
+	var dbs []Database
+	for _, db := range l.databases {
+		dbs = append(dbs, db)
+	}
+	return dbs
+}
+
 // CreateDatabase 新建数据库
 //
 // 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表

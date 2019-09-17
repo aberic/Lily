@@ -16,10 +16,12 @@ package lily
 
 import (
 	"github.com/aberic/gnomon"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -28,20 +30,29 @@ func BenchmarkInsert(b *testing.B) {
 	gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
-	if nil != err {
-		b.Error(err)
+	have := false
+	for _, db := range l.GetDatabases() {
+		if db.getName() == checkbookName {
+			have = true
+		}
+	}
+	if !have {
+		if _, err := l.CreateDatabase(checkbookName); nil != err {
+			b.Error(err)
+		}
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
-	now := time.Now().UnixNano()
+	var wg sync.WaitGroup
 	for i := 1; i <= b.N; i++ {
+		wg.Add(1)
 		go func(formName string, i int) {
+			defer wg.Done()
 			//_, _ = database.InsertInt(formName, i, i+10)
-			_, _ = l.Put(checkbookName, formName, strconv.Itoa(i), i+10)
+			_, _ = l.Put(checkbookName, formName, strconv.Itoa(i), &TestValue{Id: i, Age: rand.Intn(17) + 1, IsMarry: i%2 == 0, Timestamp: time.Now().Local().UnixNano()})
 		}(shopperName, i)
 		//_, _ = database.InsertInt(formName, i, i+10)
 	}
-	b.Log("time =", (time.Now().UnixNano()-now)/1e6)
+	wg.Wait()
 }
 
 func BenchmarkFileWrite1G1(b *testing.B) {

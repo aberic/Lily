@@ -237,14 +237,17 @@ func TestQuerySelector2(t *testing.T) {
 		t.Error(err)
 	}
 	gnomon.Log().Debug("TestQuerySelector2 Put")
-	for i := 1007; i > 0; i-- {
+	var wg sync.WaitGroup
+	for i := 100007; i > 0; i-- {
+		wg.Add(1)
 		go func(i int) {
+			defer wg.Done()
 			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 				t.Log(err)
 			}
 		}(i)
 	}
-	time.Sleep(1 * time.Second)
+	wg.Wait()
 	gnomon.Log().Debug("TestQuerySelector2 Get")
 	for i := 1007; i > 1000; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
@@ -254,23 +257,23 @@ func TestQuerySelector2(t *testing.T) {
 			t.Log("get ", i, " = ", j)
 		}
 	}
-	gnomon.Log().Debug("TestQuerySelector2 Select")
-	var (
-		i     interface{}
-		count int
-	)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{})
-	t.Log("select nil count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}})
-	t.Log("select time count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: true}})
-	t.Log("select time true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: false}})
-	t.Log("select time false count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: true}})
-	t.Log("select id true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
-	t.Log("select id false count =", count, "i = ", i, "err = ", err)
+	//gnomon.Log().Debug("TestQuerySelector2 Select")
+	//var (
+	//	i     interface{}
+	//	count int
+	//)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{})
+	//t.Log("select nil count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}})
+	//t.Log("select time count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: true}})
+	//t.Log("select time true count =", count, "i =", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: false}})
+	//t.Log("select time false count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: true}})
+	//t.Log("select id true count =", count, "i =", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
+	//t.Log("select id false count =", count, "i = ", i, "err = ", err)
 }
 
 func TestQuerySelector3(t *testing.T) {
@@ -323,8 +326,8 @@ func TestQuerySelector3(t *testing.T) {
 	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "IsMarry", ASC: false}})
 	//t.Log("select IsMarry false count =", count, "i = ", i, "err = ", err)
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Scopes: []*scope{
-			{Param: "Age", Start: 3, End: 15},
+		Conditions: []*condition{
+			{Param: "Age", Cond: "gt", Value: 15},
 		},
 		Sort: &sort{Param: "Age", ASC: true},
 	})

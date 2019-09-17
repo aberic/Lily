@@ -31,6 +31,8 @@ type API interface {
 	Start()
 	// Restart 重新启动lily
 	Restart()
+	// GetDatabases 获取数据库集合
+	GetDatabases() []Database
 	// CreateDatabase 新建数据库
 	//
 	// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表

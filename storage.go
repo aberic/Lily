@@ -68,6 +68,11 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	//	gnomon.Log().Field("appendStr", appendStr),
 	//	gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()),
 	//	gnomon.Log().Field("seekStartIndex", ib.getLink().getSeekStartIndex()))
+	defer func(file *os.File) {
+		if nil != file {
+			_ = file.Close()
+		}
+	}(file)
 	// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
 	// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 	if file, err = os.OpenFile(ib.getFormIndexFilePath(), os.O_CREATE|os.O_RDWR, 0644); nil != err {
@@ -122,6 +127,12 @@ func (s *storage) storeData(form Form, path string, value interface{}) *writeRes
 	if data, err = msgpack.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	}
+	defer func(file *os.File) {
+		if nil != file {
+			gnomon.Log().Debug("storeData file close")
+			_ = file.Close()
+		}
+	}(file)
 	if file, err = os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); nil != err {
 		gnomon.Log().Error("storeData", gnomon.Log().Err(err))
 		return &writeResult{err: err}
@@ -143,20 +154,30 @@ func (s *storage) storeData(form Form, path string, value interface{}) *writeRes
 }
 
 func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan *readResult) {
+	var (
+		file *os.File
+		err  error
+	)
+	defer func(file *os.File) {
+		if nil != file {
+			gnomon.Log().Debug("read file close")
+			_ = file.Close()
+		}
+	}(file)
 	//gnomon.Log().Debug("read", gnomon.Log().Field("filePath", filePath), gnomon.Log().Field("seekStart", seekStart), gnomon.Log().Field("seekLast", seekLast))
-	f, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
+	file, err = os.OpenFile(filePath, os.O_RDONLY, 0644)
 	if err != nil {
 		gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
-	_, err = f.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
+	_, err = file.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
 		gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
-	inputReader := bufio.NewReader(f)
+	inputReader := bufio.NewReader(file)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
 		gnomon.Log().Error("read", gnomon.Log().Err(err))
