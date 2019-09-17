@@ -15,7 +15,6 @@
 package lily
 
 import (
-	"github.com/aberic/gnomon"
 	"sync"
 )
 
@@ -87,10 +86,10 @@ func (l *link) rUnLock() {
 
 func (l *link) put(key string, hashKey uint32) *indexBack {
 	formIndexFilePath := l.getFormIndexFilePath()
-	gnomon.Log().Debug("box",
-		gnomon.Log().Field("key", key),
-		gnomon.Log().Field("hashKey", hashKey),
-		gnomon.Log().Field("formIndexFilePath", formIndexFilePath))
+	//gnomon.Log().Debug("box",
+	//	gnomon.Log().Field("key", key),
+	//	gnomon.Log().Field("hashKey", hashKey),
+	//	gnomon.Log().Field("formIndexFilePath", formIndexFilePath))
 	return &indexBack{
 		formIndexFilePath: formIndexFilePath,
 		locker:            l.preNode.getIndex(),

@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 )
 
@@ -161,6 +162,7 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 	if ibs, err = d.rangeIndexes(form, key, autoID, indexes, value, update); nil != err {
 		return 0, err
 	}
+	//gnomon.Log().Debug("insertDataWithIndexInfo", gnomon.Log().Field("ibs", ibs))
 	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
 	// 存储数据到表文件
 	wrf := store().storeData(form, pathFormDataFile(d.id, form.getID(), form.getFileIndex()), value)
@@ -187,6 +189,7 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
 func (d *database) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
 	var (
+		wg        sync.WaitGroup
 		chanIndex chan IndexBack
 		err       error
 	)
@@ -194,7 +197,9 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 	chanIndex = make(chan IndexBack, indexLen) // 创建索引ID结果返回通道
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	for _, index := range indexes {
+		wg.Add(1)
 		go func(autoID uint32, index Index) {
+			defer wg.Done()
 			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
 				chanIndex <- form.getIndexes()[index.getID()].put(strconv.Itoa(int(autoID)), autoID, update)
@@ -220,6 +225,7 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 			}
 		}(autoID, index)
 	}
+	wg.Wait()
 	var ibs []IndexBack
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex

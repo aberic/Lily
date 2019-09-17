@@ -207,7 +207,7 @@ func (s *Selector) leftQueryIndex(index Index) (int, []interface{}) {
 			is = append(is, nis...)
 		}
 	}
-	gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("is", is))
+	//gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("is", is))
 	if s.Sort == nil {
 		gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("s.Sort", s.Sort))
 		return count, is
@@ -239,7 +239,7 @@ func (s *Selector) leftQueryLeaf(leaf Leaf) (int, []interface{}) {
 			is = append(is, inter)
 		}
 	}
-	return len(leaf.getLinks()), s.shellAsc(is)
+	return len(leaf.getLinks()), is
 }
 
 // rightQueryIndex 索引倒序检索
@@ -255,7 +255,7 @@ func (s *Selector) rightQueryIndex(index Index) (int, []interface{}) {
 		}
 	}
 	gnomon.Log().Debug("rightQueryIndex", gnomon.Log().Field("is", is))
-	return count, is
+	return count, s.shellSort(is)
 }
 
 // rightQueryNode 节点倒序检索
@@ -285,29 +285,31 @@ func (s *Selector) rightQueryLeaf(leaf Leaf) (int, []interface{}) {
 			is = append(is, inter)
 		}
 	}
-	return len(leaf.getLinks()), s.shellDesc(is)
+	return len(leaf.getLinks()), is
 }
 
 // shellSort 希尔排序
 func (s *Selector) shellSort(is []interface{}) []interface{} {
 	gnomon.Log().Debug("shellSort 希尔排序")
 	if s.Sort.ASC {
+		gnomon.Log().Debug("shellAsc 希尔顺序排序")
 		return s.shellAsc(is)
 	}
+	gnomon.Log().Debug("shellDesc 希尔倒序排序")
 	return s.shellDesc(is)
 }
 
 // shellAsc 希尔顺序排序
 func (s *Selector) shellAsc(is []interface{}) []interface{} {
-	gnomon.Log().Debug("shellAsc 希尔顺序排序")
 	length := len(is)
 	gap := length / 2
+	params := strings.Split(s.Sort.Param, ".")
 	for gap > 0 {
 		for i := gap; i < length; i++ {
 			tempI := is[i]
-			temp := s.hashKeyFromValue(is[i])
+			temp := s.hashKeyFromValue(params, is[i])
 			preIndex := i - gap
-			for preIndex >= 0 && s.hashKeyFromValue(is[preIndex]) > temp {
+			for preIndex >= 0 && s.hashKeyFromValue(params, is[preIndex]) > temp {
 				is[preIndex+gap] = is[preIndex]
 				preIndex -= gap
 			}
@@ -320,15 +322,15 @@ func (s *Selector) shellAsc(is []interface{}) []interface{} {
 
 // shellDesc 希尔倒序排序
 func (s *Selector) shellDesc(is []interface{}) []interface{} {
-	gnomon.Log().Debug("shellDesc 希尔倒序排序")
 	length := len(is)
 	gap := length / 2
+	params := strings.Split(s.Sort.Param, ".")
 	for gap > 0 {
 		for i := gap; i < length; i++ {
 			tempI := is[i]
-			temp := s.hashKeyFromValue(is[i])
+			temp := s.hashKeyFromValue(params, is[i])
 			preIndex := i - gap
-			for preIndex >= 0 && s.hashKeyFromValue(is[preIndex]) < temp {
+			for preIndex >= 0 && s.hashKeyFromValue(params, is[preIndex]) < temp {
 				is[preIndex+gap] = is[preIndex]
 				preIndex -= gap
 			}
@@ -339,24 +341,19 @@ func (s *Selector) shellDesc(is []interface{}) []interface{} {
 	return is
 }
 
-func (s *Selector) hashKeyFromValue(i interface{}) uint32 {
-	hashKey, support := s.getInterValue(s.Sort.Param, i)
+func (s *Selector) hashKeyFromValue(params []string, value interface{}) uint32 {
+	hashKey, support := s.getInterValue(params, value)
 	if !support {
 		return 0
 	}
 	return hashKey
 }
 
-func (s *Selector) timestampFromValue(i interface{}) int64 {
-	return s.getInterTimestampValue(s.Sort.Param, i)
-}
-
 // getInterValue 根据索引描述和当前检索到的value对象获取当前value对象所在索引的hashKey
-func (s *Selector) getInterValue(param string, value interface{}) (hashKey uint32, support bool) {
+func (s *Selector) getInterValue(params []string, value interface{}) (hashKey uint32, support bool) {
 	reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
 	if reflectObj.Kind() == reflect.Map {
 		interMap := value.(map[string]interface{})
-		params := strings.Split(param, ".")
 		lenParams := len(params)
 		var valueResult interface{}
 		for i, param := range params {
@@ -372,29 +369,4 @@ func (s *Selector) getInterValue(param string, value interface{}) (hashKey uint3
 	}
 	gnomon.Log().Debug("getInterValue", gnomon.Log().Field("kind", reflectObj.Kind()), gnomon.Log().Field("support", false))
 	return 0, false
-}
-
-// getInterTimestampValue 根据索引描述和当前检索到的value对象获取当前value对象所在索引的hashKey
-func (s *Selector) getInterTimestampValue(param string, value interface{}) int64 {
-	reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
-	if reflectObj.Kind() == reflect.Map {
-		interMap := value.(map[string]interface{})
-		params := strings.Split(param, ".")
-		lenParams := len(params)
-		var valueResult interface{}
-		for i, param := range params {
-			if i == lenParams-1 {
-				valueResult = interMap[param]
-				break
-			}
-			interMap = interMap[param].(map[string]interface{})
-		}
-		//gnomon.Log().Debug("getInterValue", gnomon.Log().Field("valueResult", valueResult))
-		checkValue := reflect.ValueOf(valueResult)
-		if checkValue.Kind() == reflect.Int64 {
-			return checkValue.Int()
-		}
-	}
-	gnomon.Log().Error("getInterTimestampValue", gnomon.Log().Field("kind", reflectObj.Kind()))
-	return 0
 }

@@ -381,6 +381,14 @@ func valueType2index(value *reflect.Value) (key string, hashKey uint32, support 
 		// todo 字符串索引按照字母及大小写顺序，待完善
 		key = value.String()
 		hashKey = hash(key)
+	case reflect.Bool:
+		if value.Bool() {
+			key = value.String()
+			hashKey = 1
+		} else {
+			key = value.String()
+			hashKey = 2
+		}
 	}
 	return
 }
