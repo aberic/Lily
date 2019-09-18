@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -42,17 +41,13 @@ func BenchmarkInsert(b *testing.B) {
 		}
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
-	var wg sync.WaitGroup
 	for i := 1; i <= b.N; i++ {
-		wg.Add(1)
 		go func(formName string, i int) {
-			defer wg.Done()
 			//_, _ = database.InsertInt(formName, i, i+10)
 			_, _ = l.Put(checkbookName, formName, strconv.Itoa(i), &TestValue{Id: i, Age: rand.Intn(17) + 1, IsMarry: i%2 == 0, Timestamp: time.Now().Local().UnixNano()})
 		}(shopperName, i)
 		//_, _ = database.InsertInt(formName, i, i+10)
 	}
-	wg.Wait()
 }
 
 func BenchmarkFileWrite1G1(b *testing.B) {

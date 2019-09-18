@@ -17,6 +17,7 @@ package lily
 import (
 	"github.com/aberic/gnomon"
 	"path/filepath"
+	"strconv"
 )
 
 const (
@@ -39,8 +40,6 @@ const (
 	purseDistance uint32 = 128
 	// boxDistance level4间隔 ld3=(1*127+1)/128=1 128^0
 	boxDistance uint32 = 1
-
-	dataPath = "DATA_PATH"
 )
 
 //const (
@@ -65,11 +64,16 @@ const (
 //)
 
 var (
-	rootDir string // Lily服务默认存储路径
-	dataDir string // Lily服务默认存储路径
+	rootDir       string // Lily服务默认存储路径
+	dataDir       string // Lily服务默认存储路径
+	limitOpenFile int    // 限制打开文件描述符次数
 )
 
 func init() {
-	rootDir = gnomon.Env().GetEnvDefault(dataPath, "test/t1")
+	var err error
+	rootDir = gnomon.Env().GetEnvDefault("DATA_PATH", "test/t1")
 	dataDir = filepath.Join(rootDir, "Data")
+	if limitOpenFile, err = strconv.Atoi(gnomon.Env().GetEnvDefault("LIMIT_COUNT", "10000")); nil == err {
+		limitOpenFile = 10000
+	}
 }

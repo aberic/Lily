@@ -46,13 +46,15 @@ var (
 func store() *storage {
 	onceStorage.Do(func() {
 		if nil == stg {
-			stg = &storage{}
+			stg = &storage{limitOpenFileChan: make(chan int, limitOpenFile)}
 		}
 	})
 	return stg
 }
 
-type storage struct{}
+type storage struct {
+	limitOpenFileChan chan int // limitOpenFileChan 限制打开文件描述符次数
+}
 
 func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	var (
@@ -68,14 +70,15 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	//	gnomon.Log().Field("appendStr", appendStr),
 	//	gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()),
 	//	gnomon.Log().Field("seekStartIndex", ib.getLink().getSeekStartIndex()))
-	defer func(file *os.File) {
+	defer func() {
 		if nil != file {
+			<-s.limitOpenFileChan
 			_ = file.Close()
 		}
-	}(file)
+	}()
 	// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
 	// 写入5位key及16位md5后key及16位起始seek和8位持续seek
-	if file, err = os.OpenFile(ib.getFormIndexFilePath(), os.O_CREATE|os.O_RDWR, 0644); nil != err {
+	if file, err = s.openFile(ib.getFormIndexFilePath(), os.O_CREATE|os.O_RDWR); nil != err {
 		gnomon.Log().Error("storeIndex", gnomon.Log().Err(err))
 		return &writeResult{err: err}
 	}
@@ -127,13 +130,13 @@ func (s *storage) storeData(form Form, path string, value interface{}) *writeRes
 	if data, err = msgpack.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	}
-	defer func(file *os.File) {
+	defer func() {
 		if nil != file {
-			gnomon.Log().Debug("storeData file close")
+			<-s.limitOpenFileChan
 			_ = file.Close()
 		}
-	}(file)
-	if file, err = os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); nil != err {
+	}()
+	if file, err = s.openFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND); nil != err {
 		gnomon.Log().Error("storeData", gnomon.Log().Err(err))
 		return &writeResult{err: err}
 	}
@@ -158,14 +161,14 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		file *os.File
 		err  error
 	)
-	defer func(file *os.File) {
+	defer func() {
 		if nil != file {
-			gnomon.Log().Debug("read file close")
+			<-s.limitOpenFileChan
 			_ = file.Close()
 		}
-	}(file)
+	}()
 	//gnomon.Log().Debug("read", gnomon.Log().Field("filePath", filePath), gnomon.Log().Field("seekStart", seekStart), gnomon.Log().Field("seekLast", seekLast))
-	file, err = os.OpenFile(filePath, os.O_RDONLY, 0644)
+	file, err = s.openFile(filePath, os.O_RDONLY)
 	if err != nil {
 		gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
@@ -191,4 +194,9 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		return
 	}
 	rr <- &readResult{err: err, value: value}
+}
+
+func (s *storage) openFile(filePath string, flag int) (*os.File, error) {
+	s.limitOpenFileChan <- 1
+	return os.OpenFile(filePath, flag, 0644)
 }
