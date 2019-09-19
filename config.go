@@ -71,9 +71,9 @@ var (
 
 func init() {
 	var err error
-	rootDir = gnomon.Env().GetEnvDefault("DATA_PATH", "test/t1")
+	rootDir = gnomon.Env().GetD("DATA_PATH", "test/t1")
 	dataDir = filepath.Join(rootDir, "Data")
-	if limitOpenFile, err = strconv.Atoi(gnomon.Env().GetEnvDefault("LIMIT_COUNT", "10000")); nil == err {
+	if limitOpenFile, err = strconv.Atoi(gnomon.Env().GetD("LIMIT_COUNT", "10000")); nil == err {
 		limitOpenFile = 10000
 	}
 }

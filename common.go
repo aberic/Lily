@@ -374,7 +374,7 @@ func valueType2index(value *reflect.Value) (key string, hashKey uint32, support 
 		key = strconv.FormatUint(ui64, 10)
 		hashKey = uint64ToUint32Index(ui64)
 	case reflect.Float32, reflect.Float64:
-		i64 := gnomon.Scale().Wrap(value.Float(), 4)
+		i64 := gnomon.Scale().Float64toInt64(value.Float(), 4)
 		key = strconv.FormatInt(i64, 10)
 		hashKey = int64ToUint32Index(i64)
 	case reflect.String:
@@ -414,7 +414,7 @@ func value2hashKey(value *reflect.Value) (hashKey uint32, support bool) {
 		ui64 := value.Uint()
 		hashKey = uint64ToUint32Index(ui64)
 	case reflect.Float32, reflect.Float64:
-		i64 := gnomon.Scale().Wrap(value.Float(), 4)
+		i64 := gnomon.Scale().Float64toInt64(value.Float(), 4)
 		hashKey = int64ToUint32Index(i64)
 	case reflect.String:
 		// todo 字符串索引按照字母及大小写顺序，待完善
