@@ -22,11 +22,9 @@ import (
 )
 
 const (
-	sysDatabase  = "lily"      // 跟随‘Lily’创建的默认库
-	userForm     = "_user"     // 跟随‘sysDatabase’库创建的‘Lily’用户管理表
-	databaseForm = "_database" // 跟随‘sysDatabase’库创建的‘Lily’数据库管理表
-	indexForm    = "_index"    // 跟随‘sysDatabase’库创建的‘Lily’索引管理表
-	defaultForm  = "_default"  // 跟随‘sysDatabase’库创建的‘Lily’k-v表
+	sysDatabase = "lily"     // 跟随‘Lily’创建的默认库
+	userForm    = "_user"    // 跟随‘sysDatabase’库创建的‘Lily’用户管理表
+	defaultForm = "_default" // 跟随‘sysDatabase’库创建的‘Lily’k-v表
 )
 
 var (
@@ -101,14 +99,6 @@ func (l *Lily) initialize() {
 			panic(err)
 		}
 		if err = data.createForm(userForm, "default user form", FormTypeSQL); nil != err {
-			_ = rmDataDir(sysDatabase)
-			return
-		}
-		if err = data.createForm(databaseForm, "default database form", FormTypeSQL); nil != err {
-			_ = rmDataDir(sysDatabase)
-			return
-		}
-		if err = data.createForm(indexForm, "default index form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}

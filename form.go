@@ -42,16 +42,14 @@ import (
 //
 // 索引格式
 type form struct {
-	autoID    uint32           // 自增id
-	database  Database         // 数据库对象
-	name      string           // 表名，根据需求可以随时变化
-	id        string           // 表唯一ID，不能改变
-	indexes   map[string]Index // 索引ID集合
-	fileIndex int              // 数据文件存储编号
-	comment   string           // 描述
-	nodes     []Nodal          // 节点
-	formType  string           // 表类型 SQL/Doc
-	fLock     sync.RWMutex
+	autoID   uint32           // 自增id
+	database Database         // 数据库对象
+	name     string           // 表名，根据需求可以随时变化
+	id       string           // 表唯一ID，不能改变
+	indexes  map[string]Index // 索引ID集合
+	comment  string           // 描述
+	formType string           // 表类型 SQL/Doc
+	fLock    sync.RWMutex
 }
 
 func (f *form) getAutoID() *uint32 {
@@ -68,10 +66,6 @@ func (f *form) getName() string {
 
 func (f *form) getDatabase() Database {
 	return f.database
-}
-
-func (f *form) getFileIndex() int {
-	return f.fileIndex
 }
 
 func (f *form) getIndexes() map[string]Index {

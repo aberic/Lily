@@ -250,7 +250,6 @@ type Form interface {
 	getID() string                // getID 返回表唯一ID
 	getName() string              // getName 返回表名称
 	getDatabase() Database        // getDatabase 返回数据库对象
-	getFileIndex() int            // getFileIndex 获取表索引文件ID，该ID根据容量满载自增
 	getIndexes() map[string]Index // getIndexes 获取表下索引集合
 	getFormType() string          // getFormType 获取表类型
 }

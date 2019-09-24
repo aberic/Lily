@@ -103,7 +103,7 @@ func (l *link) put(key string, hashKey uint32) *indexBack {
 func (l *link) get() (interface{}, error) {
 	index := l.preNode.getIndex()
 	rrFormBack := make(chan *readResult, 1)
-	go store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID(), index.getForm().getFileIndex()), l.seekStart, l.seekLast, rrFormBack)
+	go store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID()), l.seekStart, l.seekLast, rrFormBack)
 	rr := <-rrFormBack
 	return rr.value, rr.err
 }
@@ -113,7 +113,7 @@ func (l *link) getFormIndexFilePath() (formIndexFilePath string) {
 	index := l.preNode.getIndex()
 	dataID := index.getForm().getDatabase().getID()
 	formID := index.getForm().getID()
-	return pathFormIndexFile(dataID, formID, index.getID(), index.getKeyStructure())
+	return pathFormIndexFile(dataID, formID, index.getID())
 }
 
 // indexBack 索引对象

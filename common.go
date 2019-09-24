@@ -152,26 +152,15 @@ func rmDataDir(dataName string) (err error) {
 // dataID 数据库唯一id
 //
 // formID 表唯一id
-func mkFormResource(dataID, formID string, fileIndex int) (err error) {
+func mkFormResource(dataID, formID string) (err error) {
 	if err = mkFormDir(dataID, formID); nil != err {
 		return
 	}
-	if err = mkFormDataFile(dataID, formID, fileIndex); nil != err {
+	if err = mkFormDataFile(dataID, formID); nil != err {
 		_ = rmFormDir(dataID, formID)
 		return
 	}
 	return
-}
-
-// mkFormIndexResource 创建表索引资源
-//
-// dataID 数据库唯一id
-//
-// formID 表唯一id
-//
-// indexID 表索引唯一id
-func mkFormIndexResource(dataID, formID, indexID string) (err error) {
-	return mkFormIndexDir(dataID, formID, indexID)
 }
 
 // mkFormDir 创建表存储目录
@@ -200,43 +189,13 @@ func rmFormDir(dataID, formID string) (err error) {
 	return nil
 }
 
-// mkFormIndexDir 创建表索引目录
+// mkFormDataFile 创建表文件
 //
 // dataID 数据库唯一id
 //
 // formID 表唯一id
-//
-// indexID 表索引唯一id
-func mkFormIndexDir(dataID, formID, indexID string) (err error) {
-	return os.Mkdir(pathFormIndexDir(dataID, formID, indexID), os.ModePerm)
-}
-
-// rmFormIndexDir 删除表索引目录
-//
-// dataID 数据库唯一id
-//
-// formID 表唯一id
-//
-// indexID 表索引唯一id
-func rmFormIndexDir(dataID, formID, indexID string) (err error) {
-	indexPath := pathFormIndexDir(dataID, formID, indexID)
-	if gnomon.File().PathExists(indexPath) {
-		return os.Remove(indexPath)
-	}
-	return nil
-}
-
-// mkFormIndexDir 创建表索引文件
-//
-// dataID 数据库唯一id
-//
-// formID 表唯一id
-//
-// indexID 表索引唯一id
-//
-// index 所在表顶层数组中下标
-func mkFormDataFile(dataID, formID string, fileIndex int) (err error) {
-	_, err = os.Create(pathFormDataFile(dataID, formID, fileIndex))
+func mkFormDataFile(dataID, formID string) (err error) {
+	_, err = os.Create(pathFormDataFile(dataID, formID))
 	return
 }
 
@@ -249,17 +208,6 @@ func pathFormDir(dataID, formID string) string {
 	return filepath.Join(dataDir, dataID, formID)
 }
 
-// pathFormIndexDir 表索引目录
-//
-// dataID 数据库唯一id
-//
-// formID 表唯一id
-//
-// indexID 表索引唯一id
-func pathFormIndexDir(dataID, formID, indexID string) string {
-	return filepath.Join(dataDir, dataID, formID, indexID)
-}
-
 // pathFormIndexFile 表索引文件路径
 //
 // dataID 数据库唯一id
@@ -267,14 +215,13 @@ func pathFormIndexDir(dataID, formID, indexID string) string {
 // formID 表唯一id
 //
 // indexID 表索引唯一id
-//
-// indexKeyStructure 索引字段名称，由对象结构层级字段通过'.'组成
-func pathFormIndexFile(dataID, formID, indexID, indexKeyStructure string) string {
-	return strings.Join([]string{pathFormIndexDir(dataID, formID, indexID), string(filepath.Separator), indexKeyStructure, ".idx"}, "")
+func pathFormIndexFile(dataID, formID, indexID string) string {
+	return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), indexID, ".idx"}, "")
 }
 
-func pathFormDataFile(dataID, formID string, fileIndex int) string {
-	return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), strconv.Itoa(fileIndex), ".dat"}, "")
+func pathFormDataFile(dataID, formID string) string {
+	return filepath.Join(dataDir, dataID, formID, "form.dat")
+	//return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), strconv.Itoa(fileIndex), ".dat"}, "")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

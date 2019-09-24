@@ -67,10 +67,9 @@ func (d *database) createForm(formName, comment, formType string) error {
 		comment:  comment,
 		database: d,
 		indexes:  map[string]Index{},
-		nodes:    []Nodal{},
 		formType: formType,
 	}
-	err := mkFormResource(d.id, formID, 0)
+	err := mkFormResource(d.id, formID)
 	if nil != err {
 		return err
 	}
@@ -94,9 +93,6 @@ func (d *database) createKey(formName string, keyStructure string) error {
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	if err := mkFormIndexResource(d.id, form.getID(), customID); nil != err {
-		return err
-	}
 	form.getIndexes()[customID] = &index{id: customID, primary: true, keyStructure: keyStructure, form: form, fileIndex: 0}
 	return nil
 }
@@ -106,9 +102,6 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	if err := mkFormIndexResource(d.id, form.getID(), customID); nil != err {
-		return err
-	}
 	form.getIndexes()[customID] = &index{id: customID, primary: false, keyStructure: keyStructure, form: form, fileIndex: 0}
 	return nil
 }
@@ -158,14 +151,16 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 		ibs []IndexBack
 		err error
 	)
+	//gnomon.Log().Debug("insertDataWithIndexInfo", gnomon.Log().Field("ibs", ibs))
+	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
+	defer form.unLock()
+	form.lock()
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	if ibs, err = d.rangeIndexes(form, key, autoID, indexes, value, update); nil != err {
 		return 0, err
 	}
-	//gnomon.Log().Debug("insertDataWithIndexInfo", gnomon.Log().Field("ibs", ibs))
-	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
 	// 存储数据到表文件
-	wrf := store().storeData(form, pathFormDataFile(d.id, form.getID(), form.getFileIndex()), value)
+	wrf := store().storeData(pathFormDataFile(d.id, form.getID()), value)
 	if nil != wrf.err {
 		return 0, wrf.err
 	}

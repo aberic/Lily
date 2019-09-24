@@ -117,7 +117,7 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 		err:            err}
 }
 
-func (s *storage) storeData(form Form, path string, value interface{}) *writeResult {
+func (s *storage) storeData(path string, value interface{}) *writeResult {
 	var (
 		file      *os.File
 		seekStart int64
@@ -125,8 +125,6 @@ func (s *storage) storeData(form Form, path string, value interface{}) *writeRes
 		data      []byte
 		err       error
 	)
-	defer form.unLock()
-	form.lock()
 	if data, err = msgpack.Marshal(value); nil != err {
 		return &writeResult{err: err}
 	}
