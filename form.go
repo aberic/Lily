@@ -38,6 +38,26 @@ import (
 //
 // level4间隔 ld3=(1*127+1)/128=1
 //
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+// 表索引树总数量为 nodes = 18446744073709551616
+//
+// nodes = max uint64 即 1<<64 = 18446744073709551616
+//
+// b+tree 模型 degree=65536;level=4;nodes=degree^level=18446744073709551616;
+//
+// node 内范围控制数量 nodeKeyStructure=65536
+//
+// leaf 内范围控制数量 leafKeyStructure=65537
+//
+// tree从上至下level1间隔 ld1=degree^(level-1)=65536^3=281474976710656
+//
+// tree从上至下level2间隔 ld1=degree^(level-1)=65536^2=4294967296
+//
+// tree从上至下level3间隔 ld1=degree^(level-1)=65536^1=65536
+//
+// tree从上至下level4间隔 ld1=degree^(level-1)=65536^0=1
+//
 // 存储格式 {dataDir}/database/{dataName}/{formName}/{formName}.dat/idx...
 //
 // 索引格式
