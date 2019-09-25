@@ -66,6 +66,7 @@ const (
 var (
 	rootDir       string // Lily服务默认存储路径
 	dataDir       string // Lily服务默认存储路径
+	lilyFilePath  string // Lily重启引导文件地址
 	limitOpenFile int    // 限制打开文件描述符次数
 )
 
@@ -73,6 +74,7 @@ func init() {
 	var err error
 	rootDir = gnomon.Env().GetD("DATA_PATH", "test/t1")
 	dataDir = filepath.Join(rootDir, "Data")
+	lilyFilePath = filepath.Join(dataDir, "lily.sync")
 	if limitOpenFile, err = strconv.Atoi(gnomon.Env().GetD("LIMIT_COUNT", "10000")); nil == err {
 		limitOpenFile = 10000
 	}

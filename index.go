@@ -16,6 +16,8 @@ package lily
 
 import (
 	"errors"
+	"github.com/aberic/gnomon"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,7 +47,6 @@ type index struct {
 	primary      bool    // 是否主键
 	keyStructure string  // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
 	form         Form    // form 索引所属表对象
-	fileIndex    int     // 数据文件存储编号
 	nodes        []Nodal // 节点
 	fLock        sync.RWMutex
 }
@@ -84,6 +85,22 @@ func (i *index) get(originalKey string, key uint32) (interface{}, error) {
 		return i.nodes[realIndex].get(originalKey, key-index*cityDistance, 0)
 	}
 	return nil, errors.New(strings.Join([]string{"index originalKey =", originalKey, "and keyStructure =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
+}
+
+func (i *index) recover() error {
+	// todo 恢复索引，注意Form的autoID
+	indexFilePath := pathFormIndexFile(i.form.getDatabase().getID(), i.form.getID(), i.id)
+	if gnomon.File().PathExists(indexFilePath) { // 索引文件不存在，则无需操作
+		var (
+			file *os.File
+			err  error
+		)
+		if file, err = os.OpenFile(indexFilePath, os.O_CREATE|os.O_RDWR, 0644); nil != err {
+			gnomon.Log().Panic("index recover failed", gnomon.Log().Err(err))
+		}
+		_ = file.Close()
+	}
+	return nil
 }
 
 func (i *index) existNode(index uint8) (realIndex int, err error) {

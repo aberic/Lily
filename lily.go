@@ -17,6 +17,9 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/lily/grpc"
+	"golang.org/x/protobuf/proto"
+	"io/ioutil"
 	"strings"
 	"sync"
 )
@@ -48,9 +51,10 @@ var (
 //
 // 存储格式 {dataDir}/Data/{dataName}/{formName}/{formName}.dat/idx...
 type Lily struct {
-	defaultDatabase Database
-	databases       map[string]Database
-	once            sync.Once
+	lilyData  *grpc.Lily
+	databases map[string]Database
+	once      sync.Once
+	lock      sync.Mutex
 }
 
 // ObtainLily 获取 Lily 对象
@@ -67,10 +71,22 @@ type Lily struct {
 func ObtainLily() *Lily {
 	onceLily.Do(func() {
 		lilyInstance = &Lily{
+			lilyData:  &grpc.Lily{Databases: map[string]*grpc.Database{}},
 			databases: map[string]Database{},
 		}
 	})
 	return lilyInstance
+}
+
+// syncRPC2Store 将 grpc.Lily 对象同步至本地文件中
+func (l *Lily) syncRPC2Store() {
+	defer l.lock.Unlock()
+	l.lock.Lock()
+	data, err := proto.Marshal(l.lilyData)
+	if nil != err {
+		return
+	}
+	_, _ = gnomon.File().Append(lilyFilePath, data, true)
 }
 
 // Start 启动lily
@@ -84,13 +100,77 @@ func (l *Lily) Start() {
 //
 // 调用 Restart() 会恢复 Lily 的索引，如果 Lily 索引存在，则 Restart() 什么也不会做
 func (l *Lily) Restart() {
-	// todo 恢复索引
+	defer l.lock.Unlock()
+	l.lock.Lock()
+	if gnomon.File().PathExists(lilyFilePath) {
+		var (
+			data []byte
+			lily grpc.Lily
+			err  error
+		)
+		if data, err = ioutil.ReadFile(lilyFilePath); nil != err {
+			gnomon.Log().Panic("restart failed, file read error", gnomon.Log().Err(err))
+		}
+		if err = proto.Unmarshal(data, &lily); nil != err {
+			gnomon.Log().Panic("restart failed, proto unmarshal error", gnomon.Log().Err(err))
+		}
+		l.lilyData = &lily
+		l.recover()
+		return
+	}
+	l.initialize()
+}
+
+// recover Lily恢复数据
+func (l *Lily) recover() {
+	l.databases = map[string]Database{}
+	for dk, dv := range l.lilyData.Databases {
+		l.databases[dk] = &database{
+			id:      dv.Id,
+			name:    dv.Name,
+			comment: dv.Comment,
+			forms:   map[string]Form{},
+			lily:    l,
+		}
+		for fk, fv := range dv.Forms {
+			var formType string
+			switch fv.FormType {
+			default:
+				formType = FormTypeSQL
+			case grpc.FormType_Doc:
+				formType = FormTypeDoc
+			}
+			l.databases[dk].getForms()[fk] = &form{
+				id:       fv.Id,
+				name:     fv.Name,
+				autoID:   0,
+				comment:  fv.Comment,
+				formType: formType,
+				database: l.databases[dk],
+				indexes:  map[string]Index{},
+			}
+			for ik, iv := range fv.Indexes {
+				l.databases[dk].getForms()[fk].getIndexes()[ik] = &index{
+					id:           iv.Id,
+					primary:      iv.Primary,
+					keyStructure: iv.KeyStructure,
+					form:         l.databases[dk].getForms()[fk],
+					nodes:        []Nodal{},
+				}
+				go func(l *Lily, dk, fk, ik string) {
+					if err := l.databases[dk].getForms()[fk].getIndexes()[ik].recover(); nil != err {
+						gnomon.Log().Panic("restart when index recover failed", gnomon.Log().Err(err))
+					}
+				}(l, dk, fk, ik)
+			}
+		}
+	}
 }
 
 // initialize 初始化默认库及默认表
 func (l *Lily) initialize() {
 	l.once.Do(func() {
-		data, err := l.CreateDatabase(sysDatabase)
+		data, err := l.CreateDatabase(sysDatabase, "跟随‘Lily’创建的默认库")
 		if nil != err {
 			if err == ErrDatabaseExist {
 				l.Restart()
@@ -106,7 +186,7 @@ func (l *Lily) initialize() {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		l.defaultDatabase = data
+		l.databases[sysDatabase] = data
 	})
 }
 
@@ -124,7 +204,9 @@ func (l *Lily) GetDatabases() []Database {
 // 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
 //
 // name 数据库名称
-func (l *Lily) CreateDatabase(name string) (Database, error) {
+//
+// comment 数据库描述
+func (l *Lily) CreateDatabase(name, comment string) (Database, error) {
 	// 确定库名不重复
 	for k := range l.databases {
 		if k == name {
@@ -136,8 +218,10 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 	if err := mkDataDir(id); nil != err {
 		return nil, err
 	}
-	l.databases[name] = &database{name: name, id: id, forms: map[string]Form{}}
-	//l.defaultDatabase.insert(databaseForm, id, )
+	l.databases[name] = &database{name: name, id: id, comment: comment, forms: map[string]Form{}, lily: l}
+	// 同步数据到 pb.Lily
+	l.lilyData.Databases[name] = &grpc.Database{Id: id, Name: name, Comment: comment, Forms: map[string]*grpc.Form{}}
+	l.syncRPC2Store()
 	return l.databases[name], nil
 }
 
@@ -150,21 +234,33 @@ func (l *Lily) CreateDatabase(name string) (Database, error) {
 // comment 表描述
 func (l *Lily) CreateForm(databaseName, formName, comment, formType string) error {
 	if database := l.databases[databaseName]; nil != database {
-		return database.createForm(formName, comment, formType)
+		if err := database.createForm(formName, comment, formType); nil != err {
+			return err
+		}
+		l.syncRPC2Store()
+		return nil
 	}
 	return ErrDataIsNil
 }
 
 func (l *Lily) CreateKey(databaseName, formName string, keyStructure string) error {
 	if database := l.databases[databaseName]; nil != database {
-		return database.createIndex(formName, keyStructure)
+		if err := database.createIndex(formName, keyStructure); nil != err {
+			return err
+		}
+		l.syncRPC2Store()
+		return nil
 	}
 	return ErrDataIsNil
 }
 
 func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) error {
 	if database := l.databases[databaseName]; nil != database {
-		return database.createIndex(formName, keyStructure)
+		if err := database.createIndex(formName, keyStructure); nil != err {
+			return err
+		}
+		l.syncRPC2Store()
+		return nil
 	}
 	return ErrDataIsNil
 }
@@ -329,7 +425,7 @@ func (l *Lily) Select(databaseName, formName string, selector *Selector) (int, i
 //
 // selector 条件选择器
 func (l *Lily) Delete(databaseName, formName string, selector *Selector) error {
-	// todo
+	// todo 删除数据
 	if nil == l || nil == l.databases[databaseName] {
 		return ErrDataIsNil
 	}

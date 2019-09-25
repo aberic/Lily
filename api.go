@@ -38,7 +38,7 @@ type API interface {
 	// 新建数据库会同时创建一个名为_default的表，未指定表明的情况下使用put/get等方法会操作该表
 	//
 	// name 数据库名称
-	CreateDatabase(name string) (Database, error)
+	CreateDatabase(name, comment string) (Database, error)
 	// CreateForm 创建表
 	//
 	// databaseName 数据库名
@@ -291,6 +291,8 @@ type Index interface {
 	//
 	// key 索引key，可通过hash转换string生成
 	get(originalKey string, key uint32) (interface{}, error)
+	// recover 重置索引数据
+	recover() error
 }
 
 // Nodal 节点对象接口

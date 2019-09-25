@@ -77,7 +77,6 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 		}
 	}()
 	// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
-	// 写入5位key及16位md5后key及16位起始seek和8位持续seek
 	if file, err = s.openFile(ib.getFormIndexFilePath(), os.O_CREATE|os.O_RDWR); nil != err {
 		gnomon.Log().Error("storeIndex", gnomon.Log().Err(err))
 		return &writeResult{err: err}

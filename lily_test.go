@@ -28,6 +28,11 @@ var (
 	shopperName   = "shop"
 )
 
+func TestLily_Restart(t *testing.T) {
+	l := ObtainLily()
+	l.Restart()
+}
+
 func TestLilyPutGet(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
@@ -48,7 +53,7 @@ func TestLilyPutGet(t *testing.T) {
 func TestPutGet(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Log(err)
 	}
@@ -83,7 +88,7 @@ func TestPutGets(t *testing.T) {
 	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Error(err)
 	}
@@ -100,7 +105,7 @@ func TestPutGets(t *testing.T) {
 func TestQuerySelector1(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Error(err)
 	}
@@ -130,7 +135,7 @@ func TestQuerySelector2(t *testing.T) {
 	gnomon.Log().Debug("TestQuerySelector2 Start")
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Error(err)
 	}
@@ -189,7 +194,7 @@ func TestQuerySelector3(t *testing.T) {
 	gnomon.Log().Debug("TestQuerySelector3 Start")
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Error(err)
 	}
@@ -247,7 +252,7 @@ func TestQuerySelector3(t *testing.T) {
 func TestQuerySelector4(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Error(err)
 	}
@@ -280,7 +285,7 @@ func TestQuerySelector4(t *testing.T) {
 func TestQuerySelector5(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
-	_, err := l.CreateDatabase(checkbookName)
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
 	if nil != err {
 		t.Error(err)
 	}

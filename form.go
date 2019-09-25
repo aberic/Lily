@@ -42,13 +42,13 @@ import (
 //
 // 索引格式
 type form struct {
-	autoID   uint32           // 自增id
-	database Database         // 数据库对象
-	name     string           // 表名，根据需求可以随时变化
 	id       string           // 表唯一ID，不能改变
-	indexes  map[string]Index // 索引ID集合
+	name     string           // 表名，根据需求可以随时变化
+	autoID   uint32           // 自增id
 	comment  string           // 描述
 	formType string           // 表类型 SQL/Doc
+	database Database         // 数据库对象
+	indexes  map[string]Index // 索引ID集合
 	fLock    sync.RWMutex
 }
 

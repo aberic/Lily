@@ -36,7 +36,7 @@ func BenchmarkInsert(b *testing.B) {
 		}
 	}
 	if !have {
-		if _, err := l.CreateDatabase(checkbookName); nil != err {
+		if _, err := l.CreateDatabase(checkbookName, "数据库描述"); nil != err {
 			b.Error(err)
 		}
 	}

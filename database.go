@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/lily/grpc"
 	"reflect"
 	"strconv"
 	"strings"
@@ -33,9 +34,11 @@ const (
 //
 // 存储格式 {dataDir}/database/{dataName}/{formName}/{formName}.dat/idx...
 type database struct {
-	name  string          // 数据库名称，根据需求可以随时变化
-	id    string          // 数据库唯一ID，不能改变
-	forms map[string]Form // 表集合
+	id      string          // 数据库唯一ID，不能改变
+	name    string          // 数据库名称，根据需求可以随时变化
+	comment string          // 描述
+	forms   map[string]Form // 表集合
+	lily    *Lily           // 数据库引擎
 }
 
 func (d *database) getID() string {
@@ -74,16 +77,25 @@ func (d *database) createForm(formName, comment, formType string) error {
 		return err
 	}
 	d.forms[formName] = form
+	// 同步数据到 pb.Lily
+	d.lily.lilyData.Databases[d.name].Forms[formName] = &grpc.Form{
+		Id:      formID,
+		Name:    formName,
+		Comment: comment,
+		Indexes: map[string]*grpc.Index{},
+	}
 	if formType == FormTypeSQL {
 		// 自增索引ID
 		if err = d.createKey(formName, indexAutoID); nil != err {
 			return err
 		}
+		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = grpc.FormType_SQL
 	} else {
 		// 默认自定义Key生成ID
 		if err = d.createKey(formName, indexDefaultID); nil != err {
 			return err
 		}
+		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = grpc.FormType_Doc
 	}
 	return nil
 }
@@ -93,7 +105,13 @@ func (d *database) createKey(formName string, keyStructure string) error {
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	form.getIndexes()[customID] = &index{id: customID, primary: true, keyStructure: keyStructure, form: form, fileIndex: 0}
+	form.getIndexes()[customID] = &index{id: customID, primary: true, keyStructure: keyStructure, form: form}
+	// 同步数据到 pb.Lily
+	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &grpc.Index{
+		Id:           customID,
+		Primary:      true,
+		KeyStructure: keyStructure,
+	}
 	return nil
 }
 
@@ -102,7 +120,13 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	form.getIndexes()[customID] = &index{id: customID, primary: false, keyStructure: keyStructure, form: form, fileIndex: 0}
+	form.getIndexes()[customID] = &index{id: customID, primary: false, keyStructure: keyStructure, form: form}
+	// 同步数据到 pb.Lily
+	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &grpc.Index{
+		Id:           customID,
+		Primary:      false,
+		KeyStructure: keyStructure,
+	}
 	return nil
 }
 
@@ -133,7 +157,7 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 }
 
 func (d *database) insert(formName string, value interface{}, update bool) (uint32, error) {
-	// todo
+	// todo 插入数据
 	return 0, nil
 }
 
