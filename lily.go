@@ -18,7 +18,7 @@ import (
 	"errors"
 	"github.com/aberic/gnomon"
 	"github.com/aberic/lily/grpc"
-	"golang.org/x/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"strings"
 	"sync"
