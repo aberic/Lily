@@ -20,22 +20,6 @@ import (
 	"sync"
 )
 
-const (
-	Int = iota
-	Int8
-	Int16
-	Int32
-	Int64
-	Uint
-	Uint8
-	Uint16
-	Uint32
-	Uint64
-	Float32
-	Float64
-	String
-)
-
 // index 索引对象
 //
 // 5位key及16位md5后key及5位起始seek和4位持续seek
@@ -68,14 +52,14 @@ func (i *index) getForm() Form {
 	return i.form
 }
 
-func (i *index) put(originalKey string, key int64, update bool) IndexBack {
+func (i *index) put(originalKey string, key uint64, update bool) IndexBack {
 	return i.node.put(originalKey, key, key, update)
 	//index := key / cityDistance
 	//node := i.createNode(uint8(index))
 	//return node.put(originalKey, key-index*cityDistance, 0, update)
 }
 
-func (i *index) get(originalKey string, key int64) (interface{}, error) {
+func (i *index) get(originalKey string, key uint64) (interface{}, error) {
 	return i.node.get(originalKey, key, key)
 	//index := key / cityDistance
 	//if realIndex, err := i.existNode(uint8(index)); nil == err {

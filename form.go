@@ -64,7 +64,7 @@ import (
 type form struct {
 	id       string           // 表唯一ID，不能改变
 	name     string           // 表名，根据需求可以随时变化
-	autoID   int64            // 自增id
+	autoID   uint64           // 自增id
 	comment  string           // 描述
 	formType string           // 表类型 SQL/Doc
 	database Database         // 数据库对象
@@ -72,7 +72,7 @@ type form struct {
 	fLock    sync.RWMutex
 }
 
-func (f *form) getAutoID() *int64 {
+func (f *form) getAutoID() *uint64 {
 	return &f.autoID
 }
 
@@ -94,10 +94,6 @@ func (f *form) getIndexes() map[string]Index {
 
 func (f *form) getFormType() string {
 	return f.formType
-}
-
-func (f *form) getDatabaseID() string {
-	return f.database.getID()
 }
 
 func (f *form) lock() {

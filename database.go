@@ -136,7 +136,7 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	return nil
 }
 
-func (d *database) put(formName string, key string, value interface{}, update bool) (int64, error) {
+func (d *database) put(formName string, key string, value interface{}, update bool) (uint64, error) {
 	form := d.forms[formName] // 获取待操作表
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
@@ -144,8 +144,8 @@ func (d *database) put(formName string, key string, value interface{}, update bo
 	if form.getFormType() != FormTypeDoc {
 		return 0, errors.New("put method only support doc")
 	}
-	indexes := form.getIndexes()                   // 获取表索引ID集合
-	autoID := atomic.AddInt64(form.getAutoID(), 1) // ID自增
+	indexes := form.getIndexes()                    // 获取表索引ID集合
+	autoID := atomic.AddUint64(form.getAutoID(), 1) // ID自增
 	return d.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
 }
 
@@ -162,7 +162,7 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 	return nil, errors.New("no key for custom id index")
 }
 
-func (d *database) insert(formName string, value interface{}, update bool) (int64, error) {
+func (d *database) insert(formName string, value interface{}, update bool) (uint64, error) {
 	// todo 插入数据
 	return 0, nil
 }
@@ -176,13 +176,13 @@ func (d *database) query(formName string, selector *Selector) (int, interface{},
 	return selector.query()
 }
 
-func (d *database) insertDataWithIndexInfo(form Form, key string, autoID int64, indexes map[string]Index, value interface{}, update bool) (int64, error) {
+func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint64, indexes map[string]Index, value interface{}, update bool) (uint64, error) {
 	var (
 		ibs []IndexBack
+		wg  sync.WaitGroup
 		err error
 	)
 	//gnomon.Log().Debug("insertDataWithIndexInfo", gnomon.Log().Field("ibs", ibs))
-	wrIndexBack := make(chan *writeResult, 1) // 索引存储结果通道
 	defer form.unLock()
 	form.lock()
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
@@ -190,29 +190,33 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID int64, 
 		return 0, err
 	}
 	// 存储数据到表文件
-	wrf := store().storeData(pathFormDataFile(d.id, form.getID()), value)
-	if nil != wrf.err {
-		return 0, wrf.err
+	dataWriteResult := store().storeData(pathFormDataFile(d.id, form.getID()), value)
+	if nil != dataWriteResult.err {
+		return 0, dataWriteResult.err
 	}
+	errBack := make(chan error, len(ibs)) // 索引存储结果通道
 	for _, ib := range ibs {
+		wg.Add(1)
 		go func(key string, ib IndexBack) {
-			wrIndexBack <- store().storeIndex(ib, wrf)
+			defer wg.Done()
+			wrIndexBack := store().storeIndex(ib, dataWriteResult)
+			if wrIndexBack.err != nil {
+				errBack <- wrIndexBack.err
+			}
 		}(key, ib)
 	}
-	for {
-		select {
-		case wrIndex := <-wrIndexBack:
-			if nil != wrIndex.err {
-				return 0, wrIndex.err
-			}
+	wg.Wait()
+	if len(errBack) > 0 {
+		if err = <-errBack; nil != err {
 			// todo 回滚策略待完成
-			return autoID, nil
+			return 0, err
 		}
 	}
+	return autoID, nil
 }
 
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
-func (d *database) rangeIndexes(form Form, key string, autoID int64, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
+func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
 	var (
 		wg        sync.WaitGroup
 		chanIndex chan IndexBack
@@ -223,7 +227,7 @@ func (d *database) rangeIndexes(form Form, key string, autoID int64, indexes map
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	for _, index := range indexes {
 		wg.Add(1)
-		go func(autoID int64, index Index) {
+		go func(autoID uint64, index Index) {
 			defer wg.Done()
 			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
@@ -267,11 +271,6 @@ func (d *database) rangeIndexes(form Form, key string, autoID int64, indexes map
 // shopperIsInvalid 自定义error信息
 func shopperIsInvalid(formName string) error {
 	return errors.New(strings.Join([]string{"invalid name ", formName}, ""))
-}
-
-// indexID 索引ID新的组合名称
-func (d *database) indexID(formName, indexName string) string {
-	return strings.Join([]string{formName, indexName}, "_")
 }
 
 // name2id 确保数据库唯一ID不重复

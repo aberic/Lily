@@ -18,7 +18,6 @@ import (
 	"errors"
 	"github.com/aberic/gnomon"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -73,19 +72,19 @@ type sort struct {
 	ASC   bool   `json:"asc"` // 是否升序
 }
 
-func (s *Selector) match2String(inter interface{}) string {
-	switch inter.(type) {
-	case string:
-		return inter.(string)
-	case int:
-		return strconv.Itoa(inter.(int))
-	case float64:
-		return strconv.FormatFloat(inter.(float64), 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(inter.(bool))
-	}
-	return ""
-}
+//func (s *Selector) match2String(inter interface{}) string {
+//	switch inter.(type) {
+//	case string:
+//		return inter.(string)
+//	case int:
+//		return strconv.Itoa(inter.(int))
+//	case float64:
+//		return strconv.FormatFloat(inter.(float64), 'f', -1, 64)
+//	case bool:
+//		return strconv.FormatBool(inter.(bool))
+//	}
+//	return ""
+//}
 
 func (s *Selector) query() (int, []interface{}, error) {
 	var (
@@ -276,7 +275,7 @@ func (s *Selector) shellDesc(is []interface{}) []interface{} {
 	return is
 }
 
-func (s *Selector) hashKeyFromValue(params []string, value interface{}) int64 {
+func (s *Selector) hashKeyFromValue(params []string, value interface{}) uint64 {
 	hashKey, support := s.getInterValue(params, value)
 	if !support {
 		return 0
@@ -285,7 +284,7 @@ func (s *Selector) hashKeyFromValue(params []string, value interface{}) int64 {
 }
 
 // getInterValue 根据索引描述和当前检索到的value对象获取当前value对象所在索引的hashKey
-func (s *Selector) getInterValue(params []string, value interface{}) (hashKey int64, support bool) {
+func (s *Selector) getInterValue(params []string, value interface{}) (hashKey uint64, support bool) {
 	reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
 	if reflectObj.Kind() == reflect.Map {
 		interMap := value.(map[string]interface{})

@@ -42,18 +42,18 @@ func (n *node) getIndex() Index {
 	return n.index
 }
 
-func (n *node) put(key string, hashKey, flexibleKey int64, update bool) IndexBack {
+func (n *node) put(key string, hashKey, flexibleKey uint64, update bool) IndexBack {
 	var (
 		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
-		nextFlexibleKey int64  // 下一级最左最小树所对应真实key
-		distance        int64  // 指定Level层级节点内各个子节点之前的差
+		nextFlexibleKey uint64 // 下一级最左最小树所对应真实key
+		distance        uint64 // 指定Level层级节点内各个子节点之前的差
 		data            Nodal
 	)
 	if n.level < 5 {
 		distance = levelDistance(n.level)
 		//gnomon.Log().Debug("put", gnomon.Log().Field("key", key), gnomon.Log().Field("distance", distance))
 		nextDegree = uint16(flexibleKey / distance)
-		nextFlexibleKey = flexibleKey - int64(nextDegree)*distance
+		nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 		if n.level == 4 {
 			data = n.createLeaf(nextDegree)
 		} else {
@@ -70,16 +70,16 @@ func (n *node) put(key string, hashKey, flexibleKey int64, update bool) IndexBac
 	return data.put(key, hashKey, nextFlexibleKey, update)
 }
 
-func (n *node) get(key string, hashKey, flexibleKey int64) (interface{}, error) {
+func (n *node) get(key string, hashKey, flexibleKey uint64) (interface{}, error) {
 	var (
 		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
-		nextFlexibleKey int64  // 下一级最左最小树所对应真实key
-		distance        int64  // 指定Level层级节点内各个子节点之前的差
+		nextFlexibleKey uint64 // 下一级最左最小树所对应真实key
+		distance        uint64 // 指定Level层级节点内各个子节点之前的差
 	)
 	if n.level < 5 {
 		distance = levelDistance(n.level)
 		nextDegree = uint16(flexibleKey / distance)
-		nextFlexibleKey = flexibleKey - int64(nextDegree)*distance
+		nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 	} else {
 		//gnomon.Log().Debug("box-get", gnomon.Log().Field("key", key))
 		if realIndex, exist := n.existLink(key); exist {

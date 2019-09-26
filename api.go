@@ -15,8 +15,10 @@
 package lily
 
 const (
-	FormTypeSQL = "FORM_TYPE_SQL" // FormTypeSQL 关系型数据存储方式
-	FormTypeDoc = "FORM_TYPE_DOC" // FormTypeDoc 文档型数据存储方式
+	// FormTypeSQL 关系型数据存储方式
+	FormTypeSQL = "FORM_TYPE_SQL"
+	// FormTypeDoc 文档型数据存储方式
+	FormTypeDoc = "FORM_TYPE_DOC"
 )
 
 // API 暴露公共API接口
@@ -74,7 +76,7 @@ type API interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	PutD(key string, value interface{}) (int64, error)
+	PutD(key string, value interface{}) (uint64, error)
 	// SetD 设置数据，如果存在将被覆盖，如果不存在，则新建
 	//
 	// 向_default表中新增或更新一条数据，key相同则覆盖
@@ -84,7 +86,7 @@ type API interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	SetD(key string, value interface{}) (int64, error)
+	SetD(key string, value interface{}) (uint64, error)
 	// GetD 获取数据
 	//
 	// 向_default表中查询一条数据并返回
@@ -104,7 +106,7 @@ type API interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	Put(databaseName, formName, key string, value interface{}) (int64, error)
+	Put(databaseName, formName, key string, value interface{}) (uint64, error)
 	// Set 设置数据，如果存在将被覆盖，如果不存在，则新建
 	//
 	// 向指定表中新增或更新一条数据，key相同则覆盖
@@ -118,7 +120,7 @@ type API interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	Set(databaseName, formName, key string, value interface{}) (int64, error)
+	Set(databaseName, formName, key string, value interface{}) (uint64, error)
 	// Get 获取数据
 	//
 	// 向指定表中查询一条数据并返回
@@ -138,7 +140,7 @@ type API interface {
 	// formName 表名
 	//
 	// value 插入数据对象
-	Insert(databaseName, formName string, value interface{}) (int64, error)
+	Insert(databaseName, formName string, value interface{}) (uint64, error)
 	// Update 更新数据
 	//
 	// 向指定表中新增或更新一条数据，key相同则覆盖
@@ -212,7 +214,7 @@ type Database interface {
 	// 返回 hashKey
 	//
 	// update 本次是否执行更新操作
-	put(formName string, key string, value interface{}, update bool) (int64, error)
+	put(formName string, key string, value interface{}, update bool) (uint64, error)
 	// Get 获取数据
 	//
 	// 向_default表中查询一条数据并返回
@@ -230,7 +232,7 @@ type Database interface {
 	// value 插入数据对象
 	//
 	// 返回 hashKey
-	insert(formName string, value interface{}, update bool) (int64, error)
+	insert(formName string, value interface{}, update bool) (uint64, error)
 	// querySelector 根据条件检索
 	//
 	// formName 表名
@@ -246,7 +248,7 @@ type Database interface {
 // 提供表基本操作方法
 type Form interface {
 	WriteLocker
-	getAutoID() *int64            // getAutoID 返回表当前自增ID值
+	getAutoID() *uint64           // getAutoID 返回表当前自增ID值
 	getID() string                // getID 返回表唯一ID
 	getName() string              // getName 返回表名称
 	getDatabase() Database        // getDatabase 返回数据库对象
@@ -254,6 +256,7 @@ type Form interface {
 	getFormType() string          // getFormType 获取表类型
 }
 
+// Index 索引接口
 type Index interface {
 	WriteLocker
 	// getID 索引唯一ID
@@ -285,13 +288,13 @@ type Index interface {
 	//
 	// update 本次是否执行更新操作
 	getNode() Nodal // getNode 获取树根节点
-	put(originalKey string, key int64, update bool) IndexBack
+	put(originalKey string, key uint64, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
 	// originalKey 真实key，必须string类型
 	//
 	// key 索引key，可通过hash转换string生成
-	get(originalKey string, key int64) (interface{}, error)
+	get(originalKey string, key uint64) (interface{}, error)
 	// recover 重置索引数据
 	recover() error
 }
@@ -311,7 +314,7 @@ type Nodal interface {
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	put(key string, hashKey, flexibleKey int64, update bool) IndexBack
+	put(key string, hashKey, flexibleKey uint64, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
 	// key 真实key，必须string类型
@@ -319,7 +322,7 @@ type Nodal interface {
 	// hashKey 索引key，可通过hash转换string生成
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
-	get(key string, hashKey, flexibleKey int64) (interface{}, error)
+	get(key string, hashKey, flexibleKey uint64) (interface{}, error)
 	getDegreeIndex() uint16 // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNode() Nodal      // getPreNode 获取父节点对象
 	getNodes() []Nodal      // getNodes 获取下属节点集合
@@ -344,16 +347,17 @@ type Link interface {
 	getSeekStart() uint32         // value最终存储在文件中的起始位置
 	getSeekLast() int             // value最终存储在文件中的持续长度
 	getValue() interface{}
-	put(key string, hashKey int64) *indexBack
+	put(key string, hashKey uint64) *indexBack
 	get() (interface{}, error)
 }
 
+// IndexBack 索引检索回调结果接口
 type IndexBack interface {
 	getFormIndexFilePath() string // 索引文件所在路径
 	getLocker() WriteLocker       // 索引文件所对应level2层级度节点
 	getLink() Link                // 索引对应节点对象子集
 	getKey() string               // 索引对应字符串key
-	getHashKey() int64            // put hash keyStructure
+	getHashKey() uint64           // put hash keyStructure
 	getErr() error
 }
 

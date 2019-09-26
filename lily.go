@@ -243,6 +243,13 @@ func (l *Lily) CreateForm(databaseName, formName, comment, formType string) erro
 	return ErrDataIsNil
 }
 
+// CreateKey 新建主键
+//
+// databaseName 数据库名
+//
+// name 表名称
+//
+// keyStructure 主键结构名，按照规范结构组成的主键字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
 func (l *Lily) CreateKey(databaseName, formName string, keyStructure string) error {
 	if database := l.databases[databaseName]; nil != database {
 		if err := database.createIndex(formName, keyStructure); nil != err {
@@ -254,6 +261,13 @@ func (l *Lily) CreateKey(databaseName, formName string, keyStructure string) err
 	return ErrDataIsNil
 }
 
+// CreateIndex 新建索引
+//
+// databaseName 数据库名
+//
+// name 表名称
+//
+// keyStructure 索引结构名，按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
 func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) error {
 	if database := l.databases[databaseName]; nil != database {
 		if err := database.createIndex(formName, keyStructure); nil != err {
@@ -265,7 +279,7 @@ func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) e
 	return ErrDataIsNil
 }
 
-// Put 新增数据
+// PutD 新增数据
 //
 // 向_default表中新增一条数据，key相同则返回一个Error
 //
@@ -274,14 +288,14 @@ func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) e
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) PutD(key string, value interface{}) (int64, error) {
+func (l *Lily) PutD(key string, value interface{}) (uint64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
 	return l.databases[sysDatabase].put(defaultForm, key, value, false)
 }
 
-// Put 新增数据
+// SetD 新增数据
 //
 // 向_default表中新增一条数据，key相同则覆盖
 //
@@ -290,14 +304,14 @@ func (l *Lily) PutD(key string, value interface{}) (int64, error) {
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) SetD(key string, value interface{}) (int64, error) {
+func (l *Lily) SetD(key string, value interface{}) (uint64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
 	return l.databases[sysDatabase].put(defaultForm, key, value, true)
 }
 
-// Get 获取数据
+// GetD 获取数据
 //
 // 向_default表中查询一条数据并返回
 //
@@ -319,7 +333,7 @@ func (l *Lily) GetD(key string) (interface{}, error) {
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) Put(databaseName, formName, key string, value interface{}) (int64, error) {
+func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
@@ -329,7 +343,7 @@ func (l *Lily) Put(databaseName, formName, key string, value interface{}) (int64
 	return l.databases[databaseName].put(formName, key, value, false)
 }
 
-// Put 新增数据
+// Set 新增数据
 //
 // 向指定表中新增一条数据，key相同则覆盖
 //
@@ -342,7 +356,7 @@ func (l *Lily) Put(databaseName, formName, key string, value interface{}) (int64
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) Set(databaseName, formName, key string, value interface{}) (int64, error) {
+func (l *Lily) Set(databaseName, formName, key string, value interface{}) (uint64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
@@ -377,7 +391,7 @@ func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 // keyStructure 插入数据唯一key
 //
 // value 插入数据对象
-func (l *Lily) Insert(databaseName, formName string, value interface{}) (int64, error) {
+func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint64, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
 	}

@@ -22,13 +22,13 @@ import (
 
 const (
 	// level1Distance level1间隔 65536^3 = 281474976710656 | 测试 4^3 = 64
-	level1Distance int64 = 281474976710656
+	level1Distance uint64 = 281474976710656
 	// level2Distance level2间隔 65536^2 = 4294967296 | 测试 4^2 = 16
-	level2Distance int64 = 4294967296
+	level2Distance uint64 = 4294967296
 	// level3Distance level3间隔 65536^1 = 65536 | 测试 4^1 = 4
-	level3Distance int64 = 65536
+	level3Distance uint64 = 65536
 	// level4Distance level4间隔 65536^0 = 1 | 测试 4^0 = 1
-	level4Distance int64 = 1
+	level4Distance uint64 = 1
 )
 
 var (

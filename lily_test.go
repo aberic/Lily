@@ -124,7 +124,7 @@ func TestQuerySelector1(t *testing.T) {
 }
 
 type TestValue struct {
-	Id        int
+	ID        int
 	Age       int
 	IsMarry   bool
 	Timestamp int64
@@ -140,7 +140,7 @@ func TestQuerySelector2(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
-	if err = l.CreateKey(checkbookName, shopperName, "Id"); nil != err {
+	if err = l.CreateKey(checkbookName, shopperName, "ID"); nil != err {
 		t.Error(err)
 	}
 	if err = l.CreateIndex(checkbookName, shopperName, "Timestamp"); nil != err {
@@ -151,18 +151,18 @@ func TestQuerySelector2(t *testing.T) {
 	}
 	gnomon.Log().Debug("TestQuerySelector2 Put")
 	var wg sync.WaitGroup
-	for i := 17; i > 0; i-- {
+	for i := 100007; i > 0; i-- {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
+			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{ID: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 				t.Log(err)
 			}
 		}(i)
 	}
 	wg.Wait()
 	gnomon.Log().Debug("TestQuerySelector2 Get")
-	for i := 17; i > 0; i-- {
+	for i := 80007; i > 80000; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		if nil != err {
 			t.Log(err)
@@ -170,23 +170,23 @@ func TestQuerySelector2(t *testing.T) {
 			t.Log("get ", i, " = ", j)
 		}
 	}
-	gnomon.Log().Debug("TestQuerySelector2 Select")
-	var (
-		i     interface{}
-		count int
-	)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{})
-	t.Log("select nil count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}})
-	t.Log("select time count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: true}})
-	t.Log("select time true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: false}})
-	t.Log("select time false count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: true}})
-	t.Log("select id true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Id", ASC: false}})
-	t.Log("select id false count =", count, "i = ", i, "err = ", err)
+	//gnomon.Log().Debug("TestQuerySelector2 Select")
+	//var (
+	//	i     interface{}
+	//	count int
+	//)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{})
+	//t.Log("select nil count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}})
+	//t.Log("select time count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: true}})
+	//t.Log("select time true count =", count, "i =", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: false}})
+	//t.Log("select time false count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "ID", ASC: true}})
+	//t.Log("select id true count =", count, "i =", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "ID", ASC: false}})
+	//t.Log("select id false count =", count, "i = ", i, "err = ", err)
 }
 
 func TestQuerySelector3(t *testing.T) {
@@ -199,7 +199,7 @@ func TestQuerySelector3(t *testing.T) {
 		t.Error(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
-	if err = l.CreateKey(checkbookName, shopperName, "Id"); nil != err {
+	if err = l.CreateKey(checkbookName, shopperName, "ID"); nil != err {
 		t.Error(err)
 	}
 	if err = l.CreateIndex(checkbookName, shopperName, "Timestamp"); nil != err {
@@ -214,7 +214,7 @@ func TestQuerySelector3(t *testing.T) {
 	gnomon.Log().Debug("TestQuerySelector3 Put")
 	for i := 17; i > 0; i-- {
 		go func(i int) {
-			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{Id: i, Age: rand.Intn(17) + 1, IsMarry: i%2 == 0, Timestamp: time.Now().Local().UnixNano()}); nil != err {
+			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{ID: i, Age: rand.Intn(17) + 1, IsMarry: i%2 == 0, Timestamp: time.Now().Local().UnixNano()}); nil != err {
 				t.Log(err)
 			}
 		}(i)
@@ -293,21 +293,21 @@ func TestQuerySelector5(t *testing.T) {
 	//for i := 1; i <= 10; i++ {
 	//	_ = database.InsertInt(formName, i, i+10)
 	//}
-	_, err = l.Put(checkbookName, shopperName, "1000", &TestValue{Id: 1000, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "1000", &TestValue{ID: 1000, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "100", &TestValue{Id: 100, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "100", &TestValue{ID: 100, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "110000", &TestValue{Id: 110000, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "110000", &TestValue{ID: 110000, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "1100", &TestValue{Id: 1100, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "1100", &TestValue{ID: 1100, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "10000", &TestValue{Id: 10000, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "10000", &TestValue{ID: 10000, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "1", &TestValue{Id: 1, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "1", &TestValue{ID: 1, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "10", &TestValue{Id: 10, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "10", &TestValue{ID: 10, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
-	_, err = l.Put(checkbookName, shopperName, "110", &TestValue{Id: 110, Timestamp: time.Now().Local().Unix()})
+	_, err = l.Put(checkbookName, shopperName, "110", &TestValue{ID: 110, Timestamp: time.Now().Local().Unix()})
 	t.Log("err = ", err)
 	_, i, err := l.Select(checkbookName, shopperName, &Selector{})
 	t.Log("select = ", i.([]interface{}), "err = ", err)
