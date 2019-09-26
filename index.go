@@ -124,12 +124,14 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 		md516Key := indexStr[p1:p2]
 		seekStart := uint32(gnomon.Scale().DDuoStringToUint64(indexStr[p2:p3])) // value最终存储在文件中的起始位置
 		seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4]))      // value最终存储在文件中的持续长度
-		ib := i.put("", hashKey, true)
-		ib.getLink().setSeekStartIndex(p0)
-		ib.getLink().setMD5Key(md516Key)
-		ib.getLink().setSeekStart(seekStart)
-		ib.getLink().setSeekLast(seekLast)
-		atomic.AddUint64(i.form.getAutoID(), 1) // ID自增
+		go func(i *index, hashKey uint64, p0 int64, md516Key string, seekStart uint32, seekLast int) {
+			ib := i.node.put("", hashKey, hashKey, true)
+			ib.getLink().setSeekStartIndex(p0)
+			ib.getLink().setMD5Key(md516Key)
+			ib.getLink().setSeekStart(seekStart)
+			ib.getLink().setSeekLast(seekLast)
+			atomic.AddUint64(i.form.getAutoID(), 1) // ID自增
+		}(i, hashKey, p0, md516Key, seekStart, seekLast)
 		position += 36
 		if indexStrLen < position+36 {
 			haveNext = false

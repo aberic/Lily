@@ -41,6 +41,15 @@ func TestLily_Restart(t *testing.T) {
 	}
 }
 
+func TestLily_New(t *testing.T) {
+	var nds []Nodal
+	for i := 0; i < 100000; i++ {
+		nd := &node{index: nil, nodes: []Nodal{}}
+		nds = append(nds, nd)
+	}
+	t.Log("success", len(nds))
+}
+
 func TestLilyPutGet(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
