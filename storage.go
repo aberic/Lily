@@ -65,7 +65,7 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	ib.getLocker().lock()
 	md5Key := gnomon.CryptoHash().MD516(ib.getKey()) // hash(keyStructure) 会发生碰撞，因此这里存储md5结果进行反向验证
 	// 写入5位key及16位md5后key
-	appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
+	appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Int64ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
 	//gnomon.Log().Debug("storeIndex",
 	//	gnomon.Log().Field("appendStr", appendStr),
 	//	gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()),

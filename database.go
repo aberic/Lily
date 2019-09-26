@@ -130,7 +130,7 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	return nil
 }
 
-func (d *database) put(formName string, key string, value interface{}, update bool) (uint32, error) {
+func (d *database) put(formName string, key string, value interface{}, update bool) (int64, error) {
 	form := d.forms[formName] // 获取待操作表
 	if nil == form {
 		return 0, shopperIsInvalid(formName)
@@ -138,8 +138,8 @@ func (d *database) put(formName string, key string, value interface{}, update bo
 	if form.getFormType() != FormTypeDoc {
 		return 0, errors.New("put method only support doc")
 	}
-	indexes := form.getIndexes()                    // 获取表索引ID集合
-	autoID := atomic.AddUint32(form.getAutoID(), 1) // ID自增
+	indexes := form.getIndexes()                   // 获取表索引ID集合
+	autoID := atomic.AddInt64(form.getAutoID(), 1) // ID自增
 	return d.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
 }
 
@@ -156,7 +156,7 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 	return nil, errors.New("no key for custom id index")
 }
 
-func (d *database) insert(formName string, value interface{}, update bool) (uint32, error) {
+func (d *database) insert(formName string, value interface{}, update bool) (int64, error) {
 	// todo 插入数据
 	return 0, nil
 }
@@ -170,7 +170,7 @@ func (d *database) query(formName string, selector *Selector) (int, interface{},
 	return selector.query()
 }
 
-func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) (uint32, error) {
+func (d *database) insertDataWithIndexInfo(form Form, key string, autoID int64, indexes map[string]Index, value interface{}, update bool) (int64, error) {
 	var (
 		ibs []IndexBack
 		err error
@@ -206,7 +206,7 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint32,
 }
 
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
-func (d *database) rangeIndexes(form Form, key string, autoID uint32, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
+func (d *database) rangeIndexes(form Form, key string, autoID int64, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
 	var (
 		wg        sync.WaitGroup
 		chanIndex chan IndexBack
@@ -217,7 +217,7 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint32, indexes ma
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	for _, index := range indexes {
 		wg.Add(1)
-		go func(autoID uint32, index Index) {
+		go func(autoID int64, index Index) {
 			defer wg.Done()
 			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {

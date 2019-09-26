@@ -42,15 +42,15 @@ func (n *node) getIndex() Index {
 	return n.index
 }
 
-func (n *node) put(key string, hashKey, flexibleKey uint32, update bool) IndexBack {
+func (n *node) put(key string, hashKey, flexibleKey int64, update bool) IndexBack {
 	var (
 		index          uint8
-		flexibleNewKey uint32
+		flexibleNewKey int64
 		data           Nodal
 	)
 	if n.level == 0 {
 		index = uint8(hashKey / mallDistance)
-		flexibleNewKey = hashKey - uint32(index)*mallDistance
+		flexibleNewKey = hashKey - int64(index)*mallDistance
 		data = n.createNode(uint8(index))
 	} else if n.level == 4 {
 		link, exist := n.createLink(key)
@@ -61,7 +61,7 @@ func (n *node) put(key string, hashKey, flexibleKey uint32, update bool) IndexBa
 		return link.put(key, hashKey)
 	} else {
 		index = uint8(flexibleKey / distance(n.level))
-		flexibleNewKey = flexibleKey - uint32(index)*distance(n.level)
+		flexibleNewKey = flexibleKey - int64(index)*distance(n.level)
 		if n.level == 3 {
 			data = n.createLeaf(uint8(index))
 		} else {
@@ -71,23 +71,23 @@ func (n *node) put(key string, hashKey, flexibleKey uint32, update bool) IndexBa
 	return data.put(key, hashKey, flexibleNewKey, update)
 }
 
-func (n *node) get(key string, hashKey, flexibleKey uint32) (interface{}, error) {
+func (n *node) get(key string, hashKey, flexibleKey int64) (interface{}, error) {
 	var (
 		index          uint8
-		flexibleNewKey uint32
+		flexibleNewKey int64
 	)
 	if n.level == 0 {
 		index = uint8(hashKey / mallDistance)
-		flexibleNewKey = hashKey - uint32(index)*mallDistance
+		flexibleNewKey = hashKey - int64(index)*mallDistance
 	} else if n.level == 4 {
 		//gnomon.Log().Debug("box-get", gnomon.Log().Field("key", key))
-		if realIndex, exist := n.existLink(key, hashKey); exist {
+		if realIndex, exist := n.existLink(key); exist {
 			return n.links[realIndex].get()
 		}
 		return nil, errors.New(strings.Join([]string{"box key", key, "is nil"}, " "))
 	} else {
 		index = uint8(flexibleKey / distance(n.level))
-		flexibleNewKey = flexibleKey - uint32(index)*distance(n.level)
+		flexibleNewKey = flexibleKey - int64(index)*distance(n.level)
 	}
 	if realIndex, err := n.existNode(uint8(index)); nil == err {
 		return n.nodes[realIndex].get(key, hashKey, flexibleNewKey)
@@ -157,7 +157,7 @@ func (n *node) createLink(key string) (Link, bool) {
 	return link, false
 }
 
-func (n *node) existLink(key string, hashKey uint32) (int, bool) {
+func (n *node) existLink(key string) (int, bool) {
 	for index, link := range n.links {
 		//gnomon.Log().Debug("existLink", gnomon.Log().Field("link.md5Key", link.getMD5Key()), gnomon.Log().Field("md516", gnomon.CryptoHash().MD516(key)))
 		if strings.EqualFold(link.getMD5Key(), gnomon.CryptoHash().MD516(key)) {

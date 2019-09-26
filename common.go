@@ -27,7 +27,7 @@ import (
 )
 
 // distance 根据节点所在层级获取当前节点内部子节点之间的差
-func distance(level uint8) uint32 {
+func distance(level uint8) int64 {
 	switch level {
 	case 0:
 		return mallDistance
@@ -42,8 +42,8 @@ func distance(level uint8) uint32 {
 }
 
 // String hashes a string to a unique hashcode.
-func hash(key string) uint32 {
-	return crc32.ChecksumIEEE([]byte(key))
+func hash(key string) int64 {
+	return int64(crc32.ChecksumIEEE([]byte(key)))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,37 +295,28 @@ func timestamp2Uint32Index(i64 int64) uint32 {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func valueType2index(value *reflect.Value) (key string, hashKey uint32, support bool) {
+func valueType2index(value *reflect.Value) (key string, hashKey int64, support bool) {
 	support = true
 	switch value.Kind() {
 	default:
 		return "", 0, false
-	case reflect.Int8, reflect.Int16:
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int, reflect.Int64:
 		i64 := value.Int()
 		key = strconv.FormatInt(i64, 10)
-		hashKey = int16ToUint32Index(int16(i64))
-	case reflect.Int32:
-		i64 := value.Int()
-		key = strconv.FormatInt(i64, 10)
-		hashKey = int32ToUint32Index(int32(i64))
-	case reflect.Int, reflect.Int64:
-		i64 := value.Int()
-		key = strconv.FormatInt(i64, 10)
-		hashKey = int64ToUint32Index(i64)
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		hashKey = i64
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr:
 		ui64 := value.Uint()
 		key = strconv.FormatUint(ui64, 10)
-		hashKey = uint32(ui64)
-	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
-		ui64 := value.Uint()
-		key = strconv.FormatUint(ui64, 10)
-		hashKey = uint64ToUint32Index(ui64)
+		if ui64 > 9223372036854775808 { // 9223372036854775808 = 1 << 63
+			return "", 0, false
+		} else {
+			hashKey = int64(ui64)
+		}
 	case reflect.Float32, reflect.Float64:
 		i64 := gnomon.Scale().Float64toInt64(value.Float(), 4)
 		key = strconv.FormatInt(i64, 10)
-		hashKey = int64ToUint32Index(i64)
+		hashKey = gnomon.Scale().Float64toInt64(value.Float(), 4)
 	case reflect.String:
-		// todo 字符串索引按照字母及大小写顺序，待完善
 		key = value.String()
 		hashKey = hash(key)
 	case reflect.Bool:
@@ -340,32 +331,31 @@ func valueType2index(value *reflect.Value) (key string, hashKey uint32, support 
 	return
 }
 
-func value2hashKey(value *reflect.Value) (hashKey uint32, support bool) {
+func value2hashKey(value *reflect.Value) (hashKey int64, support bool) {
 	support = true
 	switch value.Kind() {
 	default:
 		return 0, false
-	case reflect.Int8, reflect.Int16:
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int, reflect.Int64:
 		i64 := value.Int()
-		hashKey = int16ToUint32Index(int16(i64))
-	case reflect.Int32:
-		i64 := value.Int()
-		hashKey = int32ToUint32Index(int32(i64))
-	case reflect.Int, reflect.Int64:
-		i64 := value.Int()
-		hashKey = int64ToUint32Index(i64)
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		hashKey = i64
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr:
 		ui64 := value.Uint()
-		hashKey = uint32(ui64)
-	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
-		ui64 := value.Uint()
-		hashKey = uint64ToUint32Index(ui64)
+		if ui64 > 9223372036854775808 { // 9223372036854775808 = 1 << 63
+			return 0, false
+		} else {
+			hashKey = int64(ui64)
+		}
 	case reflect.Float32, reflect.Float64:
-		i64 := gnomon.Scale().Float64toInt64(value.Float(), 4)
-		hashKey = int64ToUint32Index(i64)
+		hashKey = gnomon.Scale().Float64toInt64(value.Float(), 4)
 	case reflect.String:
-		// todo 字符串索引按照字母及大小写顺序，待完善
 		hashKey = hash(value.String())
+	case reflect.Bool:
+		if value.Bool() {
+			hashKey = 1
+		} else {
+			hashKey = 2
+		}
 	}
 	return
 }

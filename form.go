@@ -64,7 +64,7 @@ import (
 type form struct {
 	id       string           // 表唯一ID，不能改变
 	name     string           // 表名，根据需求可以随时变化
-	autoID   uint32           // 自增id
+	autoID   int64            // 自增id
 	comment  string           // 描述
 	formType string           // 表类型 SQL/Doc
 	database Database         // 数据库对象
@@ -72,7 +72,7 @@ type form struct {
 	fLock    sync.RWMutex
 }
 
-func (f *form) getAutoID() *uint32 {
+func (f *form) getAutoID() *int64 {
 	return &f.autoID
 }
 

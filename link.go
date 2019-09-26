@@ -84,7 +84,7 @@ func (l *link) rUnLock() {
 	l.tLock.RUnlock()
 }
 
-func (l *link) put(key string, hashKey uint32) *indexBack {
+func (l *link) put(key string, hashKey int64) *indexBack {
 	formIndexFilePath := l.getFormIndexFilePath()
 	//gnomon.Log().Debug("box",
 	//	gnomon.Log().Field("key", key),
@@ -122,7 +122,7 @@ type indexBack struct {
 	locker            WriteLocker // 索引文件所对应level2层级度节点
 	link              Link        // 索引对应节点对象子集
 	key               string      // 索引对应字符串key
-	hashKey           uint32      // put hash hashKey
+	hashKey           int64       // put hash hashKey
 	err               error
 }
 
@@ -147,7 +147,7 @@ func (i *indexBack) getKey() string {
 }
 
 // getHashKey put hash keyStructure
-func (i *indexBack) getHashKey() uint32 {
+func (i *indexBack) getHashKey() int64 {
 	return i.hashKey
 }
 

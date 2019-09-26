@@ -274,7 +274,7 @@ func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) e
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) PutD(key string, value interface{}) (uint32, error) {
+func (l *Lily) PutD(key string, value interface{}) (int64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
@@ -290,7 +290,7 @@ func (l *Lily) PutD(key string, value interface{}) (uint32, error) {
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) SetD(key string, value interface{}) (uint32, error) {
+func (l *Lily) SetD(key string, value interface{}) (int64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
@@ -319,7 +319,7 @@ func (l *Lily) GetD(key string) (interface{}, error) {
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint32, error) {
+func (l *Lily) Put(databaseName, formName, key string, value interface{}) (int64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
@@ -342,7 +342,7 @@ func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint3
 // value 插入数据对象
 //
 // 返回 hashKey
-func (l *Lily) Set(databaseName, formName, key string, value interface{}) (uint32, error) {
+func (l *Lily) Set(databaseName, formName, key string, value interface{}) (int64, error) {
 	if gnomon.String().IsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
@@ -377,7 +377,7 @@ func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 // keyStructure 插入数据唯一key
 //
 // value 插入数据对象
-func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint32, error) {
+func (l *Lily) Insert(databaseName, formName string, value interface{}) (int64, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
 	}

@@ -71,14 +71,14 @@ func (i *index) getForm() Form {
 	return i.form
 }
 
-func (i *index) put(originalKey string, key uint32, update bool) IndexBack {
+func (i *index) put(originalKey string, key int64, update bool) IndexBack {
 	index := key / cityDistance
 	//index := uint32(0)
 	node := i.createNode(uint8(index))
 	return node.put(originalKey, key-index*cityDistance, 0, update)
 }
 
-func (i *index) get(originalKey string, key uint32) (interface{}, error) {
+func (i *index) get(originalKey string, key int64) (interface{}, error) {
 	index := key / cityDistance
 	//index := uint32(0)
 	if realIndex, err := i.existNode(uint8(index)); nil == err {
