@@ -139,7 +139,7 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 func (d *database) put(formName string, key string, value interface{}, update bool) (uint64, error) {
 	form := d.forms[formName] // 获取待操作表
 	if nil == form {
-		return 0, shopperIsInvalid(formName)
+		return 0, formIsInvalid(formName)
 	}
 	if form.getFormType() != FormTypeDoc {
 		return 0, errors.New("put method only support doc")
@@ -152,7 +152,7 @@ func (d *database) put(formName string, key string, value interface{}, update bo
 func (d *database) get(formName string, key string) (interface{}, error) {
 	form := d.forms[formName]
 	if nil == form {
-		return nil, shopperIsInvalid(formName)
+		return nil, formIsInvalid(formName)
 	}
 	for _, index := range form.getIndexes() {
 		if index.getKeyStructure() == indexDefaultID {
@@ -231,7 +231,7 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes ma
 			defer wg.Done()
 			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
-				chanIndex <- form.getIndexes()[index.getID()].put(strconv.Itoa(int(autoID)), autoID, update)
+				chanIndex <- form.getIndexes()[index.getID()].put(strconv.FormatUint(autoID, 10), autoID, update)
 			} else if index.getKeyStructure() == indexDefaultID {
 				chanIndex <- form.getIndexes()[index.getID()].put(key, hash(key), update)
 			} else {
@@ -268,8 +268,8 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes ma
 	return ibs, nil
 }
 
-// shopperIsInvalid 自定义error信息
-func shopperIsInvalid(formName string) error {
+// formIsInvalid 自定义error信息
+func formIsInvalid(formName string) error {
 	return errors.New(strings.Join([]string{"invalid name ", formName}, ""))
 }
 

@@ -30,7 +30,7 @@ staticcheck:
 cyclo:
 	@echo "gocyclo"
 	gocyclo -over 15 $(GO_FILES)
-#	gocyclo -top 10 $(GO_FILES)
+	gocyclo -top 10 $(GO_FILES)
 
 const:
 	@echo "goconst"

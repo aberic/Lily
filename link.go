@@ -20,16 +20,15 @@ import (
 
 type link struct {
 	preNode        Nodal // box 所属 node
-	md5Key         string
+	md516Key       string
 	seekStartIndex int64  // 索引最终存储在文件中的起始位置
 	seekStart      uint32 // value最终存储在文件中的起始位置
 	seekLast       int    // value最终存储在文件中的持续长度
-	value          interface{}
 	tLock          sync.RWMutex
 }
 
 func (l *link) setMD5Key(md5Key string) {
-	l.md5Key = md5Key
+	l.md516Key = md5Key
 }
 
 func (l *link) setSeekStartIndex(seek int64) {
@@ -48,8 +47,8 @@ func (l *link) getNodal() Nodal {
 	return l.preNode
 }
 
-func (l *link) getMD5Key() string {
-	return l.md5Key
+func (l *link) getMD516Key() string {
+	return l.md516Key
 }
 
 func (l *link) getSeekStartIndex() int64 {
@@ -62,10 +61,6 @@ func (l *link) getSeekStart() uint32 {
 
 func (l *link) getSeekLast() int {
 	return l.seekLast
-}
-
-func (l *link) getValue() interface{} {
-	return l.value
 }
 
 func (l *link) lock() {

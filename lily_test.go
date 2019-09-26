@@ -31,6 +31,14 @@ var (
 func TestLily_Restart(t *testing.T) {
 	l := ObtainLily()
 	l.Restart()
+	for i := 80007; i > 80000; i-- {
+		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
+		if nil != err {
+			t.Log(err)
+		} else {
+			t.Log("get ", i, " = ", j)
+		}
+	}
 }
 
 func TestLilyPutGet(t *testing.T) {

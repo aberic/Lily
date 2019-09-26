@@ -15,9 +15,13 @@
 package lily
 
 import (
+	"bufio"
+	"errors"
 	"github.com/aberic/gnomon"
+	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 )
 
 // index 索引对象
@@ -52,36 +56,90 @@ func (i *index) getForm() Form {
 	return i.form
 }
 
-func (i *index) put(originalKey string, key uint64, update bool) IndexBack {
-	return i.node.put(originalKey, key, key, update)
-	//index := key / cityDistance
-	//node := i.createNode(uint8(index))
-	//return node.put(originalKey, key-index*cityDistance, 0, update)
+func (i *index) put(key string, hashKey uint64, update bool) IndexBack {
+	return i.node.put(key, hashKey, hashKey, update)
 }
 
-func (i *index) get(originalKey string, key uint64) (interface{}, error) {
-	return i.node.get(originalKey, key, key)
-	//index := key / cityDistance
-	//if realIndex, err := i.existNode(uint8(index)); nil == err {
-	//	return i.nodes[realIndex].get(originalKey, key-index*cityDistance, 0)
-	//}
-	//return nil, errors.New(strings.Join([]string{"index originalKey =", originalKey, "and keyStructure =", strconv.Itoa(int(key)), ", index =", strconv.Itoa(int(index)), "is nil"}, " "))
+func (i *index) get(key string, hashKey uint64) (interface{}, error) {
+	return i.node.get(key, hashKey, hashKey)
 }
 
-func (i *index) recover() error {
-	// todo 恢复索引，注意Form的autoID
+func (i *index) recover() {
+	i.recoverMultiReadFile()
+}
+
+func (i *index) recoverMultiReadFile() {
 	indexFilePath := pathFormIndexFile(i.form.getDatabase().getID(), i.form.getID(), i.id)
-	if gnomon.File().PathExists(indexFilePath) { // 索引文件不存在，则无需操作
+	if gnomon.File().PathExists(indexFilePath) { // 索引文件存在才继续恢复
 		var (
 			file *os.File
 			err  error
 		)
-		if file, err = os.OpenFile(indexFilePath, os.O_CREATE|os.O_RDWR, 0644); nil != err {
-			gnomon.Log().Panic("index recover failed", gnomon.Log().Err(err))
+		defer func() { _ = file.Close() }()
+		if file, err = os.OpenFile(indexFilePath, os.O_RDONLY, 0644); nil != err {
+			gnomon.Log().Panic("index recover multi read failed", gnomon.Log().Err(err))
 		}
-		_ = file.Close()
+		_, err = file.Seek(0, io.SeekStart) // 文件下标置为文件的起始位置
+		if err != nil {
+			gnomon.Log().Panic("index recover multi read failed", gnomon.Log().Err(err))
+		}
+		if err = i.read(file, 0); nil != err && io.EOF != err {
+			gnomon.Log().Panic("index recover multi read failed", gnomon.Log().Err(err))
+		}
 	}
-	return nil
+}
+
+func (i *index) read(file *os.File, offset int64) (err error) {
+	var (
+		inputReader *bufio.Reader
+		data        []byte
+		peekOnce          = 3600
+		haveNext          = true
+		position    int64 = 0
+	)
+	_, err = file.Seek(offset, io.SeekStart) //表示文件的起始位置，从第二个字符往后写入。
+	inputReader = bufio.NewReaderSize(file, peekOnce)
+	data, err = inputReader.Peek(peekOnce)
+	if nil != err && io.EOF != err {
+		return
+	} else if nil != err && io.EOF == err {
+		if len(data) == 0 {
+			return
+		}
+		if len(data)%36 != 0 {
+			return errors.New("index lens does't match")
+		}
+	}
+	indexStr := string(data)
+	indexStrLen := int64(len(indexStr))
+	var p0, p1, p2, p3, p4 int64
+	for haveNext {
+		// 读取11位key及16位md5后key及5位起始seek和4位持续seek
+		p0 = position
+		p1 = p0 + 11
+		p2 = p1 + 16
+		p3 = p2 + 5
+		p4 = p3 + 4
+		hashKey := gnomon.Scale().DDuoStringToUint64(indexStr[p0:p1])
+		md516Key := indexStr[p1:p2]
+		seekStart := uint32(gnomon.Scale().DDuoStringToUint64(indexStr[p2:p3])) // value最终存储在文件中的起始位置
+		seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4]))      // value最终存储在文件中的持续长度
+		ib := i.put("", hashKey, true)
+		ib.getLink().setSeekStartIndex(p0)
+		ib.getLink().setMD5Key(md516Key)
+		ib.getLink().setSeekStart(seekStart)
+		ib.getLink().setSeekLast(seekLast)
+		atomic.AddUint64(i.form.getAutoID(), 1) // ID自增
+		position += 36
+		if indexStrLen < position+36 {
+			haveNext = false
+		}
+	}
+	if nil == err {
+		offset += int64(peekOnce)
+		return i.read(file, offset)
+	}
+	return
 }
 
 func (i *index) getNode() Nodal {

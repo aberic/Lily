@@ -64,8 +64,8 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	defer ib.getLocker().unLock()
 	ib.getLocker().lock()
 	md5Key := gnomon.CryptoHash().MD516(ib.getKey()) // hash(keyStructure) 会发生碰撞，因此这里存储md5结果进行反向验证
-	// 写入5位key及16位md5后key
-	appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint64ToDDuoString(ib.getHashKey()), 5), md5Key}, "")
+	// 写入11位key及16位md5后key
+	appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint64ToDDuoString(ib.getHashKey()), 11), md5Key}, "")
 	//gnomon.Log().Debug("storeIndex",
 	//	gnomon.Log().Field("appendStr", appendStr),
 	//	gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()),
@@ -96,14 +96,14 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 		}
 		//gnomon.Log().Debug("running", gnomon.Log().Field("seekStartIndex", it.link.getSeekStartIndex()), gnomon.Log().Field("it.link.seekStartIndex != -1", seekEnd))
 	}
-	// 写入5位key及16位md5后key及5位起始seek和4位持续seek
+	// 写入11位key及16位md5后key及5位起始seek和4位持续seek
 	if _, err = file.WriteString(strings.Join([]string{appendStr,
 		gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(wf.seekStart), 5),
 		gnomon.String().PrefixSupplementZero(gnomon.Scale().IntToDDuoString(wf.seekLast), 4)}, "")); nil != err {
 		//gnomon.Log().Error("running", gnomon.Log().Field("seekStartIndex", seekEnd), gnomon.Log().Err(err))
 		return &writeResult{err: err}
 	}
-	//gnomon.Log().Debug("storeIndex", gnomon.Log().Field("ib.getKey()", ib.getKey()), gnomon.Log().Field("md5Key", md5Key), gnomon.Log().Field("seekStartIndex", wf.seekStartIndex))
+	//gnomon.Log().Debug("storeIndex", gnomon.Log().Field("ib.getKey()", ib.getKey()), gnomon.Log().Field("md516Key", md516Key), gnomon.Log().Field("seekStartIndex", wf.seekStartIndex))
 	ib.getLink().setSeekStartIndex(seekEnd)
 	ib.getLink().setMD5Key(md5Key)
 	ib.getLink().setSeekStart(wf.seekStart)

@@ -123,6 +123,7 @@ func (l *Lily) Restart() {
 
 // recover Lily恢复数据
 func (l *Lily) recover() {
+	var wg sync.WaitGroup
 	l.databases = map[string]Database{}
 	for dk, dv := range l.lilyData.Databases {
 		l.databases[dk] = &database{
@@ -150,21 +151,19 @@ func (l *Lily) recover() {
 				indexes:  map[string]Index{},
 			}
 			for ik, iv := range fv.Indexes {
-				l.databases[dk].getForms()[fk].getIndexes()[ik] = &index{
-					id:           iv.Id,
-					primary:      iv.Primary,
-					keyStructure: iv.KeyStructure,
-					form:         l.databases[dk].getForms()[fk],
-					node:         &node{},
-				}
+				index := &index{id: iv.Id, primary: iv.Primary, keyStructure: iv.KeyStructure, form: l.databases[dk].getForms()[fk]}
+				node := &node{level: 1, degreeIndex: 0, preNode: nil, nodes: []Nodal{}, index: index}
+				index.node = node
+				l.databases[dk].getForms()[fk].getIndexes()[ik] = index
+				wg.Add(1)
 				go func(l *Lily, dk, fk, ik string) {
-					if err := l.databases[dk].getForms()[fk].getIndexes()[ik].recover(); nil != err {
-						gnomon.Log().Panic("restart when index recover failed", gnomon.Log().Err(err))
-					}
+					defer wg.Done()
+					l.databases[dk].getForms()[fk].getIndexes()[ik].recover()
 				}(l, dk, fk, ik)
 			}
 		}
 	}
+	wg.Wait()
 }
 
 // initialize 初始化默认库及默认表

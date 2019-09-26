@@ -278,25 +278,25 @@ type Index interface {
 	getKeyStructure() string
 	// getForm 索引所属表对象
 	getForm() Form
+	getNode() Nodal // getNode 获取树根节点
 	// put 插入数据
 	//
-	// originalKey 真实key，必须string类型
+	// key 真实key，必须string类型
 	//
-	// key 索引key，可通过hash转换string生成
+	// hashKey 索引key，可通过hash转换string生成
 	//
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
-	getNode() Nodal // getNode 获取树根节点
-	put(originalKey string, key uint64, update bool) IndexBack
+	put(key string, hashKey uint64, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
-	// originalKey 真实key，必须string类型
+	// key 真实key，必须string类型
 	//
-	// key 索引key，可通过hash转换string生成
-	get(originalKey string, key uint64) (interface{}, error)
+	// hashKey 索引key，可通过hash转换string生成
+	get(key string, hashKey uint64) (interface{}, error)
 	// recover 重置索引数据
-	recover() error
+	recover()
 }
 
 // Nodal 节点对象接口
@@ -342,11 +342,10 @@ type Link interface {
 	setSeekStart(seek uint32)     // 设置value最终存储在文件中的起始位置
 	setSeekLast(seek int)         // 设置value最终存储在文件中的持续长度
 	getNodal() Nodal              // box 所属 node
-	getMD5Key() string            // 获取md5Key
+	getMD516Key() string          // 获取md516Key
 	getSeekStartIndex() int64     // 索引最终存储在文件中的起始位置
 	getSeekStart() uint32         // value最终存储在文件中的起始位置
 	getSeekLast() int             // value最终存储在文件中的持续长度
-	getValue() interface{}
 	put(key string, hashKey uint64) *indexBack
 	get() (interface{}, error)
 }

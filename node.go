@@ -145,7 +145,7 @@ func (n *node) createLink(key string) (Link, bool) {
 	if n.index.isPrimary() && len(n.links) > 0 {
 		for _, link := range n.links {
 			//gnomon.Log().Debug("createLink", gnomon.Log().Field("exist", true))
-			if strings.EqualFold(link.getMD5Key(), gnomon.CryptoHash().MD516(key)) {
+			if strings.EqualFold(link.getMD516Key(), gnomon.CryptoHash().MD516(key)) {
 				return link, true
 			}
 		}
@@ -157,8 +157,8 @@ func (n *node) createLink(key string) (Link, bool) {
 
 func (n *node) existLink(key string) (int, bool) {
 	for index, link := range n.links {
-		//gnomon.Log().Debug("existLink", gnomon.Log().Field("link.md5Key", link.getMD5Key()), gnomon.Log().Field("md516", gnomon.CryptoHash().MD516(key)))
-		if strings.EqualFold(link.getMD5Key(), gnomon.CryptoHash().MD516(key)) {
+		//gnomon.Log().Debug("existLink", gnomon.Log().Field("link.md516Key", link.getMD516Key()), gnomon.Log().Field("md516", gnomon.CryptoHash().MD516(key)))
+		if strings.EqualFold(link.getMD516Key(), gnomon.CryptoHash().MD516(key)) {
 			return index, true
 		}
 	}
