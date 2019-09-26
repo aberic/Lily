@@ -255,7 +255,7 @@ type Form interface {
 }
 
 type Index interface {
-	Data
+	WriteLocker
 	// getID 索引唯一ID
 	getID() string
 	// isPrimary 是否主键
@@ -284,6 +284,7 @@ type Index interface {
 	// value 存储对象
 	//
 	// update 本次是否执行更新操作
+	getNode() Nodal // getNode 获取树根节点
 	put(originalKey string, key int64, update bool) IndexBack
 	// get 获取数据，返回存储对象
 	//
@@ -297,7 +298,7 @@ type Index interface {
 
 // Nodal 节点对象接口
 type Nodal interface {
-	Data             // Data 表内数据操作接口
+	WriteLocker      // WriteLocker 读写锁接口
 	getIndex() Index // 获取索引对象
 	// put 插入数据
 	//
@@ -319,8 +320,9 @@ type Nodal interface {
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
 	get(key string, hashKey, flexibleKey int64) (interface{}, error)
-	getDegreeIndex() uint8 // getDegreeIndex 获取节点所在树中度集合中的数组下标
-	getPreNode() Nodal     // getPreNode 获取父节点对象
+	getDegreeIndex() uint16 // getDegreeIndex 获取节点所在树中度集合中的数组下标
+	getPreNode() Nodal      // getPreNode 获取父节点对象
+	getNodes() []Nodal      // getNodes 获取下属节点集合
 }
 
 // Leaf 叶子节点对象接口
@@ -331,7 +333,7 @@ type Leaf interface {
 
 // Link 叶子节点下的链表对象接口
 type Link interface {
-	WriteLocker
+	WriteLocker                   // WriteLocker 读写锁接口
 	setMD5Key(md5Key string)      // 设置md5Key
 	setSeekStartIndex(seek int64) // 设置索引最终存储在文件中的起始位置
 	setSeekStart(seek uint32)     // 设置value最终存储在文件中的起始位置
@@ -355,21 +357,10 @@ type IndexBack interface {
 	getErr() error
 }
 
-// Data 表内数据操作接口
-//
-// 表对象、节点对象、叶子结点对象以及存储节点对象都会实现该接口
-type Data interface {
-	WriteLocker
-	getNodes() []Nodal // getNodes 获取下属节点集合
-}
-
+// WriteLocker 读写锁接口
 type WriteLocker interface {
-	// lock 写锁
-	lock()
-	// unLock 写解锁
-	unLock()
-	// rLock 读锁
-	rLock()
-	// rUnLock 读解锁
-	rUnLock()
+	lock()    // lock 写锁
+	unLock()  // unLock 写解锁
+	rLock()   // rLock 读锁
+	rUnLock() // rUnLock 读解锁
 }

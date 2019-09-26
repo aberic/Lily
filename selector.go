@@ -139,12 +139,10 @@ func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err 
 func (s *Selector) leftQueryIndex(index Index) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
-	if nodes := index.getNodes(); nil != nodes {
-		for _, node := range index.getNodes() {
-			nc, nis := s.leftQueryNode(node)
-			count += nc
-			is = append(is, nis...)
-		}
+	for _, node := range index.getNode().getNodes() {
+		nc, nis := s.leftQueryNode(node)
+		count += nc
+		is = append(is, nis...)
 	}
 	//gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("is", is))
 	if s.Sort == nil {
@@ -185,13 +183,11 @@ func (s *Selector) leftQueryLeaf(leaf Leaf) (int, []interface{}) {
 func (s *Selector) rightQueryIndex(index Index) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
-	if nodes := index.getNodes(); nil != nodes {
-		lenNode := len(nodes)
-		for i := lenNode - 1; i >= 0; i-- {
-			nc, nis := s.rightQueryNode(nodes[i])
-			count += nc
-			is = append(is, nis...)
-		}
+	lenNode := len(index.getNode().getNodes())
+	for i := lenNode - 1; i >= 0; i-- {
+		nc, nis := s.rightQueryNode(index.getNode().getNodes()[i])
+		count += nc
+		is = append(is, nis...)
 	}
 	gnomon.Log().Debug("rightQueryIndex", gnomon.Log().Field("is", is))
 	return count, s.shellSort(is)

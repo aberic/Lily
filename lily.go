@@ -155,7 +155,7 @@ func (l *Lily) recover() {
 					primary:      iv.Primary,
 					keyStructure: iv.KeyStructure,
 					form:         l.databases[dk].getForms()[fk],
-					nodes:        []Nodal{},
+					node:         &node{},
 				}
 				go func(l *Lily, dk, fk, ik string) {
 					if err := l.databases[dk].getForms()[fk].getIndexes()[ik].recover(); nil != err {

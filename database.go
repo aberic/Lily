@@ -105,7 +105,10 @@ func (d *database) createKey(formName string, keyStructure string) error {
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	form.getIndexes()[customID] = &index{id: customID, primary: true, keyStructure: keyStructure, form: form}
+	index := &index{id: customID, primary: true, keyStructure: keyStructure, form: form}
+	node := &node{level: 1, degreeIndex: 0, preNode: nil, nodes: []Nodal{}, index: index}
+	index.node = node
+	form.getIndexes()[customID] = index
 	// 同步数据到 pb.Lily
 	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &grpc.Index{
 		Id:           customID,
@@ -120,7 +123,10 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
 	//gnomon.Log().Debug("createIndex", gnomon.Log().Field("customID", customID))
-	form.getIndexes()[customID] = &index{id: customID, primary: false, keyStructure: keyStructure, form: form}
+	index := &index{id: customID, primary: false, keyStructure: keyStructure, form: form}
+	node := &node{level: 1, degreeIndex: 0, preNode: nil, nodes: []Nodal{}, index: index}
+	index.node = node
+	form.getIndexes()[customID] = index
 	// 同步数据到 pb.Lily
 	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &grpc.Index{
 		Id:           customID,

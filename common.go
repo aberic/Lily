@@ -26,17 +26,17 @@ import (
 	"strings"
 )
 
-// distance 根据节点所在层级获取当前节点内部子节点之间的差
-func distance(level uint8) int64 {
+// levelDistance 根据节点所在层级获取当前节点内部子节点之间的差
+func levelDistance(level uint8) int64 {
 	switch level {
-	case 0:
-		return mallDistance
 	case 1:
-		return trolleyDistance
+		return level1Distance
 	case 2:
-		return purseDistance
+		return level2Distance
 	case 3:
-		return boxDistance
+		return level3Distance
+	case 4:
+		return level4Distance
 	}
 	return 0
 }
@@ -55,10 +55,10 @@ func hash(key string) int64 {
 // data 'binaryMatcher'接口支持的获取‘Nodal’接口的内置方法对象
 //
 // bool 返回存在与否
-func matchableData(matchIndex uint8, data Data) bool {
-	_, err := binaryMatchData(matchIndex, data)
-	return nil == err
-}
+//func matchableData(matchIndex uint16, data Data) bool {
+//	_, err := binaryMatchData(matchIndex, data)
+//	return nil == err
+//}
 
 // binaryMatchData 'Nodal'内子节点数组二分查找基本方法
 //
@@ -69,14 +69,14 @@ func matchableData(matchIndex uint8, data Data) bool {
 // realIndex 返回查找到的真实的元素下标，该下标是对应数组内的下标，并非树中节点数组原型的下标
 //
 // 如果没找到，则返回err
-func binaryMatchData(matchIndex uint8, data Data) (realIndex int, err error) {
+func binaryMatchData(matchIndex uint16, node Nodal) (realIndex int, err error) {
 	var (
 		leftIndex   int
 		middleIndex int
 		rightIndex  int
 	)
 	leftIndex = 0
-	nodes := data.getNodes()
+	nodes := node.getNodes()
 	rightIndex = len(nodes) - 1
 	for leftIndex <= rightIndex {
 		middleIndex = (leftIndex + rightIndex) / 2
@@ -307,7 +307,7 @@ func valueType2index(value *reflect.Value) (key string, hashKey int64, support b
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr:
 		ui64 := value.Uint()
 		key = strconv.FormatUint(ui64, 10)
-		if ui64 > 9223372036854775808 { // 9223372036854775808 = 1 << 63
+		if ui64 > 9223372036854775807 { // 9223372036854775808 = 1 << 63
 			return "", 0, false
 		} else {
 			hashKey = int64(ui64)

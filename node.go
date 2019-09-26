@@ -29,10 +29,10 @@ import (
 //
 // 存储格式 {dataDir}/database/{dataName}/{formName}.form...
 type node struct {
-	level       uint8 // 当前节点所在树层级
-	degreeIndex uint8 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
-	index       Index // 所属索引对象
-	preNode     Nodal // node 所属 trolley
+	level       uint8  // 当前节点所在树层级
+	degreeIndex uint16 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
+	index       Index  // 所属索引对象
+	preNode     Nodal  // node 所属 trolley
 	nodes       []Nodal
 	links       []Link
 	pLock       sync.RWMutex
@@ -44,69 +44,67 @@ func (n *node) getIndex() Index {
 
 func (n *node) put(key string, hashKey, flexibleKey int64, update bool) IndexBack {
 	var (
-		index          uint8
-		flexibleNewKey int64
-		data           Nodal
+		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
+		nextFlexibleKey int64  // 下一级最左最小树所对应真实key
+		distance        int64  // 指定Level层级节点内各个子节点之前的差
+		data            Nodal
 	)
-	if n.level == 0 {
-		index = uint8(hashKey / mallDistance)
-		flexibleNewKey = hashKey - int64(index)*mallDistance
-		data = n.createNode(uint8(index))
-	} else if n.level == 4 {
+	if n.level < 5 {
+		distance = levelDistance(n.level)
+		//gnomon.Log().Debug("put", gnomon.Log().Field("key", key), gnomon.Log().Field("distance", distance))
+		nextDegree = uint16(flexibleKey / distance)
+		nextFlexibleKey = flexibleKey - int64(nextDegree)*distance
+		if n.level == 4 {
+			data = n.createLeaf(nextDegree)
+		} else {
+			data = n.createNode(nextDegree)
+		}
+	} else {
 		link, exist := n.createLink(key)
 		if !update && exist {
 			return &indexBack{err: n.errDataExist(key)}
 		}
 		//log.Self.Debug("box", log.Uint32("keyStructure", keyStructure), log.Reflect("value", value))
 		return link.put(key, hashKey)
-	} else {
-		index = uint8(flexibleKey / distance(n.level))
-		flexibleNewKey = flexibleKey - int64(index)*distance(n.level)
-		if n.level == 3 {
-			data = n.createLeaf(uint8(index))
-		} else {
-			data = n.createNode(uint8(index))
-		}
 	}
-	return data.put(key, hashKey, flexibleNewKey, update)
+	return data.put(key, hashKey, nextFlexibleKey, update)
 }
 
 func (n *node) get(key string, hashKey, flexibleKey int64) (interface{}, error) {
 	var (
-		index          uint8
-		flexibleNewKey int64
+		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
+		nextFlexibleKey int64  // 下一级最左最小树所对应真实key
+		distance        int64  // 指定Level层级节点内各个子节点之前的差
 	)
-	if n.level == 0 {
-		index = uint8(hashKey / mallDistance)
-		flexibleNewKey = hashKey - int64(index)*mallDistance
-	} else if n.level == 4 {
+	if n.level < 5 {
+		distance = levelDistance(n.level)
+		nextDegree = uint16(flexibleKey / distance)
+		nextFlexibleKey = flexibleKey - int64(nextDegree)*distance
+	} else {
 		//gnomon.Log().Debug("box-get", gnomon.Log().Field("key", key))
 		if realIndex, exist := n.existLink(key); exist {
 			return n.links[realIndex].get()
 		}
 		return nil, errors.New(strings.Join([]string{"box key", key, "is nil"}, " "))
-	} else {
-		index = uint8(flexibleKey / distance(n.level))
-		flexibleNewKey = flexibleKey - int64(index)*distance(n.level)
 	}
-	if realIndex, err := n.existNode(uint8(index)); nil == err {
-		return n.nodes[realIndex].get(key, hashKey, flexibleNewKey)
+	if realIndex, err := n.existNode(nextDegree); nil == err {
+		return n.nodes[realIndex].get(key, hashKey, nextFlexibleKey)
 	}
 	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
 }
 
-func (n *node) existNode(index uint8) (realIndex int, err error) {
-	return binaryMatchData(uint8(index), n)
+func (n *node) existNode(index uint16) (realIndex int, err error) {
+	return binaryMatchData(index, n)
 }
 
-func (n *node) createNode(index uint8) Nodal {
+func (n *node) createNode(index uint16) Nodal {
 	var (
 		realIndex int
 		err       error
 	)
 	defer n.unLock()
 	n.lock()
-	if realIndex, err = n.existNode(uint8(index)); nil != err {
+	if realIndex, err = n.existNode(index); nil != err {
 		level := n.level + 1
 		newNode := &node{
 			level:       level,
@@ -120,7 +118,7 @@ func (n *node) createNode(index uint8) Nodal {
 	return n.nodes[realIndex]
 }
 
-func (n *node) createLeaf(index uint8) Nodal {
+func (n *node) createLeaf(index uint16) Nodal {
 	var (
 		realIndex int
 		err       error
@@ -167,7 +165,7 @@ func (n *node) existLink(key string) (int, bool) {
 	return 0, false
 }
 
-func (n *node) appendNodal(index uint8, nodal Nodal) Nodal {
+func (n *node) appendNodal(index uint16, nodal Nodal) Nodal {
 	lenData := len(n.nodes)
 	if lenData == 0 {
 		n.nodes = append(n.nodes, nodal)
@@ -196,7 +194,7 @@ func (n *node) getLinks() []Link {
 	return n.links
 }
 
-func (n *node) getDegreeIndex() uint8 {
+func (n *node) getDegreeIndex() uint16 {
 	return n.degreeIndex
 }
 
