@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+//生成文件所在包名
+option java_package = "cn.aberic.lily.api";
+//生成的java文件名
+option java_outer_classname = "ServerProto";
+
+package api;
+
+import "api/rs.proto";
+
+service LilyAPI {
+    // GetDatabases 获取数据库集合
+    rpc ObtainDatabases (ReqDatabases) returns (RespDatabases) {
+    }
+    // CreateDatabase 新建数据库
+    rpc CreateDatabase (ReqCreateDatabase) returns (RespDatabase) {
+    }
+    // CreateForm 创建表
+    rpc CreateForm (ReqCreateForm) returns (Resp) {
+    }
+    // CreateKey 新建主键
+    rpc CreateKey (ReqCreateKey) returns (Resp) {
+    }
+    // CreateIndex 新建索引
+    rpc CreateIndex (ReqCreateIndex) returns (Resp) {
+    }
+    // PutD 新增数据
+    rpc PutD (ReqPutD) returns (RespPutD) {
+    }
+    // SetD 新增数据
+    rpc SetD (ReqSetD) returns (RespSetD) {
+    }
+    // GetD 获取数据
+    rpc GetD (ReqGetD) returns (RespGetD) {
+    }
+    // Put 新增数据
+    rpc Put (ReqPut) returns (RespPut) {
+    }
+    // Set 新增数据
+    rpc Set (ReqSet) returns (RespSet) {
+    }
+    // Get 获取数据
+    rpc Get (ReqGet) returns (RespGet) {
+    }
+    // Insert 新增数据
+    rpc Insert (ReqInsert) returns (RespInsert) {
+    }
+    // Update 更新数据
+    rpc Update (ReqUpdate) returns (Resp) {
+    }
+    // Select 获取数据
+    rpc Select (ReqSelect) returns (RespSelect) {
+    }
+    // Delete 删除数据
+    rpc Delete (ReqDelete) returns (Resp) {
+    }
+}

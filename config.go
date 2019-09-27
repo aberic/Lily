@@ -15,9 +15,12 @@
 package lily
 
 import (
+	"errors"
 	"github.com/aberic/gnomon"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"path/filepath"
-	"strconv"
+	"sync"
 )
 
 const (
@@ -32,18 +35,98 @@ const (
 )
 
 var (
-	rootDir       string // Lily服务默认存储路径
-	dataDir       string // Lily服务默认存储路径
-	lilyFilePath  string // Lily重启引导文件地址
-	limitOpenFile int    // 限制打开文件描述符次数
+	Version      = "1.0" // 版本号
+	confInstance *Conf
+	onceConf     sync.Once
 )
 
-func init() {
-	var err error
-	rootDir = gnomon.Env().GetD("DATA_PATH", "test/t1")
-	dataDir = filepath.Join(rootDir, "Data")
-	lilyFilePath = filepath.Join(dataDir, "lily.sync")
-	if limitOpenFile, err = strconv.Atoi(gnomon.Env().GetD("LIMIT_COUNT", "10000")); nil == err {
-		limitOpenFile = 10000
+// YamlConf lily启动配置文件根项目
+type YamlConf struct {
+	Conf Conf `yaml:"conf"`
+}
+
+// YamlConf lily启动配置文件子项目
+type Conf struct {
+	Port                     string `yaml:"Port"`                     // Port 开放端口，便于其它应用访问
+	RootDir                  string `yaml:"RootDir"`                  // RootDir Lily服务默认存储路径
+	DataDir                  string `yaml:"DataDir"`                  // DataDir Lily服务数据默认存储路径
+	LimitOpenFile            int    `yaml:"LimitOpenFile"`            // LimitOpenFile 限制打开文件描述符次数
+	TLS                      bool   `yaml:"TLS"`                      // TLS 是否开启 TLS
+	TLSServerKeyFile         string `yaml:"TLSServerKeyFile"`         // TLSServerKeyFile lily服务私钥
+	TLSServerCertFile        string `yaml:"TLSServerCertFile"`        // TLSServerCertFile lily服务数字证书
+	Limit                    bool   `yaml:"Limit"`                    // Limit 是否启用服务限流策略
+	LimitMillisecond         int    `yaml:"LimitMillisecond"`         // LimitMillisecond 请求限定的时间段（毫秒）
+	LimitCount               int    `yaml:"LimitCount"`               // LimitCount 请求限定的时间段内允许的请求次数
+	LimitIntervalMillisecond int    `yaml:"LimitIntervalMillisecond"` // LimitIntervalMillisecond 请求允许的最小间隔时间（毫秒），0表示不限
+	lilyFilePath             string // Lily重启引导文件地址
+}
+
+// ObtainConf 根据文件地址获取Config对象
+func ObtainConf(filePath string) *Conf {
+	onceConf.Do(func() {
+		confInstance = &Conf{}
+		if gnomon.String().IsNotEmpty(filePath) {
+			if err := confInstance.yaml2Conf(filePath); nil != err {
+				gnomon.Log().Panic("ObtainConf", gnomon.Log().Err(err))
+			}
+		}
+		if _, err := confInstance.scanDefault(); nil != err {
+			gnomon.Log().Panic("ObtainConf", gnomon.Log().Err(err))
+		}
+	})
+	return confInstance
+}
+
+// obtainConf 根据文件地址获取Config对象
+func obtainConf() *Conf {
+	onceConf.Do(func() {
+		confInstance = &Conf{}
+		if _, err := confInstance.scanDefault(); nil != err {
+			gnomon.Log().Panic("obtainConf", gnomon.Log().Err(err))
+		}
+	})
+	return confInstance
+}
+
+// scanDefault 扫描填充默认值
+func (c *Conf) scanDefault() (*Conf, error) {
+	if gnomon.String().IsEmpty(c.Port) {
+		c.Port = "19877"
 	}
+	if gnomon.String().IsEmpty(c.RootDir) {
+		c.RootDir = "lily"
+	}
+	if gnomon.String().IsEmpty(c.DataDir) {
+		c.DataDir = filepath.Join(c.RootDir, "data")
+	}
+	c.lilyFilePath = filepath.Join(c.DataDir, "lily.sync")
+	if c.LimitOpenFile < 1000 {
+		c.LimitOpenFile = 10000
+	}
+	if c.TLS {
+		if gnomon.String().IsEmpty(c.TLSServerKeyFile) || gnomon.String().IsEmpty(c.TLSServerCertFile) {
+			return nil, errors.New("tls server key file or cert file is nil")
+		}
+	}
+	if c.Limit {
+		if c.LimitCount < 0 || c.LimitMillisecond < 0 {
+			return nil, errors.New("limit count or millisecond can not be zero")
+		}
+	}
+	return c, nil
+}
+
+// yaml2Conf YML转配置对象
+func (c *Conf) yaml2Conf(filePath string) error {
+	data, err := ioutil.ReadFile(filePath)
+	if nil != err {
+		return err
+	}
+	ymlConf := YamlConf{}
+	err = yaml.Unmarshal([]byte(data), &ymlConf)
+	if err != nil {
+		return err
+	}
+	c = &ymlConf.Conf
+	return nil
 }

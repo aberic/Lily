@@ -51,7 +51,7 @@ func BenchmarkInsert(b *testing.B) {
 }
 
 func BenchmarkFileWrite1G1(b *testing.B) {
-	f, err := os.OpenFile(filepath.Join(dataDir, "a.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	f, err := os.OpenFile(filepath.Join(obtainConf().DataDir, "a.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		b.Error(err)
 	}
@@ -87,7 +87,7 @@ func BenchmarkFileWrite1G2(b *testing.B) {
 	//}
 	//t.Log("1024 mem complete")
 	for i := 0; i < 1048576; i++ {
-		f, err := os.OpenFile(filepath.Join(dataDir, "b.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+		f, err := os.OpenFile(filepath.Join(obtainConf().DataDir, "b.txt"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 		if err != nil {
 			b.Error(err)
 		}

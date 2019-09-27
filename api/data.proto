@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+//生成文件所在包名
+option java_package = "cn.aberic.lily.api";
+//生成的java文件名
+option java_outer_classname = "DataProto";
+
+// protoc --java_out=plugins=grpc:. api/*.proto
+// protoc --go_out=plugins=grpc:. api/*.proto
+package api;
+
+// Lily 数据库引擎对象
+message Lily {
+    map<string, Database> databases = 1; // databases 数据库集合
+}
+
+// Database 数据库对象
+message Database {
+    string id = 1; // id 数据库唯一ID，不能改变
+    string name = 2; // name 数据库名称，根据需求可以随时变化
+    string comment = 3; // comment 数据库描述
+    map<string, Form> forms = 4; // forms 数据库表集合
+}
+
+// Form 数据库表对象
+message Form {
+    string id = 1; // id 表唯一ID，不能改变
+    string name = 2; // name 表名，根据需求可以随时变化
+    string comment = 3; // comment 表描述
+    FormType formType = 4; // formType 表类型 SQL/Doc
+    map<string, Index> indexes = 5; // indexes 索引ID集合
+}
+
+// Index 索引对象
+message Index {
+    string id = 1; // id 索引唯一ID
+    bool primary = 2; // primary 是否主键
+    string keyStructure = 3; // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+}
+
+// FormType 表类型
+enum FormType {
+    SQL = 0; // SQL 关联数据库类型
+    Doc = 1; // Doc 文档数据库类型
+}
+
+// Selector 检索选择器
+message Selector {
+    repeated Condition conditions = 1; // conditions 条件查询
+    int32 skip = 2; // skip 结果集跳过数量
+    Sort sort = 3; // sort 排序方式
+    int32 Limit = 4; // Limit 结果集顺序数量
+}
+
+// Condition 条件查询
+message Condition {
+    // param 参数名，由对象结构层级字段通过'.'组成，如
+    //
+    // ref := &ref{
+    //		i: 1,
+    //		s: "2",
+    //		in: refIn{
+    //			i: 3,
+    //			s: "4",
+    //		},
+    //	}
+    //
+    // key可取'i','in.s'
+    string param = 1;
+    string cond = 2; // cond 条件 gt/lt/eq/dif 大于/小于/等于/不等
+    bytes value = 3; // value 比较对象，支持int、string、float和bool
+}
+
+// Sort 排序方式
+message Sort {
+    // param 参数名，由对象结构层级字段通过'.'组成，如
+    //
+    // ref := &ref{
+    //		i: 1,
+    //		s: "2",
+    //		in: refIn{
+    //			i: 3,
+    //			s: "4",
+    //		},
+    //	}
+    //
+    // key可取'i','in.s'
+    string param = 1;
+    bool asc = 2; // asc 是否升序
+}

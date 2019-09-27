@@ -130,7 +130,7 @@ func binaryMatchData(matchIndex uint16, node Nodal) (realIndex int, err error) {
 
 // mkDataDir 创建库存储目录
 func mkDataDir(dataName string) (err error) {
-	dataPath := filepath.Join(dataDir, dataName)
+	dataPath := filepath.Join(obtainConf().DataDir, dataName)
 	if gnomon.File().PathExists(dataPath) {
 		return ErrDatabaseExist
 	}
@@ -139,7 +139,7 @@ func mkDataDir(dataName string) (err error) {
 
 // rmDataDir 删除库存储目录
 func rmDataDir(dataName string) (err error) {
-	dataPath := filepath.Join(dataDir, dataName)
+	dataPath := filepath.Join(obtainConf().DataDir, dataName)
 	if gnomon.File().PathExists(dataPath) {
 		return os.Remove(dataPath)
 	}
@@ -204,7 +204,7 @@ func mkFormDataFile(dataID, formID string) (err error) {
 //
 // formID 表唯一id
 func pathFormDir(dataID, formID string) string {
-	return filepath.Join(dataDir, dataID, formID)
+	return filepath.Join(obtainConf().DataDir, dataID, formID)
 }
 
 // pathFormIndexFile 表索引文件路径
@@ -215,11 +215,11 @@ func pathFormDir(dataID, formID string) string {
 //
 // indexID 表索引唯一id
 func pathFormIndexFile(dataID, formID, indexID string) string {
-	return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), indexID, ".idx"}, "")
+	return strings.Join([]string{obtainConf().DataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), indexID, ".idx"}, "")
 }
 
 func pathFormDataFile(dataID, formID string) string {
-	return filepath.Join(dataDir, dataID, formID, "form.dat")
+	return filepath.Join(obtainConf().DataDir, dataID, formID, "form.dat")
 	//return strings.Join([]string{dataDir, string(filepath.Separator), dataID, string(filepath.Separator), formID, string(filepath.Separator), strconv.Itoa(fileIndex), ".dat"}, "")
 }
 

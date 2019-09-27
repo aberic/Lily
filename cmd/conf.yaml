@@ -1,0 +1,12 @@
+conf:
+  Port: 19877 # 开放端口，便于其它应用访问
+  RootDir: lily # RootDir Lily服务默认存储路径
+  DataDir: lily/data # DataFileName Lily服务数据默认存储目录名
+  LimitOpenFile: 10000 # LimitOpenFile 限制打开文件描述符次数
+  TLS: false # 是否开启 TLS
+  TLSServerKeyFile: ../examples/tls/server/server.key # lily服务私钥
+  TLSServerCertFile: ../examples/tls/server/server.crt # lily服务数字证书
+  Limit: false # 是否启用服务限流策略
+  LimitMillisecond: 3 # 请求限定的时间段（毫秒）
+  LimitCount: 3 # 请求限定的时间段内允许的请求次数
+  LimitIntervalMillisecond: 150 # 请求允许的最小间隔时间（毫秒），0表示不限

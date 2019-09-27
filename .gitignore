@@ -23,3 +23,6 @@ gen### Go template
 .vscode
 .DS_Store
 /test/
+/runner/lily
+/lily/
+/runner/lily.lock

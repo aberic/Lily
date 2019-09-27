@@ -17,7 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/lily/grpc"
+	"github.com/aberic/lily/api"
 	"reflect"
 	"strconv"
 	"strings"
@@ -78,24 +78,24 @@ func (d *database) createForm(formName, comment, formType string) error {
 	}
 	d.forms[formName] = form
 	// 同步数据到 pb.Lily
-	d.lily.lilyData.Databases[d.name].Forms[formName] = &grpc.Form{
+	d.lily.lilyData.Databases[d.name].Forms[formName] = &api.Form{
 		Id:      formID,
 		Name:    formName,
 		Comment: comment,
-		Indexes: map[string]*grpc.Index{},
+		Indexes: map[string]*api.Index{},
 	}
 	if formType == FormTypeSQL {
 		// 自增索引ID
 		if err = d.createKey(formName, indexAutoID); nil != err {
 			return err
 		}
-		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = grpc.FormType_SQL
+		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = api.FormType_SQL
 	} else {
 		// 默认自定义Key生成ID
 		if err = d.createKey(formName, indexDefaultID); nil != err {
 			return err
 		}
-		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = grpc.FormType_Doc
+		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = api.FormType_Doc
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ func (d *database) createKey(formName string, keyStructure string) error {
 	index.node = node
 	form.getIndexes()[customID] = index
 	// 同步数据到 pb.Lily
-	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &grpc.Index{
+	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &api.Index{
 		Id:           customID,
 		Primary:      true,
 		KeyStructure: keyStructure,
@@ -128,7 +128,7 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	index.node = node
 	form.getIndexes()[customID] = index
 	// 同步数据到 pb.Lily
-	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &grpc.Index{
+	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &api.Index{
 		Id:           customID,
 		Primary:      false,
 		KeyStructure: keyStructure,

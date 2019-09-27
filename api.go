@@ -33,6 +33,8 @@ type API interface {
 	Start()
 	// Restart 重新启动lily
 	Restart()
+	// Stop 停止lily
+	Stop()
 	// GetDatabases 获取数据库集合
 	GetDatabases() []Database
 	// CreateDatabase 新建数据库

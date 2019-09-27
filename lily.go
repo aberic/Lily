@@ -17,7 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/lily/grpc"
+	"github.com/aberic/lily/api"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"strings"
@@ -51,7 +51,7 @@ var (
 //
 // 存储格式 {dataDir}/Data/{dataName}/{formName}/{formName}.dat/idx...
 type Lily struct {
-	lilyData  *grpc.Lily
+	lilyData  *api.Lily
 	databases map[string]Database
 	once      sync.Once
 	lock      sync.Mutex
@@ -71,14 +71,14 @@ type Lily struct {
 func ObtainLily() *Lily {
 	onceLily.Do(func() {
 		lilyInstance = &Lily{
-			lilyData:  &grpc.Lily{Databases: map[string]*grpc.Database{}},
+			lilyData:  &api.Lily{Databases: map[string]*api.Database{}},
 			databases: map[string]Database{},
 		}
 	})
 	return lilyInstance
 }
 
-// syncRPC2Store 将 grpc.Lily 对象同步至本地文件中
+// syncRPC2Store 将 api.Lily 对象同步至本地文件中
 func (l *Lily) syncRPC2Store() {
 	defer l.lock.Unlock()
 	l.lock.Lock()
@@ -86,7 +86,7 @@ func (l *Lily) syncRPC2Store() {
 	if nil != err {
 		return
 	}
-	_, _ = gnomon.File().Append(lilyFilePath, data, true)
+	_, _ = gnomon.File().Append(obtainConf().lilyFilePath, data, true)
 }
 
 // Start 启动lily
@@ -96,19 +96,24 @@ func (l *Lily) Start() {
 	l.initialize()
 }
 
+// Stop 停止lily
+func (l *Lily) Stop() {
+	// todo 停止lily
+}
+
 // Restart 重新启动lily
 //
 // 调用 Restart() 会恢复 Lily 的索引，如果 Lily 索引存在，则 Restart() 什么也不会做
 func (l *Lily) Restart() {
 	defer l.lock.Unlock()
 	l.lock.Lock()
-	if gnomon.File().PathExists(lilyFilePath) {
+	if gnomon.File().PathExists(obtainConf().lilyFilePath) {
 		var (
 			data []byte
-			lily grpc.Lily
+			lily api.Lily
 			err  error
 		)
-		if data, err = ioutil.ReadFile(lilyFilePath); nil != err {
+		if data, err = ioutil.ReadFile(obtainConf().lilyFilePath); nil != err {
 			gnomon.Log().Panic("restart failed, file read error", gnomon.Log().Err(err))
 		}
 		if err = proto.Unmarshal(data, &lily); nil != err {
@@ -138,7 +143,7 @@ func (l *Lily) recover() {
 			switch fv.FormType {
 			default:
 				formType = FormTypeSQL
-			case grpc.FormType_Doc:
+			case api.FormType_Doc:
 				formType = FormTypeDoc
 			}
 			l.databases[dk].getForms()[fk] = &form{
@@ -219,7 +224,7 @@ func (l *Lily) CreateDatabase(name, comment string) (Database, error) {
 	}
 	l.databases[name] = &database{name: name, id: id, comment: comment, forms: map[string]Form{}, lily: l}
 	// 同步数据到 pb.Lily
-	l.lilyData.Databases[name] = &grpc.Database{Id: id, Name: name, Comment: comment, Forms: map[string]*grpc.Form{}}
+	l.lilyData.Databases[name] = &api.Database{Id: id, Name: name, Comment: comment, Forms: map[string]*api.Form{}}
 	l.syncRPC2Store()
 	return l.databases[name], nil
 }

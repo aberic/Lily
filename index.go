@@ -93,7 +93,7 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 	var (
 		inputReader *bufio.Reader
 		data        []byte
-		peekOnce          = 3600
+		peekOnce          = 36000
 		haveNext          = true
 		position    int64 = 0
 	)
@@ -112,26 +112,26 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 	}
 	indexStr := string(data)
 	indexStrLen := int64(len(indexStr))
-	var p0, p1, p2, p3, p4 int64
 	for haveNext {
-		// 读取11位key及16位md5后key及5位起始seek和4位持续seek
-		p0 = position
-		p1 = p0 + 11
-		p2 = p1 + 16
-		p3 = p2 + 5
-		p4 = p3 + 4
-		hashKey := gnomon.Scale().DDuoStringToUint64(indexStr[p0:p1])
-		md516Key := indexStr[p1:p2]
-		seekStart := uint32(gnomon.Scale().DDuoStringToUint64(indexStr[p2:p3])) // value最终存储在文件中的起始位置
-		seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4]))      // value最终存储在文件中的持续长度
-		go func(i *index, hashKey uint64, p0 int64, md516Key string, seekStart uint32, seekLast int) {
+		go func(i *index, position int64) {
+			var p0, p1, p2, p3, p4 int64
+			// 读取11位key及16位md5后key及5位起始seek和4位持续seek
+			p0 = position
+			p1 = p0 + 11
+			p2 = p1 + 16
+			p3 = p2 + 5
+			p4 = p3 + 4
+			hashKey := gnomon.Scale().DDuoStringToUint64(indexStr[p0:p1])
+			md516Key := indexStr[p1:p2]
+			seekStart := uint32(gnomon.Scale().DDuoStringToUint64(indexStr[p2:p3])) // value最终存储在文件中的起始位置
+			seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4]))      // value最终存储在文件中的持续长度
 			ib := i.node.put("", hashKey, hashKey, true)
 			ib.getLink().setSeekStartIndex(p0)
 			ib.getLink().setMD5Key(md516Key)
 			ib.getLink().setSeekStart(seekStart)
 			ib.getLink().setSeekLast(seekLast)
 			atomic.AddUint64(i.form.getAutoID(), 1) // ID自增
-		}(i, hashKey, p0, md516Key, seekStart, seekLast)
+		}(i, position)
 		position += 36
 		if indexStrLen < position+36 {
 			haveNext = false

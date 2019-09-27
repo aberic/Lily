@@ -46,7 +46,7 @@ var (
 func store() *storage {
 	onceStorage.Do(func() {
 		if nil == stg {
-			stg = &storage{limitOpenFileChan: make(chan int, limitOpenFile)}
+			stg = &storage{limitOpenFileChan: make(chan int, obtainConf().LimitOpenFile)}
 		}
 	})
 	return stg
