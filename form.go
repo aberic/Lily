@@ -84,6 +84,10 @@ func (f *form) getName() string {
 	return f.name
 }
 
+func (f *form) getComment() string {
+	return f.comment
+}
+
 func (f *form) getDatabase() Database {
 	return f.database
 }

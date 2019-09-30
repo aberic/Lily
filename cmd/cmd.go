@@ -15,13 +15,13 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/aberic/gnomon"
 	"github.com/aberic/lily"
 	"github.com/aberic/lily/api"
-	"github.com/aberic/lily/io"
 	"github.com/getwe/figlet4go"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -91,7 +91,7 @@ var useCmd = &cobra.Command{
 	Short: "使用lily指定名称的数据库",
 	Long:  `uses a database with the specified name`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("lily use")
+		use()
 	},
 }
 
@@ -191,10 +191,35 @@ func rpcListener(conf *lily.Conf) {
 	fmt.Println("creates a gRPC server")
 	server := grpc.NewServer()
 	fmt.Println("register gRPC listener")
-	api.RegisterLilyAPIServer(server, &io.LilyAPIServer{})
+	api.RegisterLilyAPIServer(server, &lily.APIServer{})
 	fmt.Println("OFF")
 	if err = server.Serve(listener); nil != err {
 		panic(err)
+	}
+}
+
+func use() {
+	var (
+		sql string
+		err error
+	)
+	fmt.Print("lily->: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		sql = scanner.Text()
+		if gnomon.String().TrimN(sql) == "" {
+			fmt.Print("lily->: ")
+			continue
+		}
+		if sql == "exit" {
+			fmt.Println("Bye!")
+			os.Exit(0)
+		}
+		gnomon.Log().Debug("use", gnomon.Log().Field("sql", sql))
+		if err = analysis(sql); nil != err {
+			fmt.Println(err.Error())
+		}
+		fmt.Print("lily->: ")
 	}
 }
 

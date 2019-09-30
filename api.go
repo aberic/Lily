@@ -183,6 +183,8 @@ type Database interface {
 	getID() string
 	// getName 返回数据库名称
 	getName() string
+	// getComment 获取数据库描述
+	getComment() string
 	// getForms 获取数据库表集合
 	getForms() map[string]Form
 	// createForm 新建表方法
@@ -253,6 +255,7 @@ type Form interface {
 	getAutoID() *uint64           // getAutoID 返回表当前自增ID值
 	getID() string                // getID 返回表唯一ID
 	getName() string              // getName 返回表名称
+	getComment() string           // getComment 获取表描述
 	getDatabase() Database        // getDatabase 返回数据库对象
 	getIndexes() map[string]Index // getIndexes 获取表下索引集合
 	getFormType() string          // getFormType 获取表类型

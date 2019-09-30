@@ -49,6 +49,10 @@ func (d *database) getName() string {
 	return d.name
 }
 
+func (d *database) getComment() string {
+	return d.comment
+}
+
 // getForms 获取数据库表集合
 func (d *database) getForms() map[string]Form {
 	return d.forms
