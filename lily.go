@@ -93,6 +93,7 @@ func (l *Lily) syncRPC2Store() {
 //
 // 调用后执行 initialize() 初始化方法
 func (l *Lily) Start() {
+	gnomon.Log().Info("lily service starting")
 	l.initialize()
 }
 
@@ -174,6 +175,8 @@ func (l *Lily) recover() {
 // initialize 初始化默认库及默认表
 func (l *Lily) initialize() {
 	l.once.Do(func() {
+		gnomon.Log().Info("lily service is initializing")
+		gnomon.Log().Info("lily service is creating default database")
 		data, err := l.CreateDatabase(sysDatabase, "跟随‘Lily’创建的默认库")
 		if nil != err {
 			if err == ErrDatabaseExist {
@@ -182,14 +185,19 @@ func (l *Lily) initialize() {
 			}
 			panic(err)
 		}
+		gnomon.Log().Info(strings.Join([]string{"lily service have been created default database ", sysDatabase}, ""))
+		gnomon.Log().Info(strings.Join([]string{"lily service is creating default form ", userForm}, ""))
 		if err = data.createForm(userForm, "default user form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
+		gnomon.Log().Info(strings.Join([]string{"lily service have been created ", userForm}, ""))
+		gnomon.Log().Info(strings.Join([]string{"lily service is creating default form ", defaultForm}, ""))
 		if err = data.createForm(defaultForm, "default Data form", FormTypeDoc); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
+		gnomon.Log().Info(strings.Join([]string{"lily service have been created ", defaultForm}, ""))
 		l.databases[sysDatabase] = data
 	})
 }

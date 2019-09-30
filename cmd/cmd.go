@@ -16,17 +16,20 @@ package cmd
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/aberic/gnomon"
 	"github.com/aberic/lily"
 	"github.com/aberic/lily/api"
 	"github.com/aberic/lily/io"
+	"github.com/getwe/figlet4go"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -49,11 +52,14 @@ var startCmd = &cobra.Command{
 	Short: "启动lily，会有初始化操作",
 	Long:  `start lily service`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if gnomon.String().IsEmpty(confYmlPath) {
-			fmt.Println("lily 数据库将使用默认配置策略")
-		}
+		fmt.Println("startCmd daemon", daemon)
 		if daemon {
 			fmt.Println("后台运行…")
+		} else {
+			fmt.Println("前端启动…")
+		}
+		if gnomon.String().IsEmpty(confYmlPath) {
+			fmt.Println("lily 数据库将使用默认配置策略")
 		}
 		return nil
 	},
@@ -107,31 +113,68 @@ var rootCmd = &cobra.Command{
 
 func start() {
 	conf := lily.ObtainConf(confYmlPath)
-	fmt.Println("daemon", daemon)
+	fmt.Println("start daemon", daemon)
 	if daemon {
+		var (
+			command *exec.Cmd
+			pid     int
+		)
 		fmt.Println("确认后台运行…")
-		command := exec.Command("./lily", "start", "-p", confYmlPath, "-d false")
-		if err := command.Start(); nil != err {
-			fmt.Println("start error: ", err.Error())
+		fmt.Println("初始化数据库…")
+		lily.ObtainLily().Start()
+		fmt.Println("启动监听器…")
+		if gnomon.String().IsEmpty(confYmlPath) {
+			command = exec.Command("./lily", "start")
+		} else {
+			command = exec.Command("./lily", "start", "-p", confYmlPath)
 		}
-		fmt.Printf("lily start, [PID] %d running...\n", command.Process.Pid)
+		_ = command.Start()
+		pid = command.Process.Pid
+		fmt.Printf("lily start, [PID] %d running...\n", pid)
 		_ = ioutil.WriteFile("lily.lock", []byte(fmt.Sprintf("%d", command.Process.Pid)), 0666)
 		daemon = false
+		var (
+			running = false
+			arr     []string
+			err     error
+		)
+		for !running {
+			if _, _, arr, err = gnomon.Command().ExecCommandSilent("lsof", "-i"); nil != err {
+				panic(err)
+			}
+			for _, str := range arr {
+				str = gnomon.String().SingleSpace(str)
+				strs := strings.Split(str, " ")
+				if strs[0] == "lily" && strs[1] == strconv.Itoa(pid) {
+					running = true
+					fmt.Println("------------------------------------------------------------")
+					flag.Parse()
+					str := *flag.String("str", "Lily", "input string")
+					ascii := figlet4go.NewAsciiRender()
+					// most simple Usage
+					renderStr, _ := ascii.Render(str)
+					fmt.Println(renderStr)
+					fmt.Println("------------------------------------------------------------")
+					fmt.Println("lily start success")
+				}
+			}
+		}
 		os.Exit(0)
 	} else {
 		fmt.Println("lily start")
 	}
-	fmt.Println("初始化数据库…")
-	lily.ObtainLily().Start()
-	fmt.Println("启动监听器…")
 	rpcListener(conf)
-	fmt.Println("完成！")
 }
 
 func stop() {
-	data, _ := ioutil.ReadFile("lily.lock")
-	command := exec.Command("kill", string(data))
-	_ = command.Start()
+	data, err := ioutil.ReadFile("lily.lock")
+	if nil != err {
+		panic(errors.New("lily haven not been started or no such file or directory with name lily.lock"))
+	}
+	_, _, _, err = gnomon.Command().ExecCommandTail("kill", string(data))
+	if nil != err {
+		panic(err)
+	}
 	println("lily stop")
 }
 
@@ -141,11 +184,15 @@ func rpcListener(conf *lily.Conf) {
 		err      error
 	)
 
+	fmt.Println(strings.Join([]string{"Listen announces on the local network address with port: ", conf.Port}, ""))
 	if listener, err = net.Listen("tcp", strings.Join([]string{":", conf.Port}, "")); nil != err {
 		panic(err)
 	}
+	fmt.Println("creates a gRPC server")
 	server := grpc.NewServer()
+	fmt.Println("register gRPC listener")
 	api.RegisterLilyAPIServer(server, &io.LilyAPIServer{})
+	fmt.Println("OFF")
 	if err = server.Serve(listener); nil != err {
 		panic(err)
 	}

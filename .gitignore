@@ -26,3 +26,4 @@ gen### Go template
 /runner/lily
 /lily/
 /runner/lily.lock
+/runner/lilyDB/

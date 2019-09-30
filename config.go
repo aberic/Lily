@@ -94,7 +94,7 @@ func (c *Conf) scanDefault() (*Conf, error) {
 		c.Port = "19877"
 	}
 	if gnomon.String().IsEmpty(c.RootDir) {
-		c.RootDir = "lily"
+		c.RootDir = "lilyDB"
 	}
 	if gnomon.String().IsEmpty(c.DataDir) {
 		c.DataDir = filepath.Join(c.RootDir, "data")
