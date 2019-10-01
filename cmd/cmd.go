@@ -120,8 +120,6 @@ func start() {
 			pid     int
 		)
 		fmt.Println("确认后台运行…")
-		fmt.Println("初始化数据库…")
-		lily.ObtainLily().Start()
 		fmt.Println("启动监听器…")
 		if gnomon.String().IsEmpty(confYmlPath) {
 			command = exec.Command("./lily", "start")
@@ -163,7 +161,9 @@ func start() {
 	} else {
 		fmt.Println("lily start")
 	}
-	rpcListener(conf)
+	fmt.Println("初始化数据库…")
+	lily.ObtainLily().Start()
+	RPCListener(conf)
 }
 
 func stop() {
@@ -178,7 +178,7 @@ func stop() {
 	println("lily stop")
 }
 
-func rpcListener(conf *lily.Conf) {
+func RPCListener(conf *lily.Conf) {
 	var (
 		listener net.Listener
 		err      error

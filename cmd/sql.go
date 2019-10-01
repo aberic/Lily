@@ -18,6 +18,7 @@ import (
 	"errors"
 	"github.com/aberic/gnomon"
 	"github.com/aberic/lily"
+	"github.com/aberic/lily/dto"
 	"github.com/modood/table"
 	"strings"
 )
@@ -47,7 +48,11 @@ func show(data string) error {
 		if nil != err {
 			return err
 		}
-		table.Output(dbs.Databases)
+		var dbDTO []*dto.Database
+		for _, db := range dbs.Databases {
+			dbDTO = append(dbDTO, &dto.Database{Name: db.Name, Comment: db.Comment})
+		}
+		table.Output(dbDTO)
 		return nil
 	}
 	return sqlSyntaxErr
