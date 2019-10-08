@@ -202,7 +202,7 @@ func (l *Lily) initialize() {
 	})
 }
 
-// GetDatabases 获取数据库集合
+// GetDatabase 获取数据库集合
 func (l *Lily) GetDatabase(name string) Database {
 	for _, db := range l.databases {
 		if name == db.getName() {

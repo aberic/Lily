@@ -21,12 +21,9 @@ import (
 	"fmt"
 	"github.com/aberic/gnomon"
 	"github.com/aberic/lily"
-	"github.com/aberic/lily/api"
 	"github.com/getwe/figlet4go"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
 	"io/ioutil"
-	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -183,7 +180,7 @@ func start() {
 	}
 	fmt.Println("初始化数据库…")
 	lily.ObtainLily().Start()
-	RPCListener(conf)
+	lily.RPCListener(conf)
 }
 
 func stop() {
@@ -198,26 +195,6 @@ func stop() {
 	}
 	_ = os.Remove("lily.lock")
 	println("lily stop")
-}
-
-func RPCListener(conf *lily.Conf) {
-	var (
-		listener net.Listener
-		err      error
-	)
-
-	fmt.Println(strings.Join([]string{"Listen announces on the local network address with port: ", conf.Port}, ""))
-	if listener, err = net.Listen("tcp", strings.Join([]string{":", conf.Port}, "")); nil != err {
-		panic(err)
-	}
-	fmt.Println("creates a gRPC server")
-	server := grpc.NewServer()
-	fmt.Println("register gRPC listener")
-	api.RegisterLilyAPIServer(server, &lily.APIServer{Conf: conf})
-	fmt.Println("OFF")
-	if err = server.Serve(listener); nil != err {
-		panic(err)
-	}
 }
 
 // conn 数据库连接

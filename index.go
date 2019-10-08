@@ -93,11 +93,13 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 	var (
 		inputReader *bufio.Reader
 		data        []byte
-		peekOnce          = 36000
-		haveNext          = true
-		position    int64 = 0
+		peekOnce    = 36000
+		haveNext    = true
+		position    int64
 	)
-	_, err = file.Seek(offset, io.SeekStart) //表示文件的起始位置，从第二个字符往后写入。
+	if _, err = file.Seek(offset, io.SeekStart); nil != err { //表示文件的起始位置，从第二个字符往后写入。
+		return
+	}
 	inputReader = bufio.NewReaderSize(file, peekOnce)
 	data, err = inputReader.Peek(peekOnce)
 	if nil != err && io.EOF != err {

@@ -24,14 +24,18 @@ import (
 )
 
 var (
-	sqlSyntaxErr                   = errors.New("sql syntax error")
-	sqlDatabaseIsNilErr            = errors.New("database is nil, you should use database first")
+	sqlSyntaxErr                   = err("sql syntax error")
+	sqlDatabaseIsNilErr            = err("database is nil, you should use database first")
 	sqlSyntaxParamsCountInvalidErr = syntaxErr("params count is invalid")
 )
 
 type sql struct {
 	serverURL    string // serverURL 链接数据库地址，如'localhost:19877'
 	databaseName string // databaseName 当前操作数据库名称
+}
+
+func err(errStr string) error {
+	return errors.New(errStr)
 }
 
 func syntaxErr(errStr string) error {
@@ -139,9 +143,8 @@ func (s *sql) use(array []string) error {
 	if have {
 		s.databaseName = array[1]
 		return nil
-	} else {
-		return executeErr("database not found")
 	}
+	return executeErr("database not found")
 }
 
 func (s *sql) create(array []string) error {

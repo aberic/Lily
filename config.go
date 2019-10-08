@@ -36,7 +36,8 @@ const (
 )
 
 var (
-	Version      = "1.0" // 版本号
+	// Version 版本号
+	Version      = "1.0"
 	confInstance *Conf
 	onceConf     sync.Once
 )
@@ -46,7 +47,7 @@ type YamlConf struct {
 	Conf *Conf `yaml:"conf"`
 }
 
-// YamlConf lily启动配置文件子项目
+// Conf lily启动配置文件子项目
 type Conf struct {
 	Port                     string `yaml:"Port"`                     // Port 开放端口，便于其它应用访问
 	RootDir                  string `yaml:"RootDir"`                  // RootDir Lily服务默认存储路径

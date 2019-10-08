@@ -234,6 +234,7 @@ func (l *APIServer) formatFormArr(db Database) []*api.Form {
 	return fms
 }
 
+// FormatFormType 通过api表类型获取数据库表类型
 func FormatFormType(ft api.FormType) string {
 	switch ft {
 	default:
@@ -243,6 +244,7 @@ func FormatFormType(ft api.FormType) string {
 	}
 }
 
+// FormatFormType2API 通过数据库表类型获取api表类型
 func FormatFormType2API(ft string) api.FormType {
 	switch ft {
 	default:
