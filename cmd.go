@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package cmd
+package lily
 
 import (
 	"bufio"
@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/lily"
 	"github.com/getwe/figlet4go"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -44,7 +43,7 @@ var versionCmd = &cobra.Command{
 	Short: "检出lily的版本号",
 	Long:  `print the version number of lily`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("lily Version:v" + lily.Version)
+		fmt.Println("lily Version:v" + Version)
 	},
 }
 
@@ -123,11 +122,11 @@ var rootCmd = &cobra.Command{
 }
 
 func start() {
-	if gnomon.File().PathExists("lily.lock") {
+	if gnomon.File().PathExists("lock") {
 		fmt.Println("lily is start already")
 		return
 	}
-	conf := lily.ObtainConf(confYmlPath)
+	conf := ObtainConf(confYmlPath)
 	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
 	fmt.Println("start daemon", daemon)
 	if daemon {
@@ -179,15 +178,15 @@ func start() {
 		fmt.Println("lily start")
 	}
 	fmt.Println("初始化数据库…")
-	lily.ObtainLily().Start()
-	lily.RPCListener(conf)
+	ObtainLily().Start()
+	rpcListener(conf)
 }
 
 func stop() {
 	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
-	data, err := ioutil.ReadFile("lily.lock")
+	data, err := ioutil.ReadFile("lock")
 	if nil != err {
-		panic(errors.New("lily haven not been started or no such file or directory with name lily.lock"))
+		panic(errors.New("lily haven not been started or no such file or directory with name lock"))
 	}
 	_, _, _, err = gnomon.Command().ExecCommandTail("kill", string(data))
 	if nil != err {

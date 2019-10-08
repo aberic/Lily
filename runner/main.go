@@ -15,11 +15,11 @@
 package main
 
 import (
-	"github.com/aberic/lily/cmd"
+	"github.com/aberic/lily"
 )
 
 // go build -o ./lily ./main.go
 // go build -o ./runner/lily ./runner/main.go
 func main() {
-	cmd.Execute()
+	lily.Execute()
 }

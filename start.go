@@ -22,8 +22,8 @@ import (
 	"strings"
 )
 
-// RPCListener 启动rpc监听
-func RPCListener(conf *Conf) {
+// rpcListener 启动rpc监听
+func rpcListener(conf *Conf) {
 	var (
 		listener net.Listener
 		err      error

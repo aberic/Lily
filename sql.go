@@ -12,13 +12,11 @@
  * limitations under the License.
  */
 
-package cmd
+package lily
 
 import (
 	"errors"
 	"github.com/aberic/gnomon"
-	"github.com/aberic/lily"
-	"github.com/aberic/lily/dto"
 	"github.com/modood/table"
 	"strings"
 )
@@ -89,8 +87,8 @@ func (s *sql) show(array []string) error {
 	default:
 		return sqlSyntaxErr
 	case "conf":
-		var confs []*lily.Conf
-		conf, err := lily.GetConf(s.serverURL)
+		var confs []*Conf
+		conf, err := GetConf(s.serverURL)
 		if nil != err {
 			return executeErr(err.Error())
 		}
@@ -98,13 +96,13 @@ func (s *sql) show(array []string) error {
 		table.Output(confs)
 		return nil
 	case "databases":
-		dbs, err := lily.ObtainDatabases(s.serverURL)
+		dbs, err := ObtainDatabases(s.serverURL)
 		if nil != err {
 			return executeErr(err.Error())
 		}
-		var dbDTO []*dto.Database
+		var dbDTO []*DTODatabase
 		for _, db := range dbs.Databases {
-			dbDTO = append(dbDTO, &dto.Database{Name: db.Name, Comment: db.Comment})
+			dbDTO = append(dbDTO, &DTODatabase{Name: db.Name, Comment: db.Comment})
 		}
 		table.Output(dbDTO)
 		return nil
@@ -112,13 +110,13 @@ func (s *sql) show(array []string) error {
 		if gnomon.String().IsEmpty(s.databaseName) {
 			return sqlDatabaseIsNilErr
 		}
-		fms, err := lily.ObtainForms(s.serverURL, s.databaseName)
+		fms, err := ObtainForms(s.serverURL, s.databaseName)
 		if nil != err {
 			return executeErr(err.Error())
 		}
-		var fmDTO []*dto.Form
+		var fmDTO []*DTOForm
 		for _, fm := range fms.Forms {
-			fmDTO = append(fmDTO, &dto.Form{Name: fm.Name, Comment: fm.Comment, Type: lily.FormatFormType(fm.FormType)})
+			fmDTO = append(fmDTO, &DTOForm{Name: fm.Name, Comment: fm.Comment, Type: FormatFormType(fm.FormType)})
 		}
 		table.Output(fmDTO)
 		return nil
@@ -129,7 +127,7 @@ func (s *sql) use(array []string) error {
 	if len(array) != 2 {
 		return sqlSyntaxParamsCountInvalidErr
 	}
-	dbs, err := lily.ObtainDatabases(s.serverURL)
+	dbs, err := ObtainDatabases(s.serverURL)
 	if nil != err {
 		return executeErr(err.Error())
 	}
@@ -167,30 +165,30 @@ func (s *sql) create(array []string) error {
 
 func (s *sql) createDatabase(array []string) error {
 	if len(array) == 3 {
-		return lily.CreateDatabase(s.serverURL, array[2], "")
+		return CreateDatabase(s.serverURL, array[2], "")
 	} else if len(array) > 3 {
 		comment := array[3:]
-		return lily.CreateDatabase(s.serverURL, array[2], strings.Join(comment, " "))
+		return CreateDatabase(s.serverURL, array[2], strings.Join(comment, " "))
 	}
 	return sqlSyntaxErr
 }
 
 func (s *sql) createTable(array []string) error {
 	if len(array) == 3 {
-		return lily.CreateTable(s.serverURL, s.databaseName, array[2], "")
+		return CreateTable(s.serverURL, s.databaseName, array[2], "")
 	} else if len(array) > 3 {
 		comment := array[3:]
-		return lily.CreateTable(s.serverURL, s.databaseName, array[2], strings.Join(comment, " "))
+		return CreateTable(s.serverURL, s.databaseName, array[2], strings.Join(comment, " "))
 	}
 	return sqlSyntaxErr
 }
 
 func (s *sql) createDoc(array []string) error {
 	if len(array) == 3 {
-		return lily.CreateDoc(s.serverURL, s.databaseName, array[2], "")
+		return CreateDoc(s.serverURL, s.databaseName, array[2], "")
 	} else if len(array) > 3 {
 		comment := array[3:]
-		return lily.CreateDoc(s.serverURL, s.databaseName, array[2], strings.Join(comment, " "))
+		return CreateDoc(s.serverURL, s.databaseName, array[2], strings.Join(comment, " "))
 	}
 	return sqlSyntaxErr
 }
@@ -200,7 +198,7 @@ func (s *sql) createDoc(array []string) error {
 //		return sqlSyntaxParamsCountInvalidErr
 //	}
 //	valueStr := strings.Join(array[2:], " ")
-//	lily.PutD(s.serverURL)
+//	PutD(s.serverURL)
 //}
 
 //func put(databaseName, formName, key string, value interface{}) error {
