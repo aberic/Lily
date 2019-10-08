@@ -24,29 +24,79 @@ import (
 )
 
 var (
-	sqlSyntaxErr = errors.New("sql syntax error")
+	sqlSyntaxErr                   = errors.New("sql syntax error")
+	sqlDatabaseIsNilErr            = errors.New("database is nil, you should use database first")
+	sqlSyntaxParamsCountInvalidErr = syntaxErr("params count is invalid")
 )
 
-func analysis(sql string) error {
-	sql = gnomon.String().SingleSpace(sql)
-	array := strings.Split(sql, " ")
-	return first(array)
+type sql struct {
+	serverURL    string // serverURL 链接数据库地址，如'localhost:19877'
+	databaseName string // databaseName 当前操作数据库名称
 }
 
-func first(array []string) error {
+func syntaxErr(errStr string) error {
+	return errors.New(strings.Join([]string{"sql syntax error", errStr}, ": "))
+}
+
+func executeErr(errStr string) error {
+	return errors.New(strings.Join([]string{"sql execute error", errStr}, ": "))
+}
+
+func (s *sql) analysis(sql string) error {
+	sql = gnomon.String().SingleSpace(sql)
+	array := strings.Split(sql, " ")
+	if len(array) < 1 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	return s.first(array)
+}
+
+func (s *sql) first(array []string) error {
 	switch strings.ToLower(array[0]) {
 	default:
 		return sqlSyntaxErr
 	case "show":
-		return show(array[1])
+		return s.show(array)
+	case "use":
+		return s.use(array)
+	case "create":
+		return s.create(array)
+		//case "putD":
+		//	return s.putD(array)
+		//case "setD":
+		//	return s.setD(array)
+		//case "getD":
+		//	return s.getD(array)
+		//case "put":
+		//	return s.put(array)
+		//case "set":
+		//	return s.set(array)
+		//case "get":
+		//	return s.get(array)
 	}
 }
 
-func show(data string) error {
-	if strings.ToLower(data) == "database" {
-		dbs, err := lily.ObtainDatabases("localhost:19877")
+// show show database
+func (s *sql) show(array []string) error {
+	if len(array) != 2 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	switch strings.ToLower(array[1]) {
+	default:
+		return sqlSyntaxErr
+	case "conf":
+		var confs []*lily.Conf
+		conf, err := lily.GetConf(s.serverURL)
 		if nil != err {
-			return err
+			return executeErr(err.Error())
+		}
+		confs = append(confs, conf)
+		table.Output(confs)
+		return nil
+	case "databases":
+		dbs, err := lily.ObtainDatabases(s.serverURL)
+		if nil != err {
+			return executeErr(err.Error())
 		}
 		var dbDTO []*dto.Database
 		for _, db := range dbs.Databases {
@@ -54,6 +104,102 @@ func show(data string) error {
 		}
 		table.Output(dbDTO)
 		return nil
+	case "forms":
+		if gnomon.String().IsEmpty(s.databaseName) {
+			return sqlDatabaseIsNilErr
+		}
+		fms, err := lily.ObtainForms(s.serverURL, s.databaseName)
+		if nil != err {
+			return executeErr(err.Error())
+		}
+		var fmDTO []*dto.Form
+		for _, fm := range fms.Forms {
+			fmDTO = append(fmDTO, &dto.Form{Name: fm.Name, Comment: fm.Comment, Type: lily.FormatFormType(fm.FormType)})
+		}
+		table.Output(fmDTO)
+		return nil
+	}
+}
+
+func (s *sql) use(array []string) error {
+	if len(array) != 2 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	dbs, err := lily.ObtainDatabases(s.serverURL)
+	if nil != err {
+		return executeErr(err.Error())
+	}
+	have := false
+	for _, db := range dbs.Databases {
+		if db.Name == array[1] {
+			have = true
+			break
+		}
+	}
+	if have {
+		s.databaseName = array[1]
+		return nil
+	} else {
+		return executeErr("database not found")
+	}
+}
+
+func (s *sql) create(array []string) error {
+	if len(array) < 3 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	switch array[1] {
+	default:
+		return sqlSyntaxErr
+	case "database":
+		return s.createDatabase(array)
+	case "table":
+		return s.createTable(array)
+	case "doc":
+		return s.createDoc(array)
+		//case "key":
+		//	return s.createKey(array)
+	}
+}
+
+func (s *sql) createDatabase(array []string) error {
+	if len(array) == 3 {
+		return lily.CreateDatabase(s.serverURL, array[2], "")
+	} else if len(array) > 3 {
+		comment := array[3:]
+		return lily.CreateDatabase(s.serverURL, array[2], strings.Join(comment, " "))
 	}
 	return sqlSyntaxErr
 }
+
+func (s *sql) createTable(array []string) error {
+	if len(array) == 3 {
+		return lily.CreateTable(s.serverURL, s.databaseName, array[2], "")
+	} else if len(array) > 3 {
+		comment := array[3:]
+		return lily.CreateTable(s.serverURL, s.databaseName, array[2], strings.Join(comment, " "))
+	}
+	return sqlSyntaxErr
+}
+
+func (s *sql) createDoc(array []string) error {
+	if len(array) == 3 {
+		return lily.CreateDoc(s.serverURL, s.databaseName, array[2], "")
+	} else if len(array) > 3 {
+		comment := array[3:]
+		return lily.CreateDoc(s.serverURL, s.databaseName, array[2], strings.Join(comment, " "))
+	}
+	return sqlSyntaxErr
+}
+
+//func (s *sql) putD(array []string) error {
+//	if len(array) < 3 {
+//		return sqlSyntaxParamsCountInvalidErr
+//	}
+//	valueStr := strings.Join(array[2:], " ")
+//	lily.PutD(s.serverURL)
+//}
+
+//func put(databaseName, formName, key string, value interface{}) error {
+//
+//}

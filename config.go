@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/lily/api"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path/filepath"
@@ -42,7 +43,7 @@ var (
 
 // YamlConf lily启动配置文件根项目
 type YamlConf struct {
-	Conf Conf `yaml:"conf"`
+	Conf *Conf `yaml:"conf"`
 }
 
 // YamlConf lily启动配置文件子项目
@@ -50,15 +51,17 @@ type Conf struct {
 	Port                     string `yaml:"Port"`                     // Port 开放端口，便于其它应用访问
 	RootDir                  string `yaml:"RootDir"`                  // RootDir Lily服务默认存储路径
 	DataDir                  string `yaml:"DataDir"`                  // DataDir Lily服务数据默认存储路径
-	LimitOpenFile            int    `yaml:"LimitOpenFile"`            // LimitOpenFile 限制打开文件描述符次数
+	LogDir                   string `yaml:"LogDir"`                   // LogDir Lily服务默认日志存储路径
+	LimitOpenFile            int32  `yaml:"LimitOpenFile"`            // LimitOpenFile 限制打开文件描述符次数
 	TLS                      bool   `yaml:"TLS"`                      // TLS 是否开启 TLS
 	TLSServerKeyFile         string `yaml:"TLSServerKeyFile"`         // TLSServerKeyFile lily服务私钥
 	TLSServerCertFile        string `yaml:"TLSServerCertFile"`        // TLSServerCertFile lily服务数字证书
 	Limit                    bool   `yaml:"Limit"`                    // Limit 是否启用服务限流策略
-	LimitMillisecond         int    `yaml:"LimitMillisecond"`         // LimitMillisecond 请求限定的时间段（毫秒）
-	LimitCount               int    `yaml:"LimitCount"`               // LimitCount 请求限定的时间段内允许的请求次数
-	LimitIntervalMillisecond int    `yaml:"LimitIntervalMillisecond"` // LimitIntervalMillisecond 请求允许的最小间隔时间（毫秒），0表示不限
-	lilyFilePath             string // Lily重启引导文件地址
+	LimitMillisecond         int32  `yaml:"LimitMillisecond"`         // LimitMillisecond 请求限定的时间段（毫秒）
+	LimitCount               int32  `yaml:"LimitCount"`               // LimitCount 请求限定的时间段内允许的请求次数
+	LimitIntervalMillisecond int32  `yaml:"LimitIntervalMillisecond"` // LimitIntervalMillisecond 请求允许的最小间隔时间（毫秒），0表示不限
+	LilyLockFilePath         string // LilyLockFilePath Lily当前进程地址存储文件地址
+	LilyBootstrapFilePath    string // LilyBootstrapFilePath Lily重启引导文件地址
 }
 
 // ObtainConf 根据文件地址获取Config对象
@@ -67,11 +70,11 @@ func ObtainConf(filePath string) *Conf {
 		confInstance = &Conf{}
 		if gnomon.String().IsNotEmpty(filePath) {
 			if err := confInstance.yaml2Conf(filePath); nil != err {
-				gnomon.Log().Panic("ObtainConf", gnomon.Log().Err(err))
+				panic(err)
 			}
 		}
 		if _, err := confInstance.scanDefault(); nil != err {
-			gnomon.Log().Panic("ObtainConf", gnomon.Log().Err(err))
+			panic(err)
 		}
 	})
 	return confInstance
@@ -99,7 +102,11 @@ func (c *Conf) scanDefault() (*Conf, error) {
 	if gnomon.String().IsEmpty(c.DataDir) {
 		c.DataDir = filepath.Join(c.RootDir, "data")
 	}
-	c.lilyFilePath = filepath.Join(c.DataDir, "lily.sync")
+	if gnomon.String().IsEmpty(c.LogDir) {
+		c.LogDir = filepath.Join(c.RootDir, "log")
+	}
+	c.LilyLockFilePath = filepath.Join(c.RootDir, "lily.lock")
+	c.LilyBootstrapFilePath = filepath.Join(c.DataDir, "lily.sync")
 	if c.LimitOpenFile < 1000 {
 		c.LimitOpenFile = 10000
 	}
@@ -127,6 +134,44 @@ func (c *Conf) yaml2Conf(filePath string) error {
 	if err != nil {
 		return err
 	}
-	c = &ymlConf.Conf
+	confInstance = ymlConf.Conf
 	return nil
+}
+
+// conf2API 转rpc对象
+func (c *Conf) conf2RPC() *api.Conf {
+	return &api.Conf{
+		Port:                     c.Port,
+		RootDir:                  c.RootDir,
+		DataDir:                  c.DataDir,
+		LogDir:                   c.LogDir,
+		LimitOpenFile:            c.LimitOpenFile,
+		TLS:                      c.TLS,
+		TLSServerKeyFile:         c.TLSServerKeyFile,
+		TLSServerCertFile:        c.TLSServerCertFile,
+		Limit:                    c.Limit,
+		LimitMillisecond:         c.LimitMillisecond,
+		LimitCount:               c.LimitCount,
+		LimitIntervalMillisecond: c.LimitIntervalMillisecond,
+		LilyLockFilePath:         c.LilyLockFilePath,
+		LilyBootstrapFilePath:    c.LilyBootstrapFilePath,
+	}
+}
+
+// rpc2Conf rpc转对象
+func (c *Conf) rpc2Conf(conf *api.Conf) {
+	c.Port = conf.Port
+	c.RootDir = conf.RootDir
+	c.DataDir = conf.DataDir
+	c.LogDir = conf.LogDir
+	c.LimitOpenFile = conf.LimitOpenFile
+	c.TLS = conf.TLS
+	c.TLSServerKeyFile = conf.TLSServerKeyFile
+	c.TLSServerCertFile = conf.TLSServerCertFile
+	c.Limit = conf.Limit
+	c.LimitMillisecond = conf.LimitMillisecond
+	c.LimitCount = conf.LimitCount
+	c.LimitIntervalMillisecond = conf.LimitIntervalMillisecond
+	c.LilyLockFilePath = conf.LilyLockFilePath
+	c.LilyBootstrapFilePath = conf.LilyBootstrapFilePath
 }

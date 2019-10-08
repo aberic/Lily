@@ -86,7 +86,7 @@ func (l *Lily) syncRPC2Store() {
 	if nil != err {
 		return
 	}
-	_, _ = gnomon.File().Append(obtainConf().lilyFilePath, data, true)
+	_, _ = gnomon.File().Append(obtainConf().LilyBootstrapFilePath, data, true)
 }
 
 // Start 启动lily
@@ -108,13 +108,13 @@ func (l *Lily) Stop() {
 func (l *Lily) Restart() {
 	defer l.lock.Unlock()
 	l.lock.Lock()
-	if gnomon.File().PathExists(obtainConf().lilyFilePath) {
+	if gnomon.File().PathExists(obtainConf().LilyBootstrapFilePath) {
 		var (
 			data []byte
 			lily api.Lily
 			err  error
 		)
-		if data, err = ioutil.ReadFile(obtainConf().lilyFilePath); nil != err {
+		if data, err = ioutil.ReadFile(obtainConf().LilyBootstrapFilePath); nil != err {
 			gnomon.Log().Panic("restart failed, file read error", gnomon.Log().Err(err))
 		}
 		if err = proto.Unmarshal(data, &lily); nil != err {
@@ -200,6 +200,16 @@ func (l *Lily) initialize() {
 		gnomon.Log().Info(strings.Join([]string{"lily service have been created ", defaultForm}, ""))
 		l.databases[sysDatabase] = data
 	})
+}
+
+// GetDatabases 获取数据库集合
+func (l *Lily) GetDatabase(name string) Database {
+	for _, db := range l.databases {
+		if name == db.getName() {
+			return db
+		}
+	}
+	return nil
 }
 
 // GetDatabases 获取数据库集合

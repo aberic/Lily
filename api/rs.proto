@@ -8,6 +8,18 @@ option java_outer_classname = "RSProto";
 package api;
 
 import "api/data.proto";
+import "api/conf.proto";
+
+// ReqConf 请求获取数据库引擎对象
+message ReqConf {
+}
+
+// RespConf 响应获取数据库引擎对象
+message RespConf {
+    Code code = 1; // code 响应结果码
+    Conf conf = 2; // conf 数据库引擎对象
+    string errMsg = 3; // errMsg 错误信息
+}
 
 // ReqDatabases 请求获取数据库集合
 message ReqDatabases {
@@ -17,6 +29,18 @@ message ReqDatabases {
 message RespDatabases {
     Code code = 1; // code 响应结果码
     repeated Database databases = 2; // databases 数据库对象集合
+    string errMsg = 3; // errMsg 错误信息
+}
+
+// ReqForms 请求获取数据库表集合
+message ReqForms {
+    string databaseName = 1;
+}
+
+// RespForms 响应获取数据库表集合
+message RespForms {
+    Code code = 1; // code 响应结果码
+    repeated Form forms = 2; // forms 数据库表对象集合
     string errMsg = 3; // errMsg 错误信息
 }
 

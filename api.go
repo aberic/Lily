@@ -35,6 +35,8 @@ type API interface {
 	Restart()
 	// Stop 停止lily
 	Stop()
+	// GetDatabase 获取指定名称数据库
+	GetDatabase(name string) Database
 	// GetDatabases 获取数据库集合
 	GetDatabases() []Database
 	// CreateDatabase 新建数据库

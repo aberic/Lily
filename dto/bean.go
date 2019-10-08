@@ -16,6 +16,13 @@ package dto
 
 // Database 数据库对象
 type Database struct {
-	Name    string // 数据库名称，根据需求可以随时变化
-	Comment string // 描述
+	Name    string // Name 数据库名称，根据需求可以随时变化
+	Comment string // Comment 描述
+}
+
+// Form 数据库表对象
+type Form struct {
+	Name    string // Name 数据库名称，根据需求可以随时变化
+	Comment string // Comment 描述
+	Type    string // Type 类型
 }

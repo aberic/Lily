@@ -31,11 +31,15 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
-	confYmlPath string
-	daemon      bool
+	confYmlPath string // confYmlPath lily配置文件地址
+	daemon      bool   // daemon 是否后台启动
+	address     string // address lily服务地址
+	username    string // username lily服务用户名
+	password    string // password lily服务密码
 )
 
 var versionCmd = &cobra.Command{
@@ -86,12 +90,18 @@ var restartCmd = &cobra.Command{
 	},
 }
 
-var useCmd = &cobra.Command{
-	Use:   "use",
+var connCmd = &cobra.Command{
+	Use:   "conn",
 	Short: "使用lily指定名称的数据库",
 	Long:  `uses a database with the specified name`,
+	Args: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("address", address)
+		fmt.Println("username", username)
+		fmt.Println("password", password)
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		use()
+		conn()
 	},
 }
 
@@ -100,11 +110,15 @@ var rootCmd = &cobra.Command{
 	Short: "lily是命令的抬头符",
 	Long:  `lily is a cli library db. use lily can operation db, like start or stop.`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		// Do Stuff Here
 		if len(args) < 1 {
 			return errors.New("command is required , Use lily -h to get more information ")
 		}
-		return nil
+		switch args[0] {
+		default:
+			return errors.New("command is required , Use lily -h to get more information ")
+		case "conn", "help", "restart", "start", "stop", "version":
+			return nil
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -112,7 +126,12 @@ var rootCmd = &cobra.Command{
 }
 
 func start() {
+	if gnomon.File().PathExists("lily.lock") {
+		fmt.Println("lily is start already")
+		return
+	}
 	conf := lily.ObtainConf(confYmlPath)
+	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
 	fmt.Println("start daemon", daemon)
 	if daemon {
 		var (
@@ -129,6 +148,7 @@ func start() {
 		_ = command.Start()
 		pid = command.Process.Pid
 		fmt.Printf("lily start, [PID] %d running...\n", pid)
+		time.Sleep(2 * time.Second) // 休眠2秒，防止启动冲突
 		_ = ioutil.WriteFile("lily.lock", []byte(fmt.Sprintf("%d", command.Process.Pid)), 0666)
 		daemon = false
 		var (
@@ -167,6 +187,7 @@ func start() {
 }
 
 func stop() {
+	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
 	data, err := ioutil.ReadFile("lily.lock")
 	if nil != err {
 		panic(errors.New("lily haven not been started or no such file or directory with name lily.lock"))
@@ -175,6 +196,7 @@ func stop() {
 	if nil != err {
 		panic(err)
 	}
+	_ = os.Remove("lily.lock")
 	println("lily stop")
 }
 
@@ -191,32 +213,40 @@ func RPCListener(conf *lily.Conf) {
 	fmt.Println("creates a gRPC server")
 	server := grpc.NewServer()
 	fmt.Println("register gRPC listener")
-	api.RegisterLilyAPIServer(server, &lily.APIServer{})
+	api.RegisterLilyAPIServer(server, &lily.APIServer{Conf: conf})
 	fmt.Println("OFF")
 	if err = server.Serve(listener); nil != err {
 		panic(err)
 	}
 }
 
-func use() {
+// conn 数据库连接
+func conn() {
 	var (
-		sql string
-		err error
+		sqlContent string
+		s          *sql
+		err        error
 	)
+	if gnomon.String().IsEmpty(address) {
+		fmt.Println("connection to default gRPC server 'localhost:19877'")
+		s = &sql{serverURL: "localhost:19877"}
+	} else {
+		s = &sql{serverURL: address}
+	}
 	fmt.Print("lily->: ")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		sql = scanner.Text()
-		if gnomon.String().TrimN(sql) == "" {
+		sqlContent = scanner.Text()
+		if gnomon.String().TrimN(sqlContent) == "" {
 			fmt.Print("lily->: ")
 			continue
 		}
-		if sql == "exit" {
+		if sqlContent == "exit" {
 			fmt.Println("Bye!")
 			os.Exit(0)
 		}
-		gnomon.Log().Debug("use", gnomon.Log().Field("sql", sql))
-		if err = analysis(sql); nil != err {
+		//gnomon.Log().Debug("use", gnomon.Log().Field("sqlContent", sqlContent))
+		if err = s.analysis(sqlContent); nil != err {
 			fmt.Println(err.Error())
 		}
 		fmt.Print("lily->: ")
@@ -228,9 +258,12 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(restartCmd)
 	rootCmd.AddCommand(stopCmd)
-	rootCmd.AddCommand(useCmd)
+	rootCmd.AddCommand(connCmd)
 	startCmd.Flags().StringVarP(&confYmlPath, "path", "p", "", "也许你希望通过指定‘conf.yml’文件来使用自己的配置.")
 	startCmd.Flags().BoolVarP(&daemon, "daemon", "d", false, "是否启动后台运行")
+	connCmd.Flags().StringVarP(&address, "address", "a", "localhost:19877", "lily服务端地址，默认localhost")
+	connCmd.Flags().StringVarP(&username, "username", "u", "", "lily服务端登录用户")
+	connCmd.Flags().StringVarP(&password, "password", "p", "", "lily服务端登录密码")
 }
 
 // Execute cmd start

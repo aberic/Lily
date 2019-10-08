@@ -10,8 +10,14 @@ package api;
 import "api/rs.proto";
 
 service LilyAPI {
-    // GetDatabases 获取数据库集合
+    // GetConf 获取数据库引擎对象
+    rpc GetConf (ReqConf) returns (RespConf) {
+    }
+    // ObtainDatabases 获取数据库集合
     rpc ObtainDatabases (ReqDatabases) returns (RespDatabases) {
+    }
+    // ObtainForms 获取数据库表集合
+    rpc ObtainForms (ReqForms) returns (RespForms) {
     }
     // CreateDatabase 新建数据库
     rpc CreateDatabase (ReqCreateDatabase) returns (RespDatabase) {
