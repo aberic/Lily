@@ -17,7 +17,6 @@ package lily
 import (
 	"context"
 	"github.com/aberic/lily/api"
-	"github.com/vmihailenco/msgpack"
 	"google.golang.org/grpc"
 )
 
@@ -74,55 +73,85 @@ func CreateDoc(serverURL, dbName, name, comment string) error {
 }
 
 // PutD 新增数据
-func PutD(serverURL, key string, value interface{}) (*api.RespPutD, error) {
-	data, err := msgpack.Marshal(value)
+func PutD(serverURL, key, value string) (*api.RespPutD, error) {
+	res, err := putD(serverURL, &api.ReqPutD{Key: key, Value: []byte(value)})
 	if nil != err {
 		return nil, err
 	}
-	res, err := putD(serverURL, &api.ReqPutD{Key: key, Value: data})
 	return res.(*api.RespPutD), err
 }
 
 // SetD 新增数据
-func SetD(serverURL, key string, value interface{}) (*api.RespSetD, error) {
-	data, err := msgpack.Marshal(value)
+func SetD(serverURL, key, value string) (*api.RespSetD, error) {
+	res, err := setD(serverURL, &api.ReqSetD{Key: key, Value: []byte(value)})
 	if nil != err {
 		return nil, err
 	}
-	res, err := setD(serverURL, &api.ReqSetD{Key: key, Value: data})
 	return res.(*api.RespSetD), err
 }
 
 // GetD 获取数据
 func GetD(serverURL, key string) (*api.RespGetD, error) {
 	res, err := getD(serverURL, &api.ReqGetD{Key: key})
+	if nil != err {
+		return nil, err
+	}
 	return res.(*api.RespGetD), err
 }
 
 // Put 新增数据
-func Put(serverURL, databaseName, formName, key string, value interface{}) (*api.RespPut, error) {
-	data, err := msgpack.Marshal(value)
+func Put(serverURL, databaseName, formName, key, value string) (*api.RespPut, error) {
+	res, err := put(serverURL, &api.ReqPut{DatabaseName: databaseName, FormName: formName, Key: key, Value: []byte(value)})
 	if nil != err {
 		return nil, err
 	}
-	res, err := put(serverURL, &api.ReqPut{DatabaseName: databaseName, FormName: formName, Key: key, Value: data})
 	return res.(*api.RespPut), err
 }
 
 // Set 新增数据
-func Set(serverURL, databaseName, formName, key string, value interface{}) (*api.RespSet, error) {
-	data, err := msgpack.Marshal(value)
+func Set(serverURL, databaseName, formName, key, value string) (*api.RespSet, error) {
+	res, err := set(serverURL, &api.ReqSet{DatabaseName: databaseName, FormName: formName, Key: key, Value: []byte(value)})
 	if nil != err {
 		return nil, err
 	}
-	res, err := set(serverURL, &api.ReqSet{DatabaseName: databaseName, FormName: formName, Key: key, Value: data})
 	return res.(*api.RespSet), err
 }
 
 // Get 获取数据
-func Get(serverURL, key string) (*api.RespGet, error) {
-	res, err := get(serverURL, &api.ReqGet{Key: key})
+func Get(serverURL, databaseName, formName, key string) (*api.RespGet, error) {
+	res, err := get(serverURL, &api.ReqGet{DatabaseName: databaseName, FormName: formName, Key: key})
+	if nil != err {
+		return nil, err
+	}
 	return res.(*api.RespGet), err
+}
+
+// Insert 新增数据
+func Insert(serverURL, databaseName, formName string, value interface{}) (*api.RespInsert, error) {
+	// todo
+	res, err := insert(serverURL, &api.ReqInsert{})
+	return res.(*api.RespInsert), err
+}
+
+// Update 更新数据
+func Update(serverURL string) (*api.Resp, error) {
+	// todo
+	res, err := update(serverURL, &api.ReqUpdate{})
+	return res.(*api.Resp), err
+}
+
+// Select 获取数据
+func Select(serverURL string) (*api.RespSelect, error) {
+	// todo
+	res, err := query(serverURL, &api.ReqSelect{})
+	return res.(*api.RespSelect), err
+}
+
+// Delete 删除数据
+func Delete(serverURL string) (*api.Resp, error) {
+	// todo
+	res, err := delete(serverURL, &api.ReqDelete{})
+	return res.(*api.Resp), err
 }
 
 // getConf 获取数据库引擎对象
@@ -306,6 +335,74 @@ func get(serverURL string, req *api.ReqGet) (interface{}, error) {
 		c := api.NewLilyAPIClient(conn)
 		// 客户端向gRPC服务端发起请求
 		if result, err = c.Get(context.Background(), req); nil != err {
+			return nil, err
+		}
+		return result, nil
+	})
+}
+
+// insert 新增数据
+func insert(serverURL string, req *api.ReqInsert) (interface{}, error) {
+	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
+		var (
+			result *api.RespInsert
+			err    error
+		)
+		// 创建gRPC客户端
+		c := api.NewLilyAPIClient(conn)
+		// 客户端向gRPC服务端发起请求
+		if result, err = c.Insert(context.Background(), req); nil != err {
+			return nil, err
+		}
+		return result, nil
+	})
+}
+
+// update 更新数据
+func update(serverURL string, req *api.ReqUpdate) (interface{}, error) {
+	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
+		var (
+			result *api.Resp
+			err    error
+		)
+		// 创建gRPC客户端
+		c := api.NewLilyAPIClient(conn)
+		// 客户端向gRPC服务端发起请求
+		if result, err = c.Update(context.Background(), req); nil != err {
+			return nil, err
+		}
+		return result, nil
+	})
+}
+
+// query 获取数据
+func query(serverURL string, req *api.ReqSelect) (interface{}, error) {
+	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
+		var (
+			result *api.RespSelect
+			err    error
+		)
+		// 创建gRPC客户端
+		c := api.NewLilyAPIClient(conn)
+		// 客户端向gRPC服务端发起请求
+		if result, err = c.Select(context.Background(), req); nil != err {
+			return nil, err
+		}
+		return result, nil
+	})
+}
+
+// delete 删除数据
+func delete(serverURL string, req *api.ReqDelete) (interface{}, error) {
+	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
+		var (
+			result *api.Resp
+			err    error
+		)
+		// 创建gRPC客户端
+		c := api.NewLilyAPIClient(conn)
+		// 客户端向gRPC服务端发起请求
+		if result, err = c.Delete(context.Background(), req); nil != err {
 			return nil, err
 		}
 		return result, nil

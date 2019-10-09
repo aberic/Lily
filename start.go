@@ -16,11 +16,32 @@ package lily
 
 import (
 	"fmt"
+	"github.com/aberic/gnomon"
 	"github.com/aberic/lily/api"
 	"google.golang.org/grpc"
 	"net"
 	"strings"
 )
+
+// serverStart 启动服务
+func serverStart(conf *Conf) {
+	logSet(conf)
+	initLily(conf)
+	rpcListener(conf)
+}
+
+// logSet 日志设置
+func logSet(conf *Conf) {
+	if err := gnomon.Log().Init(conf.LogDir, 50, 7, false); nil != err {
+		panic(err)
+	}
+	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
+}
+
+func initLily(conf *Conf) {
+	ObtainLily().setConf(conf)
+	ObtainLily().Start()
+}
 
 // rpcListener 启动rpc监听
 func rpcListener(conf *Conf) {

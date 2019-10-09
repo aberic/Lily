@@ -218,7 +218,7 @@ func (n *node) rUnLock() {
 	n.pLock.RUnlock()
 }
 
-// // errDataExist 自定义error信息
+// errDataExist 自定义error信息
 func (n *node) errDataExist(key string) error {
 	return errors.New(strings.Join([]string{"data ", key, " already exist"}, ""))
 }

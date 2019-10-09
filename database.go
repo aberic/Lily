@@ -105,6 +105,12 @@ func (d *database) createForm(formName, comment, formType string) error {
 }
 
 func (d *database) createKey(formName string, keyStructure string) error {
+	// 确定key名不重复
+	for _, v := range d.forms[formName].getIndexes() {
+		if v.getKeyStructure() == keyStructure {
+			return ErrKeyExist
+		}
+	}
 	form := d.forms[formName]
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
@@ -123,6 +129,12 @@ func (d *database) createKey(formName string, keyStructure string) error {
 }
 
 func (d *database) createIndex(formName string, keyStructure string) error {
+	// 确定index名不重复
+	for _, v := range d.forms[formName].getIndexes() {
+		if v.getKeyStructure() == keyStructure {
+			return ErrIndexExist
+		}
+	}
 	form := d.forms[formName]
 	// 自定义Key生成ID
 	customID := d.name2id(strings.Join([]string{formName, keyStructure}, "_"))
@@ -148,9 +160,8 @@ func (d *database) put(formName string, key string, value interface{}, update bo
 	if form.getFormType() != FormTypeDoc {
 		return 0, errors.New("put method only support doc")
 	}
-	indexes := form.getIndexes()                    // 获取表索引ID集合
-	autoID := atomic.AddUint64(form.getAutoID(), 1) // ID自增
-	return d.insertDataWithIndexInfo(form, key, autoID, indexes, value, update)
+	indexes := form.getIndexes() // 获取表索引ID集合
+	return d.insertDataWithIndexInfo(form, key, indexes, value, update)
 }
 
 func (d *database) get(formName string, key string) (interface{}, error) {
@@ -180,7 +191,7 @@ func (d *database) query(formName string, selector *Selector) (int, interface{},
 	return selector.query()
 }
 
-func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint64, indexes map[string]Index, value interface{}, update bool) (uint64, error) {
+func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[string]Index, value interface{}, update bool) (uint64, error) {
 	var (
 		ibs []IndexBack
 		wg  sync.WaitGroup
@@ -189,10 +200,9 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint64,
 	//gnomon.Log().Debug("insertDataWithIndexInfo", gnomon.Log().Field("ibs", ibs))
 	defer form.unLock()
 	form.lock()
+	autoID := atomic.AddUint64(form.getAutoID(), 1) // ID自增
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
-	if ibs, err = d.rangeIndexes(form, key, autoID, indexes, value, update); nil != err {
-		return 0, err
-	}
+	ibs = d.rangeIndexes(form, key, autoID, indexes, value, update)
 	// 存储数据到表文件
 	dataWriteResult := store().storeData(pathFormDataFile(d.id, form.getID()), value)
 	if nil != dataWriteResult.err {
@@ -216,15 +226,14 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, autoID uint64,
 			return 0, err
 		}
 	}
-	return autoID, nil
+	return *form.getAutoID(), nil
 }
 
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
-func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes map[string]Index, value interface{}, update bool) ([]IndexBack, error) {
+func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes map[string]Index, value interface{}, update bool) []IndexBack {
 	var (
 		wg        sync.WaitGroup
 		chanIndex chan IndexBack
-		err       error
 	)
 	indexLen := len(indexes)
 	chanIndex = make(chan IndexBack, indexLen) // 创建索引ID结果返回通道
@@ -239,22 +248,7 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes ma
 			} else if index.getKeyStructure() == indexDefaultID {
 				chanIndex <- form.getIndexes()[index.getID()].put(key, hash(key), update)
 			} else {
-				reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
-				params := strings.Split(index.getKeyStructure(), ".")
-				var checkValue reflect.Value
-				for _, param := range params {
-					checkNewValue := reflectObj.Elem().FieldByName(param)
-					if checkNewValue.IsValid() { // 子字段有效
-						checkValue = checkNewValue
-						continue
-					}
-					chanIndex <- &indexBack{err: errors.New(strings.Join([]string{"index", index.getKeyStructure(), "is invalid"}, " "))}
-					return
-				}
-				//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("checkValue", checkValue))
-				if keyNew, hashKeyNew, valid := valueType2index(&checkValue); valid {
-					chanIndex <- form.getIndexes()[index.getID()].put(keyNew, hashKeyNew, update)
-				}
+				chanIndex <- d.getCustomIndex(form, index, value, update)
 			}
 		}(autoID, index)
 	}
@@ -262,14 +256,60 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes ma
 	var ibs []IndexBack
 	for i := 0; i < indexLen; i++ {
 		ib := <-chanIndex
-		//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("ib.formIndexFilePath", ib.getFormIndexFilePath()))
-		if err = ib.getErr(); nil != err {
-			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Err(err))
-			return nil, err
+		if ib.getErr() == nil {
+			ibs = append(ibs, ib)
 		}
-		ibs = append(ibs, ib)
 	}
-	return ibs, nil
+	return ibs
+}
+
+// getCustomIndex 获取自定义索引预插入返回对象
+func (d *database) getCustomIndex(form Form, idx Index, value interface{}, update bool) IndexBack {
+	reflectValue := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
+	params := strings.Split(idx.getKeyStructure(), ".")
+	switch reflectValue.Kind() {
+	default:
+		return &indexBack{err: errors.New(strings.Join([]string{"index", idx.getKeyStructure(), "with type is invalid"}, " "))}
+	case reflect.Map:
+		var (
+			item      interface{}
+			paramsLen = len(params)
+			position  int
+			itemMap   = value.(map[string]interface{})
+		)
+		for _, param := range params {
+			position++
+			item = itemMap[param]
+			if position == paramsLen { // 表示没有后续参数
+				break
+			}
+			switch item.(type) {
+			default:
+				return &indexBack{err: errors.New(strings.Join([]string{"index", idx.getKeyStructure(), "with map is invalid"}, " "))}
+			case map[string]interface{}:
+				itemMap = item.(map[string]interface{})
+				continue
+			}
+		}
+		if keyNew, hashKeyNew, valid := type2index(item); valid {
+			return form.getIndexes()[idx.getID()].put(keyNew, hashKeyNew, update)
+		}
+		return &indexBack{err: errors.New(strings.Join([]string{"index", idx.getKeyStructure(), "with map value is invalid"}, " "))}
+	case reflect.Ptr:
+		checkValue := reflectValue
+		for _, param := range params {
+			checkNewValue := checkValue.Elem().FieldByName(param)
+			if checkNewValue.IsValid() { // 子字段有效
+				checkValue = checkNewValue
+				continue
+			}
+			return &indexBack{err: errors.New(strings.Join([]string{"index", idx.getKeyStructure(), "with ptr is invalid"}, " "))}
+		}
+		if keyNew, hashKeyNew, valid := valueType2index(&checkValue); valid {
+			return form.getIndexes()[idx.getID()].put(keyNew, hashKeyNew, update)
+		}
+		return &indexBack{err: errors.New(strings.Join([]string{"index", idx.getKeyStructure(), "with ptr value is invalid"}, " "))}
+	}
 }
 
 // formIsInvalid 自定义error信息

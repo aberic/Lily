@@ -52,9 +52,9 @@ var startCmd = &cobra.Command{
 	Short: "启动lily，会有初始化操作",
 	Long:  `start lily service`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("startCmd daemon", daemon)
+		//fmt.Println("startCmd daemon", daemon)
 		if daemon {
-			fmt.Println("后台运行…")
+			fmt.Println("后台启动…")
 		} else {
 			fmt.Println("前端启动…")
 		}
@@ -128,14 +128,13 @@ func start() {
 	}
 	conf := ObtainConf(confYmlPath)
 	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
-	fmt.Println("start daemon", daemon)
+	//fmt.Println("start daemon", daemon)
 	if daemon {
 		var (
 			command *exec.Cmd
 			pid     int
 		)
-		fmt.Println("确认后台运行…")
-		fmt.Println("启动监听器…")
+		fmt.Println("后台启动…")
 		if gnomon.String().IsEmpty(confYmlPath) {
 			command = exec.Command("./lily", "start")
 		} else {
@@ -144,14 +143,14 @@ func start() {
 		_ = command.Start()
 		pid = command.Process.Pid
 		fmt.Printf("lily start, [PID] %d running...\n", pid)
-		time.Sleep(2 * time.Second) // 休眠2秒，防止启动冲突
-		_ = ioutil.WriteFile("lily.lock", []byte(fmt.Sprintf("%d", command.Process.Pid)), 0666)
 		daemon = false
 		var (
 			running = false
 			arr     []string
 			err     error
 		)
+		loadChan := make(chan struct{})
+		go loadingFmt(time.Second, loadChan)
 		for !running {
 			if _, _, arr, err = gnomon.Command().ExecCommandSilent("lsof", "-i"); nil != err {
 				panic(err)
@@ -160,7 +159,9 @@ func start() {
 				str = gnomon.String().SingleSpace(str)
 				strs := strings.Split(str, " ")
 				if strs[0] == "lily" && strs[1] == strconv.Itoa(pid) {
+					loadChan <- struct{}{}
 					running = true
+					fmt.Println()
 					fmt.Println("------------------------------------------------------------")
 					flag.Parse()
 					str := *flag.String("str", "Lily", "input string")
@@ -173,18 +174,40 @@ func start() {
 				}
 			}
 		}
+		_ = ioutil.WriteFile("lily.lock", []byte(fmt.Sprintf("%d", command.Process.Pid)), 0666)
 		os.Exit(0)
 	} else {
 		fmt.Println("lily start")
 	}
 	fmt.Println("初始化数据库…")
-	ObtainLily().Start()
-	rpcListener(conf)
+	serverStart(conf)
+}
+
+func loadingFmt(delay time.Duration, loadChan chan struct{}) {
+	s := "."
+	running := false
+	go func() {
+		<-loadChan
+		running = true
+	}()
+	for {
+		if running {
+			return
+		}
+		switch len(s) {
+		default:
+			s = "."
+		case 1, 2, 3, 4, 5:
+			s = strings.Join([]string{s, "."}, "")
+		}
+		fmt.Printf("\r%s", s)
+		time.Sleep(delay)
+	}
 }
 
 func stop() {
 	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
-	data, err := ioutil.ReadFile("lock")
+	data, err := ioutil.ReadFile("lily.lock")
 	if nil != err {
 		panic(errors.New("lily haven not been started or no such file or directory with name lock"))
 	}
@@ -217,7 +240,7 @@ func conn() {
 			fmt.Print("lily->: ")
 			continue
 		}
-		if sqlContent == "exit" {
+		if gnomon.String().Trim(sqlContent) == "exit" {
 			fmt.Println("Bye!")
 			os.Exit(0)
 		}

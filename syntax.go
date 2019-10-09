@@ -16,14 +16,16 @@ package lily
 
 import (
 	"errors"
+	"fmt"
 	"github.com/aberic/gnomon"
 	"github.com/modood/table"
+	"github.com/vmihailenco/msgpack"
 	"strings"
 )
 
 var (
-	sqlSyntaxErr                   = err("sql syntax error")
-	sqlDatabaseIsNilErr            = err("database is nil, you should use database first")
+	sqlSyntaxErr                   = customErr("sql syntax error")
+	sqlDatabaseIsNilErr            = customErr("database is nil, you should use database first")
 	sqlSyntaxParamsCountInvalidErr = syntaxErr("params count is invalid")
 )
 
@@ -32,7 +34,7 @@ type sql struct {
 	databaseName string // databaseName 当前操作数据库名称
 }
 
-func err(errStr string) error {
+func customErr(errStr string) error {
 	return errors.New(errStr)
 }
 
@@ -54,27 +56,27 @@ func (s *sql) analysis(sql string) error {
 }
 
 func (s *sql) first(array []string) error {
-	switch strings.ToLower(array[0]) {
+	switch array[0] {
 	default:
-		return sqlSyntaxErr
+		return syntaxErr(strings.Join(array, " "))
 	case "show":
 		return s.show(array)
 	case "use":
 		return s.use(array)
 	case "create":
 		return s.create(array)
-		//case "putD":
-		//	return s.putD(array)
-		//case "setD":
-		//	return s.setD(array)
-		//case "getD":
-		//	return s.getD(array)
-		//case "put":
-		//	return s.put(array)
-		//case "set":
-		//	return s.set(array)
-		//case "get":
-		//	return s.get(array)
+	case "putD":
+		return s.putD(array)
+	case "setD":
+		return s.setD(array)
+	case "getD":
+		return s.getD(array)
+	case "put":
+		return s.put(array)
+	case "set":
+		return s.set(array)
+	case "get":
+		return s.get(array)
 	}
 }
 
@@ -87,13 +89,13 @@ func (s *sql) show(array []string) error {
 	default:
 		return sqlSyntaxErr
 	case "conf":
-		var confs []*Conf
+		var configs []*Conf
 		conf, err := GetConf(s.serverURL)
 		if nil != err {
 			return executeErr(err.Error())
 		}
-		confs = append(confs, conf)
-		table.Output(confs)
+		configs = append(configs, conf)
+		table.Output(configs)
 		return nil
 	case "databases":
 		dbs, err := ObtainDatabases(s.serverURL)
@@ -193,13 +195,85 @@ func (s *sql) createDoc(array []string) error {
 	return sqlSyntaxErr
 }
 
-//func (s *sql) putD(array []string) error {
-//	if len(array) < 3 {
-//		return sqlSyntaxParamsCountInvalidErr
-//	}
-//	valueStr := strings.Join(array[2:], " ")
-//	PutD(s.serverURL)
-//}
+func (s *sql) putD(array []string) error {
+	if len(array) < 3 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	valueStr := strings.Join(array[2:], " ")
+	_, err := PutD(s.serverURL, array[1], valueStr)
+	if nil != err {
+		return err
+	}
+	return nil
+}
+
+func (s *sql) setD(array []string) error {
+	if len(array) < 3 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	valueStr := strings.Join(array[2:], " ")
+	_, err := SetD(s.serverURL, array[1], valueStr)
+	if nil != err {
+		return err
+	}
+	return nil
+}
+
+func (s *sql) getD(array []string) error {
+	if len(array) != 2 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	resp, err := GetD(s.serverURL, array[1])
+	if nil != err {
+		return err
+	}
+	var v interface{}
+	if err = msgpack.Unmarshal(resp.Value, &v); nil != err {
+		return err
+	}
+	fmt.Println(v)
+	return nil
+}
+
+func (s *sql) put(array []string) error {
+	if len(array) < 5 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	valueStr := strings.Join(array[4:], " ")
+	_, err := Put(s.serverURL, s.databaseName, array[2], array[3], valueStr)
+	if nil != err {
+		return err
+	}
+	return nil
+}
+
+func (s *sql) set(array []string) error {
+	if len(array) < 5 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	valueStr := strings.Join(array[4:], " ")
+	_, err := Set(s.serverURL, s.databaseName, array[2], array[3], valueStr)
+	if nil != err {
+		return err
+	}
+	return nil
+}
+
+func (s *sql) get(array []string) error {
+	if len(array) != 2 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	resp, err := Get(s.serverURL, s.databaseName, array[2], array[3])
+	if nil != err {
+		return err
+	}
+	var v interface{}
+	if err = msgpack.Unmarshal(resp.Value, &v); nil != err {
+		return err
+	}
+	fmt.Println(v)
+	return nil
+}
 
 //func put(databaseName, formName, key string, value interface{}) error {
 //

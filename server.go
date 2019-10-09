@@ -16,8 +16,10 @@ package lily
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/aberic/lily/api"
 	"github.com/vmihailenco/msgpack"
+	"gopkg.in/yaml.v3"
 )
 
 // APIServer APIServer
@@ -89,9 +91,13 @@ func (l *APIServer) PutD(ctx context.Context, req *api.ReqPutD) (*api.RespPutD, 
 		hashKey uint64
 		err     error
 	)
-	if err = msgpack.Unmarshal(req.Value, v); nil != err {
-		return &api.RespPutD{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	if err = json.Unmarshal(req.Value, &v); nil == err { // 尝试用json解析
+		goto PUT
 	}
+	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
+		goto PUT
+	}
+PUT:
 	if hashKey, err = ObtainLily().PutD(req.Key, v); nil != err {
 		return &api.RespPutD{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}
@@ -105,9 +111,13 @@ func (l *APIServer) SetD(ctx context.Context, req *api.ReqSetD) (*api.RespSetD, 
 		hashKey uint64
 		err     error
 	)
-	if err = msgpack.Unmarshal(req.Value, v); nil != err {
-		return &api.RespSetD{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	if err = json.Unmarshal(req.Value, &v); nil == err { // 尝试用json解析
+		goto PUT
 	}
+	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
+		goto PUT
+	}
+PUT:
 	if hashKey, err = ObtainLily().SetD(req.Key, v); nil != err {
 		return &api.RespSetD{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}
@@ -137,9 +147,13 @@ func (l *APIServer) Put(ctx context.Context, req *api.ReqPut) (*api.RespPut, err
 		hashKey uint64
 		err     error
 	)
-	if err = msgpack.Unmarshal(req.Value, v); nil != err {
-		return &api.RespPut{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	if err = json.Unmarshal(req.Value, &v); nil == err { // 尝试用json解析
+		goto PUT
 	}
+	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
+		goto PUT
+	}
+PUT:
 	if hashKey, err = ObtainLily().Put(req.DatabaseName, req.FormName, req.Key, v); nil != err {
 		return &api.RespPut{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}
@@ -153,9 +167,13 @@ func (l *APIServer) Set(ctx context.Context, req *api.ReqSet) (*api.RespSet, err
 		hashKey uint64
 		err     error
 	)
-	if err = msgpack.Unmarshal(req.Value, v); nil != err {
-		return &api.RespSet{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	if err = json.Unmarshal(req.Value, &v); nil == err { // 尝试用json解析
+		goto PUT
 	}
+	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
+		goto PUT
+	}
+PUT:
 	if hashKey, err = ObtainLily().Set(req.DatabaseName, req.FormName, req.Key, v); nil != err {
 		return &api.RespSet{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}

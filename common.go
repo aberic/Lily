@@ -226,6 +226,41 @@ func pathFormDataFile(dataID, formID string) string {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func type2index(value interface{}) (key string, hashKey uint64, support bool) {
+	support = true
+	switch value.(type) {
+	default:
+		return "", 0, false
+	case int8, int16, int32, int, int64:
+		i64 := value.(int64)
+		key = strconv.FormatInt(i64, 10)
+		hashKey = uint64(i64 + 9223372036854775807 + 1)
+	case uint8, uint16, uint32, uint, uint64, uintptr:
+		ui64 := value.(uint64)
+		key = strconv.FormatUint(ui64, 10)
+		if ui64 > 9223372036854775807 { // 9223372036854775808 = 1 << 63
+			return "", 0, false
+		}
+		hashKey = ui64 + 9223372036854775807 + 1
+	case float32, float64:
+		i64 := gnomon.Scale().Float64toInt64(value.(float64), 4)
+		key = strconv.FormatInt(i64, 10)
+		hashKey = uint64(i64 + 9223372036854775807 + 1)
+	case string:
+		key = value.(string)
+		hashKey = hash(key)
+	case bool:
+		if value.(bool) {
+			key = value.(string)
+			hashKey = 1
+		} else {
+			key = value.(string)
+			hashKey = 2
+		}
+	}
+	return
+}
+
 func valueType2index(value *reflect.Value) (key string, hashKey uint64, support bool) {
 	support = true
 	switch value.Kind() {

@@ -15,6 +15,7 @@
 package lily
 
 import (
+	"encoding/json"
 	"github.com/aberic/gnomon"
 	"math/rand"
 	"strconv"
@@ -75,6 +76,9 @@ func TestPutGet(t *testing.T) {
 		t.Log(err)
 	}
 	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
+	if err := l.CreateKey(checkbookName, shopperName, "ID"); nil != err {
+		t.Error(err)
+	}
 	if _, err = l.Put(checkbookName, shopperName, strconv.Itoa(198), 200); nil != err {
 		t.Log(err)
 	}
@@ -141,6 +145,14 @@ func TestQuerySelector1(t *testing.T) {
 }
 
 type TestValue struct {
+	ID          int
+	Age         int
+	IsMarry     bool
+	Timestamp   int64
+	TestValueIn *TestValueIn
+}
+
+type TestValueIn struct {
 	ID        int
 	Age       int
 	IsMarry   bool
@@ -156,14 +168,16 @@ func TestQuerySelector2(t *testing.T) {
 	if nil != err {
 		t.Error(err)
 	}
-	_ = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc)
-	if err = l.CreateKey(checkbookName, shopperName, "ID"); nil != err {
+	if err = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc); nil != err {
 		t.Error(err)
 	}
-	if err = l.CreateIndex(checkbookName, shopperName, "Timestamp"); nil != err {
+	if err = l.CreateKey(checkbookName, shopperName, "TestValueIn.ID"); nil != err {
 		t.Error(err)
 	}
-	if err = l.CreateIndex(checkbookName, shopperName, "Age"); nil != err {
+	if err = l.CreateIndex(checkbookName, shopperName, "TestValueIn.Timestamp"); nil != err {
+		t.Error(err)
+	}
+	if err = l.CreateIndex(checkbookName, shopperName, "TestValueIn.Age"); nil != err {
 		t.Error(err)
 	}
 	gnomon.Log().Debug("TestQuerySelector2 Put")
@@ -172,7 +186,17 @@ func TestQuerySelector2(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{ID: i, Age: i + 19, Timestamp: time.Now().Local().UnixNano()}); nil != err {
+			tv := &TestValue{
+				ID:        i,
+				Age:       i + 19,
+				Timestamp: time.Now().Local().UnixNano(),
+				TestValueIn: &TestValueIn{
+					ID:        i,
+					Age:       i + 19,
+					Timestamp: time.Now().Local().UnixNano(),
+				},
+			}
+			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), tv); nil != err {
 				t.Log(err)
 			}
 		}(i)
@@ -194,19 +218,98 @@ func TestQuerySelector2(t *testing.T) {
 	)
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{})
 	t.Log("select nil count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "Timestamp", Cond: "gt", Value: 1}}})
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "TestValueIn.Timestamp", Cond: "gt", Value: 1}}})
 	t.Log("select time count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: true}})
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.Timestamp", ASC: true}})
 	t.Log("select time true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "Timestamp", ASC: false}})
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.Timestamp", ASC: false}})
 	t.Log("select time false count =", count, "i = ", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "ID", ASC: true}})
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.ID", ASC: true}})
 	t.Log("select id true count =", count, "i =", i, "err = ", err)
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "ID", ASC: false}})
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.ID", ASC: false}})
 	t.Log("select id false count =", count, "i = ", i, "err = ", err)
 }
 
 func TestQuerySelector3(t *testing.T) {
+	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
+	gnomon.Log().Debug("TestQuerySelector2 Start")
+	l := ObtainLily()
+	l.Start()
+	_, err := l.CreateDatabase(checkbookName, "数据库描述")
+	if nil != err {
+		t.Error(err)
+	}
+	if err = l.CreateForm(checkbookName, shopperName, "", FormTypeDoc); nil != err {
+		t.Error(err)
+	}
+	if err = l.CreateKey(checkbookName, shopperName, "TestValueIn.ID"); nil != err {
+		t.Error(err)
+	}
+	if err = l.CreateIndex(checkbookName, shopperName, "TestValueIn.Timestamp"); nil != err {
+		t.Error(err)
+	}
+	if err = l.CreateIndex(checkbookName, shopperName, "TestValueIn.Age"); nil != err {
+		t.Error(err)
+	}
+	gnomon.Log().Debug("TestQuerySelector2 Put")
+	var wg sync.WaitGroup
+	for i := 1007; i > 0; i-- {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			tv := &TestValue{
+				ID:        i,
+				Age:       i + 19,
+				Timestamp: time.Now().Local().UnixNano(),
+				TestValueIn: &TestValueIn{
+					ID:        i,
+					Age:       i + 19,
+					Timestamp: time.Now().Local().UnixNano(),
+				},
+			}
+			data, err := json.Marshal(tv)
+			if nil != err {
+				t.Error(err)
+			}
+			var dataMap map[string]interface{}
+			if err = json.Unmarshal(data, &dataMap); nil != err {
+				t.Error(err)
+			}
+			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), dataMap); nil != err {
+				t.Log(err)
+			}
+		}(i)
+	}
+	wg.Wait()
+	gnomon.Log().Debug("TestQuerySelector2 Get")
+	for i := 807; i > 800; i-- {
+		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
+		if nil != err {
+			t.Log(err)
+		} else {
+			t.Log("get ", i, " = ", j)
+		}
+	}
+	gnomon.Log().Debug("TestQuerySelector2 Select")
+	var (
+		i     interface{}
+		count int
+	)
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{})
+	t.Log("select nil count =", count, "i = ", i, "err = ", err)
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Conditions: []*condition{{Param: "TestValueIn.Timestamp", Cond: "gt", Value: 1}}})
+	t.Log("select time count =", count, "i = ", i, "err = ", err)
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.Timestamp", ASC: true}})
+	t.Log("select time true count =", count, "i =", i, "err = ", err)
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.Timestamp", ASC: false}})
+	t.Log("select time false count =", count, "i = ", i, "err = ", err)
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.ID", ASC: true}})
+	t.Log("select id true count =", count, "i =", i, "err = ", err)
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "TestValueIn.ID", ASC: false}})
+	t.Log("select id false count =", count, "i = ", i, "err = ", err)
+}
+
+func TestQuerySelector4(t *testing.T) {
 	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
 	gnomon.Log().Debug("TestQuerySelector3 Start")
 	l := ObtainLily()
@@ -266,7 +369,7 @@ func TestQuerySelector3(t *testing.T) {
 	t.Log("select Age false count =", count, "i = ", i, "err = ", err)
 }
 
-func TestQuerySelector4(t *testing.T) {
+func TestQuerySelector5(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName, "数据库描述")
@@ -299,7 +402,7 @@ func TestQuerySelector4(t *testing.T) {
 	t.Log("select = ", i, "err = ", err)
 }
 
-func TestQuerySelector5(t *testing.T) {
+func TestQuerySelector6(t *testing.T) {
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName, "数据库描述")

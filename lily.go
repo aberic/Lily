@@ -37,6 +37,10 @@ var (
 	ErrDatabaseExist = errors.New("database already exist")
 	// ErrFormExist 自定义error信息
 	ErrFormExist = errors.New("form already exist")
+	// ErrKeyExist 自定义error信息
+	ErrKeyExist = errors.New("key already exist")
+	// ErrIndexExist 自定义error信息
+	ErrIndexExist = errors.New("index already exist")
 	// ErrDataIsNil 自定义error信息
 	ErrDataIsNil = errors.New("database had never been created")
 	// ErrKeyIsNil 自定义error信息
@@ -52,6 +56,7 @@ var (
 // 存储格式 {dataDir}/Data/{dataName}/{formName}/{formName}.dat/idx...
 type Lily struct {
 	lilyData  *api.Lily
+	conf      *Conf
 	databases map[string]Database
 	once      sync.Once
 	lock      sync.Mutex
@@ -76,6 +81,10 @@ func ObtainLily() *Lily {
 		}
 	})
 	return lilyInstance
+}
+
+func (l *Lily) setConf(conf *Conf) {
+	l.conf = conf
 }
 
 // syncRPC2Store 将 api.Lily 对象同步至本地文件中
@@ -414,6 +423,7 @@ func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 //
 // value 插入数据对象
 func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint64, error) {
+	// todo 新增数据
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
 	}
@@ -430,6 +440,7 @@ func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint64,
 //
 // value 插入数据对象
 func (l *Lily) Update(databaseName, formName string, value interface{}) error {
+	// todo 更新数据
 	if nil == l || nil == l.databases[databaseName] {
 		return ErrDataIsNil
 	}
