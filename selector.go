@@ -229,7 +229,7 @@ func (s *Selector) leftQueryNode(node Nodal, ns *nodeCondition) (int, []interfac
 		if ns == nil {
 			return s.leftQueryLeaf(node.(Leaf), nil)
 		}
-		return s.leftQueryLeaf(node.(Leaf), ns.nextNode)
+		return s.leftQueryLeaf(node.(Leaf), ns)
 	}
 	return count, is
 }
@@ -241,8 +241,8 @@ func (s *Selector) leftQueryLeaf(leaf Leaf, ns *nodeCondition) (int, []interface
 		if inter, err := link.get(); nil == err {
 			// todo 条件确定
 			for _, cond := range s.Conditions {
-				if nil != ns && cond.Param == ns.nss[0].cond.Param {
-					continue
+				if nil == ns || cond.Param != ns.nss[0].cond.Param {
+
 				}
 			}
 			is = append(is, inter)
@@ -304,7 +304,7 @@ func (s *Selector) rightQueryNode(node Nodal, ns *nodeCondition) (int, []interfa
 		if ns == nil {
 			return s.rightQueryLeaf(node.(Leaf), nil)
 		}
-		return s.rightQueryLeaf(node.(Leaf), ns.nextNode)
+		return s.rightQueryLeaf(node.(Leaf), ns)
 	}
 	return count, is
 }
