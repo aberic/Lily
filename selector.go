@@ -90,19 +90,19 @@ func (s *Selector) query() (int, []interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
-		ns        *nodeSelector
+		nc        *nodeCondition
 		count     int
 		is        []interface{}
+		err       error
 	)
-	index, leftQuery, ns = s.getIndex()
-	if nil == index {
-		return 0, nil, errors.New("index not found")
+	if index, leftQuery, nc, err = s.getIndex(); nil != err {
+		return 0, nil, err
 	}
 	gnomon.Log().Debug("query", gnomon.Log().Field("index", index.getKeyStructure()))
 	if leftQuery {
-		count, is = s.leftQueryIndex(index, ns)
+		count, is = s.leftQueryIndex(index, nc)
 	} else {
-		count, is = s.rightQueryIndex(index)
+		count, is = s.rightQueryIndex(index, nc)
 	}
 	return count, is, nil
 }
@@ -114,48 +114,61 @@ func (s *Selector) query() (int, []interface{}, error) {
 // leftQuery 是否顺序查询
 //
 // cond 条件对象
-func (s *Selector) getIndex() (index Index, leftQuery bool, node *nodeSelector) {
+func (s *Selector) getIndex() (index Index, leftQuery bool, node *nodeCondition, err error) {
 	var idx Index
-	idx, leftQuery, node = s.getIndexCondition()
-	if idx != nil {
-		return idx, leftQuery, node
+	// 优先尝试采用条件作为索引，缩小索引范围以提高检索效率
+	idx, leftQuery, node, err = s.getIndexCondition()
+	if idx != nil { // 如果存在条件查询，则优先条件查询
+		return idx, leftQuery, node, err
 	}
-	for _, idx = range s.database.getForms()[s.formName].getIndexes() {
+	for _, idx := range s.database.getForms()[s.formName].getIndexes() { // 如果存在排序查询，则优先排序查询
 		if s.Sort != nil && s.Sort.Param == idx.getKeyStructure() {
-			return idx, s.Sort.ASC, nil
+			return idx, s.Sort.ASC, nil, nil
 		}
 	}
 	// 取值默认索引来进行查询操作
-	for _, idx = range s.database.getForms()[s.formName].getIndexes() {
+	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
 		gnomon.Log().Debug("getIndex", gnomon.Log().Field("index", index))
-		return idx, true, nil
+		return idx, true, nil, nil
 	}
-	return nil, false, nil
+	return nil, false, nil, errors.New("index not found")
 }
 
-func (s *Selector) getIndexCondition() (index Index, leftQuery bool, node *nodeSelector) {
-	if len(s.Conditions) > 0 { // 优先尝试采用条件作为索引，缩小索引范围以提高检索效率
-		for _, condition := range s.Conditions { // 遍历检索条件
-			meetRight := false
-			for _, idx := range s.database.getForms()[s.formName].getIndexes() {
-				if condition.Param == idx.getKeyStructure() { // 匹配条件是否存在已有索引
-					if nil != s.Sort && s.Sort.Param == idx.getKeyStructure() { // 如果有，则继续判断该索引是否存在排序需求
-						index = idx
-						leftQuery = s.Sort.ASC
-						node = s.getConditionNode(condition)
-						meetRight = true
-						break
-					}
-					if index != nil {
-						continue
-					}
+// getIndexCondition 优先尝试采用条件作为索引，缩小索引范围以提高检索效率
+//
+// 优先匹配有多个相同Param参数的条件，如果相同数量一样，则按照先后顺序选择最先匹配的
+func (s *Selector) getIndexCondition() (index Index, leftQuery bool, nc *nodeCondition, err error) {
+	ncs := make(map[string]*nodeCondition)
+	leftQuery = true
+	for _, condition := range s.Conditions { // 遍历检索条件
+		for _, idx := range s.database.getForms()[s.formName].getIndexes() {
+			if condition.Param == idx.getKeyStructure() { // 匹配条件是否存在已有索引
+				if nil != s.Sort && s.Sort.Param == idx.getKeyStructure() { // 如果有，则继续判断该索引是否存在排序需求
 					index = idx
-					node = s.getConditionNode(condition)
+					leftQuery = s.Sort.ASC
+					if ncs[condition.Param] == nil {
+						ncs[condition.Param] = &nodeCondition{nss: []*nodeSelector{}}
+					}
+					s.getConditionNode(ncs[condition.Param], condition)
+					break
 				}
+				if index != nil {
+					continue
+				}
+				index = idx
+				if ncs[condition.Param] == nil {
+					ncs[condition.Param] = &nodeCondition{nss: []*nodeSelector{}}
+				}
+				s.getConditionNode(ncs[condition.Param], condition)
 			}
-			if meetRight {
-				break
-			}
+		}
+	}
+	var nodeCount = 0
+	for _, ncNow := range ncs {
+		ncNowCount := len(ncNow.nss)
+		if ncNowCount > nodeCount {
+			nodeCount = ncNowCount
+			nc = ncNow
 		}
 	}
 	return
@@ -164,11 +177,19 @@ func (s *Selector) getIndexCondition() (index Index, leftQuery bool, node *nodeS
 // leftQueryIndex 索引顺序检索
 //
 // index 已获取索引对象
-func (s *Selector) leftQueryIndex(index Index, ns *nodeSelector) (int, []interface{}) {
-	count := 0
-	is := make([]interface{}, 0)
+func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition) (int, []interface{}) {
+	var (
+		count, nc int
+		nis       []interface{}
+		is        = make([]interface{}, 0)
+	)
 	for _, node := range index.getNode().getNodes() {
-		nc, nis := s.leftQueryNode(node, ns)
+		if nil == ns {
+			nc, nis = s.leftQueryNode(node, nil)
+		} else {
+			nc, nis = s.leftQueryNode(node, ns.nextNode)
+		}
+
 		count += nc
 		is = append(is, nis...)
 	}
@@ -186,6 +207,129 @@ func (s *Selector) leftQueryIndex(index Index, ns *nodeSelector) (int, []interfa
 		return count, is
 	}
 	return count, s.shellSort(is)
+}
+
+// leftQueryNode 节点顺序检索
+func (s *Selector) leftQueryNode(node Nodal, ns *nodeCondition) (int, []interface{}) {
+	count := 0
+	is := make([]interface{}, 0)
+	if nodes := node.getNodes(); nil != nodes {
+		for _, nd := range node.getNodes() {
+			if ns == nil {
+				nc, nis := s.leftQueryNode(nd, nil)
+				count += nc
+				is = append(is, nis...)
+			} else if s.conditions(nd, ns.nextNode.nss) { // 判断当前条件是否满足，如果满足则继续下一步
+				nc, nis := s.leftQueryNode(nd, ns.nextNode)
+				count += nc
+				is = append(is, nis...)
+			}
+		}
+	} else {
+		if ns == nil {
+			return s.leftQueryLeaf(node.(Leaf), nil)
+		}
+		return s.leftQueryLeaf(node.(Leaf), ns.nextNode)
+	}
+	return count, is
+}
+
+// leftQueryLeaf 叶子节点顺序检索
+func (s *Selector) leftQueryLeaf(leaf Leaf, ns *nodeCondition) (int, []interface{}) {
+	is := make([]interface{}, 0)
+	for _, link := range leaf.getLinks() {
+		if inter, err := link.get(); nil == err {
+			// todo 条件确定
+			for _, cond := range s.Conditions {
+				if nil != ns && cond.Param == ns.nss[0].cond.Param {
+					continue
+				}
+			}
+			is = append(is, inter)
+		}
+	}
+	return len(leaf.getLinks()), is
+}
+
+// rightQueryIndex 索引倒序检索
+//
+// index 已获取索引对象
+func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition) (int, []interface{}) {
+	var (
+		count, nc int
+		nis       []interface{}
+		is        = make([]interface{}, 0)
+	)
+	lenNode := len(index.getNode().getNodes())
+	for i := lenNode - 1; i >= 0; i-- {
+		if nil == ns {
+			nc, nis = s.rightQueryNode(index.getNode().getNodes()[i], nil)
+		} else {
+			nc, nis = s.rightQueryNode(index.getNode().getNodes()[i], ns.nextNode)
+		}
+		count += nc
+		is = append(is, nis...)
+	}
+	if s.Skip > 0 {
+		if s.Skip < uint32(len(is)) {
+			is = is[s.Skip:]
+		} else {
+			is = is[0:0]
+		}
+	}
+	if s.Limit > 0 && s.Limit < uint32(len(is)) {
+		is = is[:s.Limit]
+	}
+	return count, is
+}
+
+// rightQueryNode 节点倒序检索
+func (s *Selector) rightQueryNode(node Nodal, ns *nodeCondition) (int, []interface{}) {
+	count := 0
+	is := make([]interface{}, 0)
+	if nodes := node.getNodes(); nil != nodes {
+		lenNode := len(nodes)
+		for i := lenNode - 1; i >= 0; i-- {
+			if ns == nil {
+				nc, nis := s.rightQueryNode(nodes[i], nil)
+				count += nc
+				is = append(is, nis...)
+			} else if s.conditions(nodes[i], ns.nextNode.nss) { // 判断当前条件是否满足，如果满足则继续下一步
+				nc, nis := s.rightQueryNode(nodes[i], ns.nextNode)
+				count += nc
+				is = append(is, nis...)
+			}
+		}
+	} else {
+		if ns == nil {
+			return s.rightQueryLeaf(node.(Leaf), nil)
+		}
+		return s.rightQueryLeaf(node.(Leaf), ns.nextNode)
+	}
+	return count, is
+}
+
+// rightQueryLeaf 叶子节点倒序检索
+func (s *Selector) rightQueryLeaf(leaf Leaf, ns *nodeCondition) (int, []interface{}) {
+	is := make([]interface{}, 0)
+	links := leaf.getLinks()
+	lenLink := len(links)
+	for i := lenLink - 1; i >= 0; i-- {
+		if inter, err := links[i].get(); nil == err {
+			is = append(is, inter)
+		}
+	}
+	return len(leaf.getLinks()), is
+}
+
+// conditions 判断当前条件集合是否满足
+func (s *Selector) conditions(node Nodal, nss []*nodeSelector) bool {
+	for _, ns := range nss {
+		if !s.condition(node, ns) {
+			return false
+		}
+	}
+	return true
 }
 
 // condition 判断当前条件是否满足
@@ -197,109 +341,37 @@ func (s *Selector) condition(node Nodal, ns *nodeSelector) bool {
 			}
 			switch cond.Cond {
 			case "gt":
-				return ns.degreeIndex > node.getDegreeIndex()
+				return s.conditionGT(node, ns)
 			case "lt":
-				return ns.degreeIndex < node.getDegreeIndex()
+				return s.conditionLT(node, ns)
 			case "eq":
 				return ns.degreeIndex == node.getDegreeIndex()
 			case "dif":
-				return ns.degreeIndex != node.getDegreeIndex()
+				return ns.level == 4 && ns.degreeIndex != node.getDegreeIndex()
 			}
 		}
 	}
 	return true
 }
 
-// leftQueryNode 节点顺序检索
-func (s *Selector) leftQueryNode(node Nodal, ns *nodeSelector) (int, []interface{}) {
-	count := 0
-	is := make([]interface{}, 0)
-	if nodes := node.getNodes(); nil != nodes {
-		for _, nd := range node.getNodes() {
-			// 判断当前条件是否满足，如果满足则继续下一步
-			if s.condition(nd, ns) {
-				nc, nis := s.leftQueryNode(nd, ns)
-				count += nc
-				is = append(is, nis...)
-			}
-		}
-	} else {
-		return s.leftQueryLeaf(node.(Leaf))
+// conditionGT 条件大于判断
+func (s *Selector) conditionGT(node Nodal, ns *nodeSelector) bool {
+	switch ns.level {
+	default:
+		return ns.degreeIndex < node.getDegreeIndex()
+	case 1, 2, 3, 4:
+		return ns.degreeIndex <= node.getDegreeIndex()
 	}
-	return count, is
 }
 
-// leftQueryLeaf 叶子节点顺序检索
-func (s *Selector) leftQueryLeaf(leaf Leaf) (int, []interface{}) {
-	is := make([]interface{}, 0)
-	for _, link := range leaf.getLinks() {
-		if inter, err := link.get(); nil == err {
-			// todo 条件确定
-			//for _, cond := range s.Conditions {
-			//
-			//}
-			is = append(is, inter)
-		}
+// conditionLT 条件小于判断
+func (s *Selector) conditionLT(node Nodal, ns *nodeSelector) bool {
+	switch ns.level {
+	default:
+		return ns.degreeIndex > node.getDegreeIndex()
+	case 1, 2, 3, 4:
+		return ns.degreeIndex >= node.getDegreeIndex()
 	}
-	return len(leaf.getLinks()), is
-}
-
-// rightQueryIndex 索引倒序检索
-//
-// index 已获取索引对象
-func (s *Selector) rightQueryIndex(index Index) (int, []interface{}) {
-	count := 0
-	is := make([]interface{}, 0)
-	lenNode := len(index.getNode().getNodes())
-	for i := lenNode - 1; i >= 0; i-- {
-		nc, nis := s.rightQueryNode(index.getNode().getNodes()[i])
-		count += nc
-		is = append(is, nis...)
-	}
-	if s.Skip > 0 {
-		if s.Skip < uint32(len(is)) {
-			is = is[s.Skip:]
-		} else {
-			is = is[0:0]
-		}
-	}
-	if s.Limit > 0 && s.Limit < uint32(len(is)) {
-		is = is[:s.Limit]
-	}
-	if s.Sort == nil {
-		return count, is
-	}
-	return count, s.shellSort(is)
-}
-
-// rightQueryNode 节点倒序检索
-func (s *Selector) rightQueryNode(node Nodal) (int, []interface{}) {
-	count := 0
-	is := make([]interface{}, 0)
-	if nodes := node.getNodes(); nil != nodes {
-		lenNode := len(nodes)
-		for i := lenNode - 1; i >= 0; i-- {
-			nc, nis := s.rightQueryNode(nodes[i])
-			count += nc
-			is = append(is, nis...)
-		}
-	} else {
-		return s.rightQueryLeaf(node.(Leaf))
-	}
-	return count, is
-}
-
-// rightQueryLeaf 叶子节点倒序检索
-func (s *Selector) rightQueryLeaf(leaf Leaf) (int, []interface{}) {
-	is := make([]interface{}, 0)
-	links := leaf.getLinks()
-	lenLink := len(links)
-	for i := lenLink - 1; i >= 0; i-- {
-		if inter, err := links[i].get(); nil == err {
-			is = append(is, inter)
-		}
-	}
-	return len(leaf.getLinks()), is
 }
 
 // shellSort 希尔排序
@@ -355,6 +427,7 @@ func (s *Selector) shellDesc(is []interface{}) []interface{} {
 	return is
 }
 
+// hashKeyFromValue 通过Param获取该参数所属hashKey
 func (s *Selector) hashKeyFromValue(params []string, value interface{}) uint64 {
 	hashKey, support := s.getInterValue(params, value)
 	if !support {
@@ -385,41 +458,75 @@ func (s *Selector) getInterValue(params []string, value interface{}) (hashKey ui
 	return 0, false
 }
 
-func (s *Selector) getConditionNode(cond *condition) *nodeSelector {
+// getConditionNode 根据条件匹配节点单元
+//
+// 该方法可以用更优雅或正确的方式实现，但烧脑，性能无影响，就这样吧
+func (s *Selector) getConditionNode(nc *nodeCondition, cond *condition) {
 	var (
-		hashKey uint64
-		ok      bool
+		hashKey, flexibleKey, nextFlexibleKey, distance uint64
+		nextDegree                                      uint16
+		ok                                              bool
 	)
 	if _, hashKey, ok = type2index(cond.Value); !ok {
-		return nil
+		return
 	}
 
-	node1 := &nodeSelector{level: 1, degreeIndex: 0, cond: cond}
-	nowKey := hashKey
-	distance := levelDistance(node1.level)
-	nextDegree := uint16(nowKey / distance)
-	nextFlexibleKey := nowKey - uint64(nextDegree)*distance
+	nodeLevel1 := &nodeSelector{level: 1, degreeIndex: 0, cond: cond}
+	nc.nss = append(nc.nss, nodeLevel1)
+	flexibleKey = hashKey
+	distance = levelDistance(nodeLevel1.level)
+	nextDegree = uint16(flexibleKey / distance)
+	nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 
-	node2 := &nodeSelector{level: 2, degreeIndex: nextDegree, cond: cond}
-	node1.nextNode = node2
-	nowKey = nextFlexibleKey
-	distance = levelDistance(node1.level)
-	nextDegree = uint16(nowKey / distance)
-	nextFlexibleKey = nowKey - uint64(nextDegree)*distance
+	nodeLevel2 := &nodeSelector{level: 2, degreeIndex: nextDegree, cond: cond}
+	nodeLevel1.nextNode = nodeLevel2
+	if nil == nc.nextNode {
+		nc.nextNode = &nodeCondition{nss: []*nodeSelector{}}
+	}
+	nc.nextNode.nss = append(nc.nextNode.nss, nodeLevel2)
+	flexibleKey = nextFlexibleKey
+	distance = levelDistance(nodeLevel2.level)
+	nextDegree = uint16(flexibleKey / distance)
+	nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 
-	node3 := &nodeSelector{level: 3, degreeIndex: nextDegree, cond: cond}
-	node2.nextNode = node3
-	nowKey = nextFlexibleKey
-	distance = levelDistance(node1.level)
-	nextDegree = uint16(nowKey / distance)
-	nextFlexibleKey = nowKey - uint64(nextDegree)*distance
+	nodeLevel3 := &nodeSelector{level: 3, degreeIndex: nextDegree, cond: cond}
+	nodeLevel2.nextNode = nodeLevel3
+	if nil == nc.nextNode.nextNode {
+		nc.nextNode.nextNode = &nodeCondition{nss: []*nodeSelector{}}
+	}
+	nc.nextNode.nextNode.nss = append(nc.nextNode.nextNode.nss, nodeLevel3)
+	flexibleKey = nextFlexibleKey
+	distance = levelDistance(nodeLevel3.level)
+	nextDegree = uint16(flexibleKey / distance)
+	nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 
-	node4 := &nodeSelector{level: 4, degreeIndex: nextDegree, cond: cond}
-	node3.nextNode = node4
+	nodeLevel4 := &nodeSelector{level: 4, degreeIndex: nextDegree, cond: cond}
+	nodeLevel3.nextNode = nodeLevel4
+	if nil == nc.nextNode.nextNode.nextNode {
+		nc.nextNode.nextNode.nextNode = &nodeCondition{nss: []*nodeSelector{}}
+	}
+	nc.nextNode.nextNode.nextNode.nss = append(nc.nextNode.nextNode.nextNode.nss, nodeLevel4)
+	flexibleKey = nextFlexibleKey
+	distance = levelDistance(nodeLevel4.level)
+	nextDegree = uint16(flexibleKey / distance)
+	nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 
-	return node1
+	nodeLevel5 := &nodeSelector{level: 5, degreeIndex: nextDegree, cond: cond}
+	nodeLevel4.nextNode = nodeLevel5
+	nodeLevel3.nextNode = nodeLevel4
+	if nil == nc.nextNode.nextNode.nextNode.nextNode {
+		nc.nextNode.nextNode.nextNode.nextNode = &nodeCondition{nss: []*nodeSelector{}}
+	}
+	nc.nextNode.nextNode.nextNode.nextNode.nss = append(nc.nextNode.nextNode.nextNode.nextNode.nss, nodeLevel5)
 }
 
+// nodeCondition 多个相同Param条件检索预匹配的节点单元
+type nodeCondition struct {
+	nextNode *nodeCondition
+	nss      []*nodeSelector
+}
+
+// nodeSelector 条件检索预匹配的节点单元
 type nodeSelector struct {
 	level       uint8  // 当前节点所在树层级
 	degreeIndex uint16 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的

@@ -216,6 +216,7 @@ func TestQuerySelector2(t *testing.T) {
 		i     interface{}
 		count int
 	)
+
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{
 		Skip:  1000,
 		Limit: 5,
@@ -244,7 +245,7 @@ func TestQuerySelector2(t *testing.T) {
 	t.Log("select time false count =", count, "i = ", i, "err = ", err)
 
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Conditions: []*condition{{Param: "TestValueIn.ID", Cond: "gt", Value: 1004}},
+		Conditions: []*condition{{Param: "TestValueIn.Age", Cond: "gt", Value: 910}, {Param: "TestValueIn.ID", Cond: "gt", Value: 888}, {Param: "TestValueIn.ID", Cond: "lt", Value: 894}},
 		Sort:       &sort{Param: "TestValueIn.ID", ASC: true},
 		Skip:       1,
 		Limit:      5,
@@ -252,9 +253,10 @@ func TestQuerySelector2(t *testing.T) {
 	t.Log("select id true count =", count, "i =", i, "err = ", err)
 
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Sort:  &sort{Param: "TestValueIn.ID", ASC: false},
-		Skip:  1000,
-		Limit: 5,
+		Conditions: []*condition{{Param: "TestValueIn.ID", Cond: "gt", Value: 999}},
+		Sort:       &sort{Param: "TestValueIn.ID", ASC: false},
+		Skip:       1,
+		Limit:      5,
 	})
 	t.Log("select id false count =", count, "i = ", i, "err = ", err)
 }
