@@ -200,9 +200,8 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[st
 	//gnomon.Log().Debug("insertDataWithIndexInfo", gnomon.Log().Field("ibs", ibs))
 	defer form.unLock()
 	form.lock()
-	autoID := atomic.AddUint64(form.getAutoID(), 1) // ID自增
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
-	ibs = d.rangeIndexes(form, key, autoID, indexes, value, update)
+	ibs = d.rangeIndexes(form, key, indexes, value, update)
 	// 存储数据到表文件
 	dataWriteResult := store().storeData(pathFormDataFile(d.id, form.getID()), value)
 	if nil != dataWriteResult.err {
@@ -230,7 +229,7 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[st
 }
 
 // rangeIndexes 遍历表索引ID集合，检索并计算所有索引返回对象集合
-func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes map[string]Index, value interface{}, update bool) []IndexBack {
+func (d *database) rangeIndexes(form Form, key string, indexes map[string]Index, value interface{}, update bool) []IndexBack {
 	var (
 		wg        sync.WaitGroup
 		chanIndex chan IndexBack
@@ -240,17 +239,18 @@ func (d *database) rangeIndexes(form Form, key string, autoID uint64, indexes ma
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	for _, index := range indexes {
 		wg.Add(1)
-		go func(autoID uint64, index Index) {
+		go func(index Index) {
 			defer wg.Done()
 			//gnomon.Log().Debug("rangeIndexes", gnomon.Log().Field("index.id", index.getID()), gnomon.Log().Field("index.keyStructure", index.getKeyStructure()))
 			if index.getKeyStructure() == indexAutoID {
+				autoID := atomic.AddUint64(form.getAutoID(), 1) // ID自增
 				chanIndex <- form.getIndexes()[index.getID()].put(strconv.FormatUint(autoID, 10), autoID, update)
 			} else if index.getKeyStructure() == indexDefaultID {
 				chanIndex <- form.getIndexes()[index.getID()].put(key, hash(key), update)
 			} else {
 				chanIndex <- d.getCustomIndex(form, index, value, update)
 			}
-		}(autoID, index)
+		}(index)
 	}
 	wg.Wait()
 	var ibs []IndexBack
@@ -283,11 +283,11 @@ func (d *database) getCustomIndex(form Form, idx Index, value interface{}, updat
 			if position == paramsLen { // 表示没有后续参数
 				break
 			}
-			switch item.(type) {
+			switch item := item.(type) {
 			default:
 				return &indexBack{err: errors.New(strings.Join([]string{"index", idx.getKeyStructure(), "with map is invalid"}, " "))}
 			case map[string]interface{}:
-				itemMap = item.(map[string]interface{})
+				itemMap = item
 				continue
 			}
 		}

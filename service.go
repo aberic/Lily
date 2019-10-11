@@ -128,28 +128,28 @@ func Get(serverURL, databaseName, formName, key string) (*api.RespGet, error) {
 
 // Insert 新增数据
 func Insert(serverURL, databaseName, formName string, value interface{}) (*api.RespInsert, error) {
-	// todo
+	// todo 新增数据
 	res, err := insert(serverURL, &api.ReqInsert{})
 	return res.(*api.RespInsert), err
 }
 
 // Update 更新数据
 func Update(serverURL string) (*api.Resp, error) {
-	// todo
+	// todo 更新数据
 	res, err := update(serverURL, &api.ReqUpdate{})
 	return res.(*api.Resp), err
 }
 
 // Select 获取数据
 func Select(serverURL string) (*api.RespSelect, error) {
-	// todo
+	// todo 获取数据
 	res, err := query(serverURL, &api.ReqSelect{})
 	return res.(*api.RespSelect), err
 }
 
 // Delete 删除数据
 func Delete(serverURL string) (*api.Resp, error) {
-	// todo
+	// todo 删除数据
 	res, err := delete(serverURL, &api.ReqDelete{})
 	return res.(*api.Resp), err
 }

@@ -26,9 +26,9 @@ import (
 // 查询顺序 scope -> match -> conditions -> skip -> sort -> limit
 type Selector struct {
 	Conditions []*condition `json:"conditions"` // Conditions 条件查询
-	Skip       int32        `json:"skip"`       // Skip 结果集跳过数量
+	Skip       uint32       `json:"skip"`       // Skip 结果集跳过数量
 	Sort       *sort        `json:"sort"`       // Sort 排序方式
-	Limit      int32        `json:"limit"`      // Limit 结果集顺序数量
+	Limit      uint32       `json:"limit"`      // Limit 结果集顺序数量
 	database   Database     // database 数据库对象
 	formName   string       // formName 表名
 }
@@ -90,16 +90,17 @@ func (s *Selector) query() (int, []interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
+		ns        *nodeSelector
 		count     int
 		is        []interface{}
-		err       error
 	)
-	if index, leftQuery, _, err = s.getIndex(); nil != err {
-		return 0, nil, err
+	index, leftQuery, ns = s.getIndex()
+	if nil == index {
+		return 0, nil, errors.New("index not found")
 	}
 	gnomon.Log().Debug("query", gnomon.Log().Field("index", index.getKeyStructure()))
 	if leftQuery {
-		count, is = s.leftQueryIndex(index)
+		count, is = s.leftQueryIndex(index, ns)
 	} else {
 		count, is = s.rightQueryIndex(index)
 	}
@@ -111,55 +112,116 @@ func (s *Selector) query() (int, []interface{}, error) {
 // index 已获取索引对象
 //
 // leftQuery 是否顺序查询
-func (s *Selector) getIndex() (index Index, leftQuery bool, sortIndex bool, err error) {
-	if len(s.Conditions) > 0 {
-		for _, condition := range s.Conditions {
-			for _, index = range s.database.getForms()[s.formName].getIndexes() {
-				if condition.Param == index.getKeyStructure() {
-					return index, true, false, nil
-				}
-			}
-		}
+//
+// cond 条件对象
+func (s *Selector) getIndex() (index Index, leftQuery bool, node *nodeSelector) {
+	var idx Index
+	idx, leftQuery, node = s.getIndexCondition()
+	if idx != nil {
+		return idx, leftQuery, node
 	}
-	for _, index = range s.database.getForms()[s.formName].getIndexes() {
-		if s.Sort != nil && s.Sort.Param == index.getKeyStructure() {
-			return index, s.Sort.ASC, true, nil
+	for _, idx = range s.database.getForms()[s.formName].getIndexes() {
+		if s.Sort != nil && s.Sort.Param == idx.getKeyStructure() {
+			return idx, s.Sort.ASC, nil
 		}
 	}
 	// 取值默认索引来进行查询操作
-	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
+	for _, idx = range s.database.getForms()[s.formName].getIndexes() {
 		gnomon.Log().Debug("getIndex", gnomon.Log().Field("index", index))
-		return idx, true, false, nil
+		return idx, true, nil
 	}
-	return nil, false, false, errors.New("index not found")
+	return nil, false, nil
+}
+
+func (s *Selector) getIndexCondition() (index Index, leftQuery bool, node *nodeSelector) {
+	if len(s.Conditions) > 0 { // 优先尝试采用条件作为索引，缩小索引范围以提高检索效率
+		for _, condition := range s.Conditions { // 遍历检索条件
+			meetRight := false
+			for _, idx := range s.database.getForms()[s.formName].getIndexes() {
+				if condition.Param == idx.getKeyStructure() { // 匹配条件是否存在已有索引
+					if nil != s.Sort && s.Sort.Param == idx.getKeyStructure() { // 如果有，则继续判断该索引是否存在排序需求
+						index = idx
+						leftQuery = s.Sort.ASC
+						node = s.getConditionNode(condition)
+						meetRight = true
+						break
+					}
+					if index != nil {
+						continue
+					}
+					index = idx
+					node = s.getConditionNode(condition)
+				}
+			}
+			if meetRight {
+				break
+			}
+		}
+	}
+	return
 }
 
 // leftQueryIndex 索引顺序检索
-func (s *Selector) leftQueryIndex(index Index) (int, []interface{}) {
+//
+// index 已获取索引对象
+func (s *Selector) leftQueryIndex(index Index, ns *nodeSelector) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
 	for _, node := range index.getNode().getNodes() {
-		nc, nis := s.leftQueryNode(node)
+		nc, nis := s.leftQueryNode(node, ns)
 		count += nc
 		is = append(is, nis...)
 	}
-	//gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("is", is))
+	if s.Skip > 0 {
+		if s.Skip < uint32(len(is)) {
+			is = is[s.Skip:]
+		} else {
+			is = is[0:0]
+		}
+	}
+	if s.Limit > 0 && s.Limit < uint32(len(is)) {
+		is = is[:s.Limit]
+	}
 	if s.Sort == nil {
-		gnomon.Log().Debug("leftQueryIndex", gnomon.Log().Field("s.Sort", s.Sort))
 		return count, is
 	}
 	return count, s.shellSort(is)
 }
 
+// condition 判断当前条件是否满足
+func (s *Selector) condition(node Nodal, ns *nodeSelector) bool {
+	if ns != nil {
+		for _, cond := range s.Conditions {
+			if cond != ns.cond {
+				continue
+			}
+			switch cond.Cond {
+			case "gt":
+				return ns.degreeIndex > node.getDegreeIndex()
+			case "lt":
+				return ns.degreeIndex < node.getDegreeIndex()
+			case "eq":
+				return ns.degreeIndex == node.getDegreeIndex()
+			case "dif":
+				return ns.degreeIndex != node.getDegreeIndex()
+			}
+		}
+	}
+	return true
+}
+
 // leftQueryNode 节点顺序检索
-func (s *Selector) leftQueryNode(node Nodal) (int, []interface{}) {
+func (s *Selector) leftQueryNode(node Nodal, ns *nodeSelector) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
 	if nodes := node.getNodes(); nil != nodes {
-		for _, node := range node.getNodes() {
-			nc, nis := s.leftQueryNode(node)
-			count += nc
-			is = append(is, nis...)
+		for _, nd := range node.getNodes() {
+			// 判断当前条件是否满足，如果满足则继续下一步
+			if s.condition(nd, ns) {
+				nc, nis := s.leftQueryNode(nd, ns)
+				count += nc
+				is = append(is, nis...)
+			}
 		}
 	} else {
 		return s.leftQueryLeaf(node.(Leaf))
@@ -172,6 +234,10 @@ func (s *Selector) leftQueryLeaf(leaf Leaf) (int, []interface{}) {
 	is := make([]interface{}, 0)
 	for _, link := range leaf.getLinks() {
 		if inter, err := link.get(); nil == err {
+			// todo 条件确定
+			//for _, cond := range s.Conditions {
+			//
+			//}
 			is = append(is, inter)
 		}
 	}
@@ -179,6 +245,8 @@ func (s *Selector) leftQueryLeaf(leaf Leaf) (int, []interface{}) {
 }
 
 // rightQueryIndex 索引倒序检索
+//
+// index 已获取索引对象
 func (s *Selector) rightQueryIndex(index Index) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
@@ -188,7 +256,19 @@ func (s *Selector) rightQueryIndex(index Index) (int, []interface{}) {
 		count += nc
 		is = append(is, nis...)
 	}
-	gnomon.Log().Debug("rightQueryIndex", gnomon.Log().Field("is", is))
+	if s.Skip > 0 {
+		if s.Skip < uint32(len(is)) {
+			is = is[s.Skip:]
+		} else {
+			is = is[0:0]
+		}
+	}
+	if s.Limit > 0 && s.Limit < uint32(len(is)) {
+		is = is[:s.Limit]
+	}
+	if s.Sort == nil {
+		return count, is
+	}
 	return count, s.shellSort(is)
 }
 
@@ -224,7 +304,7 @@ func (s *Selector) rightQueryLeaf(leaf Leaf) (int, []interface{}) {
 
 // shellSort 希尔排序
 func (s *Selector) shellSort(is []interface{}) []interface{} {
-	gnomon.Log().Debug("shellSort 希尔排序")
+	gnomon.Log().Debug("shellSort 希尔排序", gnomon.Log().Field("s.Sort", s.Sort))
 	if s.Sort.ASC {
 		gnomon.Log().Debug("shellAsc 希尔顺序排序")
 		return s.shellAsc(is)
@@ -303,4 +383,46 @@ func (s *Selector) getInterValue(params []string, value interface{}) (hashKey ui
 	}
 	gnomon.Log().Debug("getInterValue", gnomon.Log().Field("kind", reflectObj.Kind()), gnomon.Log().Field("support", false))
 	return 0, false
+}
+
+func (s *Selector) getConditionNode(cond *condition) *nodeSelector {
+	var (
+		hashKey uint64
+		ok      bool
+	)
+	if _, hashKey, ok = type2index(cond.Value); !ok {
+		return nil
+	}
+
+	node1 := &nodeSelector{level: 1, degreeIndex: 0, cond: cond}
+	nowKey := hashKey
+	distance := levelDistance(node1.level)
+	nextDegree := uint16(nowKey / distance)
+	nextFlexibleKey := nowKey - uint64(nextDegree)*distance
+
+	node2 := &nodeSelector{level: 2, degreeIndex: nextDegree, cond: cond}
+	node1.nextNode = node2
+	nowKey = nextFlexibleKey
+	distance = levelDistance(node1.level)
+	nextDegree = uint16(nowKey / distance)
+	nextFlexibleKey = nowKey - uint64(nextDegree)*distance
+
+	node3 := &nodeSelector{level: 3, degreeIndex: nextDegree, cond: cond}
+	node2.nextNode = node3
+	nowKey = nextFlexibleKey
+	distance = levelDistance(node1.level)
+	nextDegree = uint16(nowKey / distance)
+	nextFlexibleKey = nowKey - uint64(nextDegree)*distance
+
+	node4 := &nodeSelector{level: 4, degreeIndex: nextDegree, cond: cond}
+	node3.nextNode = node4
+
+	return node1
+}
+
+type nodeSelector struct {
+	level       uint8  // 当前节点所在树层级
+	degreeIndex uint16 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
+	nextNode    *nodeSelector
+	cond        *condition
 }

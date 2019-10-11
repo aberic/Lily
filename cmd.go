@@ -54,9 +54,9 @@ var startCmd = &cobra.Command{
 	Args: func(cmd *cobra.Command, args []string) error {
 		//fmt.Println("startCmd daemon", daemon)
 		if daemon {
-			fmt.Println("后台启动…")
+			fmt.Println("后台启动...")
 		} else {
-			fmt.Println("前端启动…")
+			fmt.Println("前端启动...")
 		}
 		if gnomon.String().IsEmpty(confYmlPath) {
 			fmt.Println("lily 数据库将使用默认配置策略")
@@ -134,7 +134,7 @@ func start() {
 			command *exec.Cmd
 			pid     int
 		)
-		fmt.Println("后台启动…")
+		fmt.Println("启动中...")
 		if gnomon.String().IsEmpty(confYmlPath) {
 			command = exec.Command("./lily", "start")
 		} else {
@@ -185,6 +185,7 @@ func start() {
 
 func loadingFmt(delay time.Duration, loadChan chan struct{}) {
 	s := "."
+	sFull := ".     "
 	running := false
 	go func() {
 		<-loadChan
@@ -196,11 +197,14 @@ func loadingFmt(delay time.Duration, loadChan chan struct{}) {
 		}
 		switch len(s) {
 		default:
-			s = "."
+			s = sFull
 		case 1, 2, 3, 4, 5:
 			s = strings.Join([]string{s, "."}, "")
 		}
 		fmt.Printf("\r%s", s)
+		if s == sFull {
+			s = "."
+		}
 		time.Sleep(delay)
 	}
 }

@@ -97,6 +97,7 @@ func (l *APIServer) PutD(ctx context.Context, req *api.ReqPutD) (*api.RespPutD, 
 	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
 		goto PUT
 	}
+	v = string(req.Value)
 PUT:
 	if hashKey, err = ObtainLily().PutD(req.Key, v); nil != err {
 		return &api.RespPutD{Code: api.Code_Fail, ErrMsg: err.Error()}, err
@@ -117,6 +118,7 @@ func (l *APIServer) SetD(ctx context.Context, req *api.ReqSetD) (*api.RespSetD, 
 	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
 		goto PUT
 	}
+	v = string(req.Value)
 PUT:
 	if hashKey, err = ObtainLily().SetD(req.Key, v); nil != err {
 		return &api.RespSetD{Code: api.Code_Fail, ErrMsg: err.Error()}, err
@@ -153,6 +155,7 @@ func (l *APIServer) Put(ctx context.Context, req *api.ReqPut) (*api.RespPut, err
 	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
 		goto PUT
 	}
+	v = string(req.Value)
 PUT:
 	if hashKey, err = ObtainLily().Put(req.DatabaseName, req.FormName, req.Key, v); nil != err {
 		return &api.RespPut{Code: api.Code_Fail, ErrMsg: err.Error()}, err
@@ -173,6 +176,7 @@ func (l *APIServer) Set(ctx context.Context, req *api.ReqSet) (*api.RespSet, err
 	if err = yaml.Unmarshal(req.Value, &v); nil == err { // 尝试用yaml解析
 		goto PUT
 	}
+	v = string(req.Value)
 PUT:
 	if hashKey, err = ObtainLily().Set(req.DatabaseName, req.FormName, req.Key, v); nil != err {
 		return &api.RespSet{Code: api.Code_Fail, ErrMsg: err.Error()}, err

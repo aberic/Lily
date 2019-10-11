@@ -228,10 +228,17 @@ func pathFormDataFile(dataID, formID string) string {
 
 func type2index(value interface{}) (key string, hashKey uint64, support bool) {
 	support = true
-	switch value.(type) {
+	switch value := value.(type) {
 	default:
 		return "", 0, false
-	case int8, int16, int32, int, int64:
+	case int:
+		i64, err := strconv.ParseInt(strconv.Itoa(value), 10, 64)
+		if nil != err {
+			return "", 0, false
+		}
+		key = strconv.FormatInt(i64, 10)
+		hashKey = uint64(i64 + 9223372036854775807 + 1)
+	case int8, int16, int32, int64:
 		i64 := value.(int64)
 		key = strconv.FormatInt(i64, 10)
 		hashKey = uint64(i64 + 9223372036854775807 + 1)
@@ -247,14 +254,13 @@ func type2index(value interface{}) (key string, hashKey uint64, support bool) {
 		key = strconv.FormatInt(i64, 10)
 		hashKey = uint64(i64 + 9223372036854775807 + 1)
 	case string:
-		key = value.(string)
-		hashKey = hash(key)
+		hashKey = hash(value)
 	case bool:
-		if value.(bool) {
-			key = value.(string)
+		if value {
+			key = "true"
 			hashKey = 1
 		} else {
-			key = value.(string)
+			key = "false"
 			hashKey = 2
 		}
 	}

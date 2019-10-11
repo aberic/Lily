@@ -15,6 +15,7 @@
 package lily
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
@@ -119,6 +120,9 @@ func (s *sql) show(array []string) error {
 		var fmDTO []*DTOForm
 		for _, fm := range fms.Forms {
 			fmDTO = append(fmDTO, &DTOForm{Name: fm.Name, Comment: fm.Comment, Type: FormatFormType(fm.FormType)})
+		}
+		if len(fmDTO) == 0 {
+			fmDTO = append(fmDTO, &DTOForm{Name: "-", Comment: "-", Type: "-"})
 		}
 		table.Output(fmDTO)
 		return nil
@@ -231,16 +235,25 @@ func (s *sql) getD(array []string) error {
 	if err = msgpack.Unmarshal(resp.Value, &v); nil != err {
 		return err
 	}
-	fmt.Println(v)
+	switch v.(type) {
+	default:
+		fmt.Println(v)
+	case map[string]interface{}:
+		data, err := json.Marshal(v)
+		if nil != err {
+			return err
+		}
+		fmt.Println(string(data))
+	}
 	return nil
 }
 
 func (s *sql) put(array []string) error {
-	if len(array) < 5 {
+	if len(array) < 4 {
 		return sqlSyntaxParamsCountInvalidErr
 	}
-	valueStr := strings.Join(array[4:], " ")
-	_, err := Put(s.serverURL, s.databaseName, array[2], array[3], valueStr)
+	valueStr := strings.Join(array[3:], " ")
+	_, err := Put(s.serverURL, s.databaseName, array[1], array[2], valueStr)
 	if nil != err {
 		return err
 	}
@@ -248,11 +261,11 @@ func (s *sql) put(array []string) error {
 }
 
 func (s *sql) set(array []string) error {
-	if len(array) < 5 {
+	if len(array) < 4 {
 		return sqlSyntaxParamsCountInvalidErr
 	}
-	valueStr := strings.Join(array[4:], " ")
-	_, err := Set(s.serverURL, s.databaseName, array[2], array[3], valueStr)
+	valueStr := strings.Join(array[3:], " ")
+	_, err := Set(s.serverURL, s.databaseName, array[1], array[2], valueStr)
 	if nil != err {
 		return err
 	}
@@ -260,10 +273,10 @@ func (s *sql) set(array []string) error {
 }
 
 func (s *sql) get(array []string) error {
-	if len(array) != 2 {
+	if len(array) != 3 {
 		return sqlSyntaxParamsCountInvalidErr
 	}
-	resp, err := Get(s.serverURL, s.databaseName, array[2], array[3])
+	resp, err := Get(s.serverURL, s.databaseName, array[1], array[2])
 	if nil != err {
 		return err
 	}
@@ -271,7 +284,16 @@ func (s *sql) get(array []string) error {
 	if err = msgpack.Unmarshal(resp.Value, &v); nil != err {
 		return err
 	}
-	fmt.Println(v)
+	switch v.(type) {
+	default:
+		fmt.Println(v)
+	case map[string]interface{}:
+		data, err := json.Marshal(v)
+		if nil != err {
+			return err
+		}
+		fmt.Println(string(data))
+	}
 	return nil
 }
 

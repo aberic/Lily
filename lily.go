@@ -196,13 +196,13 @@ func (l *Lily) initialize() {
 		}
 		gnomon.Log().Info(strings.Join([]string{"lily service have been created default database ", sysDatabase}, ""))
 		gnomon.Log().Info(strings.Join([]string{"lily service is creating default form ", userForm}, ""))
-		if err = data.createForm(userForm, "default user form", FormTypeSQL); nil != err {
+		if err = l.CreateForm(sysDatabase, userForm, "default user form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
 		gnomon.Log().Info(strings.Join([]string{"lily service have been created ", userForm}, ""))
 		gnomon.Log().Info(strings.Join([]string{"lily service is creating default form ", defaultForm}, ""))
-		if err = data.createForm(defaultForm, "default Data form", FormTypeDoc); nil != err {
+		if err = l.CreateForm(sysDatabase, defaultForm, "default Data form", FormTypeDoc); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
