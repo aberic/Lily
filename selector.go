@@ -72,37 +72,24 @@ type sort struct {
 	ASC   bool   `json:"asc"` // 是否升序
 }
 
-//func (s *Selector) match2String(inter interface{}) string {
-//	switch inter.(type) {
-//	case string:
-//		return inter.(string)
-//	case int:
-//		return strconv.Itoa(inter.(int))
-//	case float64:
-//		return strconv.FormatFloat(inter.(float64), 'f', -1, 64)
-//	case bool:
-//		return strconv.FormatBool(inter.(bool))
-//	}
-//	return ""
-//}
-
 func (s *Selector) query() (int, []interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
 		nc        *nodeCondition
+		pcs       map[string]*paramCondition
 		count     int
 		is        []interface{}
 		err       error
 	)
-	if index, leftQuery, nc, err = s.getIndex(); nil != err {
+	if index, leftQuery, nc, pcs, err = s.getIndex(); nil != err {
 		return 0, nil, err
 	}
 	gnomon.Log().Debug("query", gnomon.Log().Field("index", index.getKeyStructure()))
 	if leftQuery {
-		count, is = s.leftQueryIndex(index, nc)
+		count, is = s.leftQueryIndex(index, nc, pcs)
 	} else {
-		count, is = s.rightQueryIndex(index, nc)
+		count, is = s.rightQueryIndex(index, nc, pcs)
 	}
 	return count, is, nil
 }
@@ -114,30 +101,31 @@ func (s *Selector) query() (int, []interface{}, error) {
 // leftQuery 是否顺序查询
 //
 // cond 条件对象
-func (s *Selector) getIndex() (index Index, leftQuery bool, node *nodeCondition, err error) {
+func (s *Selector) getIndex() (index Index, leftQuery bool, nc *nodeCondition, pcs map[string]*paramCondition, err error) {
 	var idx Index
 	// 优先尝试采用条件作为索引，缩小索引范围以提高检索效率
-	idx, leftQuery, node, err = s.getIndexCondition()
+	idx, leftQuery, nc, pcs, err = s.getIndexCondition()
 	if idx != nil { // 如果存在条件查询，则优先条件查询
-		return idx, leftQuery, node, err
+		return idx, leftQuery, nc, pcs, err
 	}
 	for _, idx := range s.database.getForms()[s.formName].getIndexes() { // 如果存在排序查询，则优先排序查询
 		if s.Sort != nil && s.Sort.Param == idx.getKeyStructure() {
-			return idx, s.Sort.ASC, nil, nil
+			return idx, s.Sort.ASC, nc, pcs, nil
 		}
 	}
 	// 取值默认索引来进行查询操作
 	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
 		gnomon.Log().Debug("getIndex", gnomon.Log().Field("index", index))
-		return idx, true, nil, nil
+		return idx, true, nc, pcs, nil
 	}
-	return nil, false, nil, errors.New("index not found")
+	return nil, false, nc, pcs, errors.New("index not found")
 }
 
 // getIndexCondition 优先尝试采用条件作为索引，缩小索引范围以提高检索效率
 //
 // 优先匹配有多个相同Param参数的条件，如果相同数量一样，则按照先后顺序选择最先匹配的
-func (s *Selector) getIndexCondition() (index Index, leftQuery bool, nc *nodeCondition, err error) {
+func (s *Selector) getIndexCondition() (index Index, leftQuery bool, nc *nodeCondition, pcs map[string]*paramCondition, err error) {
+	pcs = make(map[string]*paramCondition)
 	ncs := make(map[string]*nodeCondition)
 	leftQuery = true
 	for _, condition := range s.Conditions { // 遍历检索条件
@@ -162,6 +150,11 @@ func (s *Selector) getIndexCondition() (index Index, leftQuery bool, nc *nodeCon
 				s.getConditionNode(ncs[condition.Param], condition)
 			}
 		}
+
+		paramType, paramValue, support := s.formatParam(condition.Value)
+		if support {
+			pcs[s.pcMapName(condition)] = &paramCondition{paramType: paramType, paramValue: paramValue}
+		}
 	}
 	var nodeCount = 0
 	for _, ncNow := range ncs {
@@ -177,7 +170,7 @@ func (s *Selector) getIndexCondition() (index Index, leftQuery bool, nc *nodeCon
 // leftQueryIndex 索引顺序检索
 //
 // index 已获取索引对象
-func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition) (int, []interface{}) {
+func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
 	var (
 		count, nc int
 		nis       []interface{}
@@ -185,9 +178,9 @@ func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition) (int, []interf
 	)
 	for _, node := range index.getNode().getNodes() {
 		if nil == ns {
-			nc, nis = s.leftQueryNode(node, nil)
+			nc, nis = s.leftQueryNode(node, nil, pcs)
 		} else {
-			nc, nis = s.leftQueryNode(node, ns.nextNode)
+			nc, nis = s.leftQueryNode(node, ns.nextNode, pcs)
 		}
 
 		count += nc
@@ -210,42 +203,42 @@ func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition) (int, []interf
 }
 
 // leftQueryNode 节点顺序检索
-func (s *Selector) leftQueryNode(node Nodal, ns *nodeCondition) (int, []interface{}) {
+func (s *Selector) leftQueryNode(node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
 	if nodes := node.getNodes(); nil != nodes {
 		for _, nd := range node.getNodes() {
+			var (
+				nc  int
+				nis []interface{}
+			)
 			if ns == nil {
-				nc, nis := s.leftQueryNode(nd, nil)
-				count += nc
-				is = append(is, nis...)
-			} else if s.conditions(nd, ns.nextNode.nss) { // 判断当前条件是否满足，如果满足则继续下一步
-				nc, nis := s.leftQueryNode(nd, ns.nextNode)
-				count += nc
-				is = append(is, nis...)
+				nc, nis = s.leftQueryNode(nd, nil, pcs)
+			} else if s.nodeConditions(nd, ns.nextNode.nss) { // 判断当前条件是否满足，如果满足则继续下一步
+				nc, nis = s.leftQueryNode(nd, ns.nextNode, pcs)
 			}
+			count += nc
+			is = append(is, nis...)
 		}
 	} else {
 		if ns == nil {
-			return s.leftQueryLeaf(node.(Leaf), nil)
+			return s.leftQueryLeaf(node.(Leaf), nil, pcs)
 		}
-		return s.leftQueryLeaf(node.(Leaf), ns)
+		return s.leftQueryLeaf(node.(Leaf), ns, pcs)
 	}
 	return count, is
 }
 
 // leftQueryLeaf 叶子节点顺序检索
-func (s *Selector) leftQueryLeaf(leaf Leaf, ns *nodeCondition) (int, []interface{}) {
+func (s *Selector) leftQueryLeaf(leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
 	is := make([]interface{}, 0)
-	for _, link := range leaf.getLinks() {
-		if inter, err := link.get(); nil == err {
-			// todo 条件确定
-			for _, cond := range s.Conditions {
-				if nil == ns || cond.Param != ns.nss[0].cond.Param {
-
-				}
+	if (nil != ns && s.leafConditions(leaf, ns.nss)) || nil == ns { // 满足等于与不等于条件
+		for _, link := range leaf.getLinks() {
+			inter, err := link.get()
+			if nil == err && s.conditionNoIndexLeaf(ns, pcs, inter) {
+				// todo skip limit
+				is = append(is, inter)
 			}
-			is = append(is, inter)
 		}
 	}
 	return len(leaf.getLinks()), is
@@ -254,7 +247,7 @@ func (s *Selector) leftQueryLeaf(leaf Leaf, ns *nodeCondition) (int, []interface
 // rightQueryIndex 索引倒序检索
 //
 // index 已获取索引对象
-func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition) (int, []interface{}) {
+func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
 	var (
 		count, nc int
 		nis       []interface{}
@@ -263,9 +256,9 @@ func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition) (int, []inter
 	lenNode := len(index.getNode().getNodes())
 	for i := lenNode - 1; i >= 0; i-- {
 		if nil == ns {
-			nc, nis = s.rightQueryNode(index.getNode().getNodes()[i], nil)
+			nc, nis = s.rightQueryNode(index.getNode().getNodes()[i], nil, pcs)
 		} else {
-			nc, nis = s.rightQueryNode(index.getNode().getNodes()[i], ns.nextNode)
+			nc, nis = s.rightQueryNode(index.getNode().getNodes()[i], ns.nextNode, pcs)
 		}
 		count += nc
 		is = append(is, nis...)
@@ -284,56 +277,71 @@ func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition) (int, []inter
 }
 
 // rightQueryNode 节点倒序检索
-func (s *Selector) rightQueryNode(node Nodal, ns *nodeCondition) (int, []interface{}) {
+func (s *Selector) rightQueryNode(node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
 	count := 0
 	is := make([]interface{}, 0)
 	if nodes := node.getNodes(); nil != nodes {
 		lenNode := len(nodes)
 		for i := lenNode - 1; i >= 0; i-- {
+			var (
+				nc  int
+				nis []interface{}
+			)
 			if ns == nil {
-				nc, nis := s.rightQueryNode(nodes[i], nil)
-				count += nc
-				is = append(is, nis...)
-			} else if s.conditions(nodes[i], ns.nextNode.nss) { // 判断当前条件是否满足，如果满足则继续下一步
-				nc, nis := s.rightQueryNode(nodes[i], ns.nextNode)
-				count += nc
-				is = append(is, nis...)
+				nc, nis = s.rightQueryNode(nodes[i], nil, pcs)
+			} else if s.nodeConditions(nodes[i], ns.nextNode.nss) { // 判断当前条件是否满足，如果满足则继续下一步
+				nc, nis = s.rightQueryNode(nodes[i], ns.nextNode, pcs)
 			}
+			count += nc
+			is = append(is, nis...)
 		}
 	} else {
 		if ns == nil {
-			return s.rightQueryLeaf(node.(Leaf), nil)
+			return s.rightQueryLeaf(node.(Leaf), nil, pcs)
 		}
-		return s.rightQueryLeaf(node.(Leaf), ns)
+		return s.rightQueryLeaf(node.(Leaf), ns, pcs)
 	}
 	return count, is
 }
 
 // rightQueryLeaf 叶子节点倒序检索
-func (s *Selector) rightQueryLeaf(leaf Leaf, ns *nodeCondition) (int, []interface{}) {
+func (s *Selector) rightQueryLeaf(leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
 	is := make([]interface{}, 0)
 	links := leaf.getLinks()
 	lenLink := len(links)
-	for i := lenLink - 1; i >= 0; i-- {
-		if inter, err := links[i].get(); nil == err {
-			is = append(is, inter)
+	if (nil != ns && s.leafConditions(leaf, ns.nss)) || nil == ns { // 满足等于与不等于条件
+		for i := lenLink - 1; i >= 0; i-- {
+			inter, err := links[i].get()
+			if nil == err && s.conditionNoIndexLeaf(ns, pcs, inter) {
+				is = append(is, inter)
+			}
 		}
 	}
 	return len(leaf.getLinks()), is
 }
 
-// conditions 判断当前条件集合是否满足
-func (s *Selector) conditions(node Nodal, nss []*nodeSelector) bool {
+// nodeConditions 判断当前条件集合是否满足
+func (s *Selector) nodeConditions(node Nodal, nss []*nodeSelector) bool {
 	for _, ns := range nss {
-		if !s.condition(node, ns) {
+		if !s.conditionNode(node, ns) {
 			return false
 		}
 	}
 	return true
 }
 
-// condition 判断当前条件是否满足
-func (s *Selector) condition(node Nodal, ns *nodeSelector) bool {
+// leafConditions 判断当前条件集合是否满足
+func (s *Selector) leafConditions(node Nodal, nss []*nodeSelector) bool {
+	for _, ns := range nss {
+		if !s.conditionLeaf(node, ns) {
+			return false
+		}
+	}
+	return true
+}
+
+// conditionNode 判断当前条件是否满足
+func (s *Selector) conditionNode(node Nodal, ns *nodeSelector) bool {
 	if ns != nil {
 		for _, cond := range s.Conditions {
 			if cond != ns.cond {
@@ -344,11 +352,53 @@ func (s *Selector) condition(node Nodal, ns *nodeSelector) bool {
 				return s.conditionGT(node, ns)
 			case "lt":
 				return s.conditionLT(node, ns)
-			case "eq":
-				return ns.degreeIndex == node.getDegreeIndex()
-			case "dif":
-				return ns.level == 4 && ns.degreeIndex != node.getDegreeIndex()
 			}
+		}
+	}
+	return true
+}
+
+// conditionLeaf 判断当前条件是否满足
+func (s *Selector) conditionLeaf(node Nodal, ns *nodeSelector) bool {
+	if ns != nil {
+		for _, cond := range s.Conditions {
+			if cond != ns.cond {
+				continue
+			}
+			switch cond.Cond {
+			case "eq":
+				return ns.level == 5 && ns.degreeIndex == node.getDegreeIndex()
+			case "dif":
+				return ns.level == 5 && ns.degreeIndex != node.getDegreeIndex()
+			}
+		}
+	}
+	return true
+}
+
+// paramCondition 参数条件结构
+type paramCondition struct {
+	paramType  int         // paramType 参数类型
+	paramValue interface{} // paramValue 参数对应指定类型的值
+}
+
+// pcMapName map[string]*paramCondition string
+func (s *Selector) pcMapName(cond *condition) string {
+	return strings.Join([]string{cond.Param, cond.Cond}, "")
+}
+
+// conditionNoIndexLeaf 判断当前条件是否满足
+func (s *Selector) conditionNoIndexLeaf(ns *nodeCondition, pcs map[string]*paramCondition, value interface{}) bool {
+	for _, cond := range s.Conditions {
+		if nil != ns && cond.Param == ns.nss[0].cond.Param {
+			continue
+		}
+		pc := pcs[s.pcMapName(cond)]
+		if nil == pc {
+			continue
+		}
+		if !s.conditionValue(cond.Cond, strings.Split(cond.Param, "."), pc.paramType, pc.paramValue, value) {
+			return false
 		}
 	}
 	return true
@@ -371,6 +421,149 @@ func (s *Selector) conditionLT(node Nodal, ns *nodeSelector) bool {
 		return ns.degreeIndex > node.getDegreeIndex()
 	case 1, 2, 3, 4:
 		return ns.degreeIndex >= node.getDegreeIndex()
+	}
+}
+
+const (
+	paramInt64 = iota
+	paramUint64
+	paramFloat64
+	paramString
+	paramBool
+)
+
+// formatParam 梳理param的类型及值
+//
+// 类型：int=0;int64=1;uint64=2;string=3;bool=4
+func (s *Selector) formatParam(paramValue interface{}) (paramType int, value interface{}, support bool) {
+	switch paramValue := paramValue.(type) {
+	default:
+		return -1, nil, false
+	case int:
+		return paramInt64, int64(paramValue), true
+	case int8, int16, int32, int64:
+		return paramInt64, paramValue.(int64), true
+	case uint8, uint16, uint32, uint, uint64, uintptr:
+		return paramUint64, paramValue.(uint64), true
+	case float32, float64:
+		return paramFloat64, paramValue.(float64), true
+	case string:
+		return paramString, paramValue, true
+	case bool:
+		return paramBool, paramValue, true
+	}
+}
+
+// conditionValue 判断当前条件是否满足
+func (s *Selector) conditionValue(cond string, params []string, paramType int, paramValue, objValue interface{}) bool {
+	var value interface{}
+	if value = s.getValueFromParams(params, objValue); nil == value {
+		return false
+	}
+	switch value := value.(type) {
+	default:
+		return false
+	case int, int8, int16, int32, int64:
+		if paramType != paramInt64 {
+			return false
+		}
+		return s.conditionValueInt64(cond, paramValue.(int64), value.(int64))
+	case uint8, uint16, uint32, uint, uint64, uintptr:
+		if paramType != paramUint64 {
+			return false
+		}
+		return s.conditionValueUint64(cond, paramValue.(uint64), value.(uint64))
+	case float32, float64:
+		if paramType != paramFloat64 {
+			return false
+		}
+		return s.conditionValueFloat64(cond, paramValue.(float64), value.(float64))
+	case string:
+		if paramType != paramString {
+			return false
+		}
+		return s.conditionValueString(cond, paramValue.(string), value)
+	case bool:
+		if paramType != paramBool {
+			return false
+		}
+		return s.conditionValueBool(cond, paramValue.(bool), value)
+	}
+}
+
+// conditionValueInt64 判断当前条件是否满足
+func (s *Selector) conditionValueInt64(cond string, param, value int64) bool {
+	switch cond {
+	default:
+		return false
+	case "gt":
+		return value > param
+	case "lt":
+		return value < param
+	case "eq":
+		return value == param
+	case "dif":
+		return value != param
+	}
+}
+
+// conditionValueUint64 判断当前条件是否满足
+func (s *Selector) conditionValueUint64(cond string, param, value uint64) bool {
+	switch cond {
+	default:
+		return false
+	case "gt":
+		return value > param
+	case "lt":
+		return value < param
+	case "eq":
+		return value == param
+	case "dif":
+		return value != param
+	}
+}
+
+// conditionValueFloat64 判断当前条件是否满足
+func (s *Selector) conditionValueFloat64(cond string, param, value float64) bool {
+	switch cond {
+	default:
+		return false
+	case "gt":
+		return value > param
+	case "lt":
+		return value < param
+	case "eq":
+		return value == param
+	case "dif":
+		return value != param
+	}
+}
+
+// conditionValueString 判断当前条件是否满足
+func (s *Selector) conditionValueString(cond string, param, value string) bool {
+	switch cond {
+	default:
+		return false
+	case "gt":
+		return value > param
+	case "lt":
+		return value < param
+	case "eq":
+		return value == param
+	case "dif":
+		return value != param
+	}
+}
+
+// conditionValueBool 判断当前条件是否满足
+func (s *Selector) conditionValueBool(cond string, param, value bool) bool {
+	switch cond {
+	default:
+		return false
+	case "eq":
+		return value == param
+	case "dif":
+		return value != param
 	}
 }
 
@@ -458,6 +651,26 @@ func (s *Selector) getInterValue(params []string, value interface{}) (hashKey ui
 	return 0, false
 }
 
+// getValueFromParams 根据索引描述获取当前value
+func (s *Selector) getValueFromParams(params []string, value interface{}) interface{} {
+	reflectObj := reflect.ValueOf(value) // 反射对象，通过reflectObj获取存储在里面的值，还可以去改变值
+	if reflectObj.Kind() == reflect.Map {
+		interMap := value.(map[string]interface{})
+		lenParams := len(params)
+		var valueResult interface{}
+		for i, param := range params {
+			if i == lenParams-1 {
+				valueResult = interMap[param]
+				break
+			}
+			interMap = interMap[param].(map[string]interface{})
+		}
+		return valueResult
+	}
+	gnomon.Log().Debug("getValueFromParams", gnomon.Log().Field("kind", reflectObj.Kind()), gnomon.Log().Field("support", false))
+	return nil
+}
+
 // getConditionNode 根据条件匹配节点单元
 //
 // 该方法可以用更优雅或正确的方式实现，但烧脑，性能无影响，就这样吧
@@ -509,7 +722,6 @@ func (s *Selector) getConditionNode(nc *nodeCondition, cond *condition) {
 	flexibleKey = nextFlexibleKey
 	distance = levelDistance(nodeLevel4.level)
 	nextDegree = uint16(flexibleKey / distance)
-	nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 
 	nodeLevel5 := &nodeSelector{level: 5, degreeIndex: nextDegree, cond: cond}
 	nodeLevel4.nextNode = nodeLevel5
