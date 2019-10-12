@@ -249,7 +249,7 @@ func TestQuerySelector2(t *testing.T) {
 			{Param: "TestValueIn.Age", Cond: "gt", Value: 911},
 			{Param: "TestValueIn.ID", Cond: "gt", Value: 888},
 			{Param: "TestValueIn.ID", Cond: "lt", Value: 898},
-			{Param: "TestValueIn.ID", Cond: "dif", Value: 891},
+			{Param: "TestValueIn.ID", Cond: "dif", Value: 896},
 		},
 		Sort:  &sort{Param: "TestValueIn.ID", ASC: true},
 		Skip:  1,
