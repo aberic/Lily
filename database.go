@@ -58,6 +58,26 @@ func (d *database) getForms() map[string]Form {
 	return d.forms
 }
 
+func (d *database) createDoc(formName, comment string) error {
+	if err := d.createForm(formName, comment, FormTypeDoc); nil != err {
+		return err
+	}
+	// 默认自定义Key生成ID
+	_ = d.createKey(formName, indexDefaultID)
+	d.lily.lilyData.Databases[d.name].Forms[formName].FormType = api.FormType_Doc
+	return nil
+}
+
+func (d *database) createSQL(formName, comment string) error {
+	if err := d.createForm(formName, comment, FormTypeSQL); nil != err {
+		return err
+	}
+	// 自增索引ID
+	_ = d.createKey(formName, indexAutoID)
+	d.lily.lilyData.Databases[d.name].Forms[formName].FormType = api.FormType_SQL
+	return nil
+}
+
 func (d *database) createForm(formName, comment, formType string) error {
 	// 确定库名不重复
 	for k := range d.forms {
@@ -87,19 +107,6 @@ func (d *database) createForm(formName, comment, formType string) error {
 		Name:    formName,
 		Comment: comment,
 		Indexes: map[string]*api.Index{},
-	}
-	if formType == FormTypeSQL {
-		// 自增索引ID
-		if err = d.createKey(formName, indexAutoID); nil != err {
-			return err
-		}
-		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = api.FormType_SQL
-	} else {
-		// 默认自定义Key生成ID
-		if err = d.createKey(formName, indexDefaultID); nil != err {
-			return err
-		}
-		d.lily.lilyData.Databases[d.name].Forms[formName].FormType = api.FormType_Doc
 	}
 	return nil
 }
@@ -177,12 +184,27 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 	return nil, errors.New("no key for custom id index")
 }
 
-func (d *database) insert(formName string, value interface{}, update bool) (uint64, error) {
-	// todo 插入数据
-	return 0, nil
+func (d *database) remove(formName string, key string) (interface{}, error) {
+	v, err := d.get(formName, key)
+	if nil != err {
+		return nil, err
+	}
+	form := d.forms[formName]
+	indexes := form.getIndexes() // 获取表索引ID集合
+	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
+	ibs := d.rangeIndexes(form, key, indexes, v, true)
+	for _, ib := range ibs {
+		_, _ = ib.getLink().getNodal().getIndex().remove(ib.getKey(), ib.getHashKey())
+	}
+	return v, nil
 }
 
-func (d *database) query(formName string, selector *Selector) (int, interface{}, error) {
+func (d *database) delete(formName string, selector *Selector) error {
+	// todo 删除
+	return nil
+}
+
+func (d *database) query(formName string, selector *Selector) (int32, interface{}, error) {
 	if nil == d {
 		return 0, nil, ErrDataIsNil
 	}

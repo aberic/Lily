@@ -200,24 +200,33 @@ func (l *APIServer) Get(ctx context.Context, req *api.ReqGet) (*api.RespGet, err
 	return &api.RespGet{Code: api.Code_Success, Value: data}, nil
 }
 
-// Insert 新增数据
-func (l *APIServer) Insert(ctx context.Context, req *api.ReqInsert) (*api.RespInsert, error) {
-	return nil, nil
-}
-
-// Update 更新数据
-func (l *APIServer) Update(ctx context.Context, req *api.ReqUpdate) (*api.Resp, error) {
-	return nil, nil
-}
-
 // Select 获取数据
 func (l *APIServer) Select(ctx context.Context, req *api.ReqSelect) (*api.RespSelect, error) {
-	return nil, nil
+	var (
+		count int32
+		v     interface{}
+		s     = &Selector{}
+		data  []byte
+		err   error
+	)
+	s.formatAPI(req.Selector)
+	if count, v, err = ObtainLily().Select(req.DatabaseName, req.FormName, s); nil != err {
+		return &api.RespSelect{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	}
+	if data, err = msgpack.Marshal(v); nil != err {
+		return &api.RespSelect{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	}
+	return &api.RespSelect{Code: api.Code_Success, Count: count, Value: data}, nil
 }
 
 // Delete 删除数据
 func (l *APIServer) Delete(ctx context.Context, req *api.ReqDelete) (*api.Resp, error) {
-	return nil, nil
+	s := &Selector{}
+	s.formatAPI(req.Selector)
+	if err := ObtainLily().Delete(req.DatabaseName, req.FormName, s); nil != err {
+		return &api.Resp{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	}
+	return &api.Resp{Code: api.Code_Success}, nil
 }
 
 func (l *APIServer) formatDBs(dbs []Database) []*api.Database {

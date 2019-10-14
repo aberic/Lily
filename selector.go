@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/lily/api"
 	"reflect"
 	"strings"
 )
@@ -72,13 +73,13 @@ type sort struct {
 	ASC   bool   `json:"asc"` // 是否升序
 }
 
-func (s *Selector) query() (int, []interface{}, error) {
+func (s *Selector) query() (int32, []interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
 		nc        *nodeCondition
 		pcs       map[string]*paramCondition
-		count     int
+		count     int32
 		is        []interface{}
 		err       error
 	)
@@ -173,9 +174,9 @@ func (s *Selector) getIndexCondition() (index Index, leftQuery bool, nc *nodeCon
 // leftQueryIndex 索引顺序检索
 //
 // index 已获取索引对象
-func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
+func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition, pcs map[string]*paramCondition) (int32, []interface{}) {
 	var (
-		count, nc int
+		count, nc int32
 		nis       []interface{}
 		is               = make([]interface{}, 0)
 		skipIn           = s.Skip
@@ -205,17 +206,17 @@ func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition, pcs map[string
 // skipIn 传入skip表示需要跳过的数量，返回skip表示剩余待跳过的数量
 //
 // limitIn 传入limit表示已经命中的数量，返回limit表示已经命中的数量
-func (s *Selector) leftQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int, []interface{}) {
+func (s *Selector) leftQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
 	var (
-		skip  = skipIn
-		limit = limitIn
-		count = 0
-		is    = make([]interface{}, 0)
+		skip        = skipIn
+		limit       = limitIn
+		count int32 = 0
+		is          = make([]interface{}, 0)
 	)
 	if nodes := node.getNodes(); nil != nodes {
 		for _, nd := range nodes {
 			var (
-				nc  int
+				nc  int32
 				nis []interface{}
 			)
 			if ns == nil {
@@ -243,8 +244,11 @@ func (s *Selector) leftQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCon
 // skip 传入skip表示需要跳过的数量，返回skip表示剩余待跳过的数量
 //
 // limit 传入limit表示已经命中的数量，返回limit表示已经命中的数量
-func (s *Selector) leftQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int, []interface{}) {
-	is := make([]interface{}, 0)
+func (s *Selector) leftQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
+	var (
+		count int32 = 0
+		is          = make([]interface{}, 0)
+	)
 	if (nil != ns && s.leafConditions(leaf, ns.nss)) || nil == ns { // 满足等于与不等于条件
 		if limit >= s.Limit {
 			return skip, limit, 0, is
@@ -258,6 +262,7 @@ func (s *Selector) leftQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeConditio
 			}
 			inter, err := link.get()
 			if nil == err && s.conditionNoIndexLeaf(ns, pcs, inter) {
+				count++
 				if skip > 0 {
 					skip--
 					continue
@@ -267,15 +272,15 @@ func (s *Selector) leftQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeConditio
 			}
 		}
 	}
-	return skip, limit, len(leaf.getLinks()), is
+	return skip, limit, count, is
 }
 
 // rightQueryIndex 索引倒序检索
 //
 // index 已获取索引对象
-func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition, pcs map[string]*paramCondition) (int, []interface{}) {
+func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition, pcs map[string]*paramCondition) (int32, []interface{}) {
 	var (
-		count, nc int
+		count, nc int32
 		nis       []interface{}
 		is               = make([]interface{}, 0)
 		skipIn           = s.Skip
@@ -302,18 +307,18 @@ func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition, pcs map[strin
 // skip 传入skip表示需要跳过的数量，返回skip表示剩余待跳过的数量
 //
 // limit 传入limit表示已经命中的数量，返回limit表示已经命中的数量
-func (s *Selector) rightQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int, []interface{}) {
+func (s *Selector) rightQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
 	var (
-		skip  = skipIn
-		limit = limitIn
-		count = 0
-		is    = make([]interface{}, 0)
+		skip        = skipIn
+		limit       = limitIn
+		count int32 = 0
+		is          = make([]interface{}, 0)
 	)
 	if nodes := node.getNodes(); nil != nodes {
 		lenNode := len(nodes)
 		for i := lenNode - 1; i >= 0; i-- {
 			var (
-				nc  int
+				nc  int32
 				nis []interface{}
 			)
 			if ns == nil {
@@ -338,8 +343,11 @@ func (s *Selector) rightQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCo
 // skip 传入skip表示需要跳过的数量，返回skip表示剩余待跳过的数量
 //
 // limit 传入limit表示已经命中的数量，返回limit表示已经命中的数量
-func (s *Selector) rightQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int, []interface{}) {
-	is := make([]interface{}, 0)
+func (s *Selector) rightQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
+	var (
+		count int32 = 0
+		is          = make([]interface{}, 0)
+	)
 	links := leaf.getLinks()
 	lenLink := len(links)
 	if (nil != ns && s.leafConditions(leaf, ns.nss)) || nil == ns { // 满足等于与不等于条件
@@ -355,6 +363,7 @@ func (s *Selector) rightQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeConditi
 			}
 			inter, err := links[i].get()
 			if nil == err && s.conditionNoIndexLeaf(ns, pcs, inter) {
+				count++
 				if skip > 0 {
 					skip--
 					continue
@@ -364,7 +373,7 @@ func (s *Selector) rightQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeConditi
 			}
 		}
 	}
-	return skip, limit, len(leaf.getLinks()), is
+	return skip, limit, count, is
 }
 
 // nodeConditions 判断当前条件集合是否满足
@@ -791,4 +800,8 @@ type nodeSelector struct {
 	degreeIndex uint16 // 当前节点所在集合中的索引下标，该坐标不一定在数组中的正确位置，但一定是逻辑正确的
 	nextNode    *nodeSelector
 	cond        *condition
+}
+
+func (s *Selector) formatAPI(apiSelector *api.Selector) {
+
 }

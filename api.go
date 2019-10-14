@@ -135,26 +135,10 @@ type API interface {
 	//
 	// keyStructure 插入数据唯一key
 	Get(databaseName, formName, key string) (interface{}, error)
-	// Insert 新增数据
+	// Remove 删除数据
 	//
-	// 向指定表中新增一条数据，key相同则返回一个Error
-	//
-	// databaseName 数据库名
-	//
-	// formName 表名
-	//
-	// value 插入数据对象
-	Insert(databaseName, formName string, value interface{}) (uint64, error)
-	// Update 更新数据
-	//
-	// 向指定表中新增或更新一条数据，key相同则覆盖
-	//
-	// databaseName 数据库名
-	//
-	// formName 表名
-	//
-	// value 插入数据对象
-	Update(databaseName, formName string, value interface{}) error
+	// 向指定表中删除一条数据并返回
+	Remove(databaseName, formName, key string) (interface{}, error)
 	// Select 获取数据
 	//
 	// 向指定表中查询一条数据并返回
@@ -164,7 +148,7 @@ type API interface {
 	// formName 表名
 	//
 	// selector 条件选择器
-	Select(databaseName, formName string, selector *Selector) (int, interface{}, error)
+	Select(databaseName, formName string, selector *Selector) (int32, interface{}, error)
 	// Delete 删除数据
 	//
 	// 向指定表中删除一条数据并返回
@@ -196,7 +180,15 @@ type Database interface {
 	// name 表名称
 	//
 	// comment 表描述
-	createForm(formName, comment, formType string) error
+	createDoc(formName, comment string) error
+	// createForm 新建表方法
+	//
+	// 默认自增ID索引
+	//
+	// name 表名称
+	//
+	// comment 表描述
+	createSQL(formName, comment string) error
 	// createIndex 新建主键
 	//
 	// name 表名称
@@ -227,18 +219,10 @@ type Database interface {
 	//
 	// keyStructure 插入数据唯一key
 	get(formName string, key string) (interface{}, error)
-	// Insert 新增数据
+	// remove 删除数据
 	//
-	// 向指定表中新增一条数据，key相同则覆盖
-	//
-	// formName 表名
-	//
-	// keyStructure 插入数据唯一key
-	//
-	// value 插入数据对象
-	//
-	// 返回 hashKey
-	insert(formName string, value interface{}, update bool) (uint64, error)
+	// 向指定表中删除一条数据并返回
+	remove(formName, key string) (interface{}, error)
 	// querySelector 根据条件检索
 	//
 	// formName 表名
@@ -246,7 +230,13 @@ type Database interface {
 	// selector 条件选择器
 	//
 	// int 返回检索条目数量
-	query(formName string, selector *Selector) (int, interface{}, error)
+	query(formName string, selector *Selector) (int32, interface{}, error)
+	// delete 删除数据
+	//
+	// formName 表名
+	//
+	// selector 条件选择器
+	delete(formName string, selector *Selector) error
 }
 
 // Form 表接口
@@ -302,6 +292,14 @@ type Index interface {
 	//
 	// hashKey 索引key，可通过hash转换string生成
 	get(key string, hashKey uint64) (interface{}, error)
+	// remove 删除数据
+	//
+	// 向指定表中删除一条数据并返回
+	//
+	// key 真实key，必须string类型
+	//
+	// hashKey 索引key，可通过hash转换string生成
+	remove(key string, hashKey uint64) (interface{}, error)
 	// recover 重置索引数据
 	recover()
 }
@@ -330,6 +328,14 @@ type Nodal interface {
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
 	get(key string, hashKey, flexibleKey uint64) (interface{}, error)
+	// get 获取数据，返回存储对象
+	//
+	// key 真实key，必须string类型
+	//
+	// hashKey 索引key，可通过hash转换string生成
+	//
+	// flexibleKey 下一级最左最小树所对应真实key
+	remove(key string, hashKey, flexibleKey uint64) (interface{}, error)
 	getDegreeIndex() uint16 // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNode() Nodal      // getPreNode 获取父节点对象
 	getNodes() []Nodal      // getNodes 获取下属节点集合

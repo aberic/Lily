@@ -211,59 +211,83 @@ func TestQuerySelector2(t *testing.T) {
 			t.Log("get ", i, " = ", j)
 		}
 	}
+	execI := 1003
+	j, err := l.Get(checkbookName, shopperName, strconv.Itoa(execI))
+	t.Log("get ", execI, " = ", j, "err = ", err)
+	j, err = l.Remove(checkbookName, shopperName, strconv.Itoa(execI))
+	t.Log("remove ", execI, " = ", j, "err = ", err)
+	j, err = l.Get(checkbookName, shopperName, strconv.Itoa(execI))
+	t.Log("get ", execI, " = ", j, "err = ", err)
 	gnomon.Log().Debug("TestQuerySelector2 Select")
 	var (
 		i     interface{}
-		count int
+		count int32
 	)
 
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Skip:  1000,
-		Limit: 5,
-	})
-	t.Log("select nil count =", count, "i = ", i, "err = ", err)
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{
+	//	Skip:  1000,
+	//	Limit: 5,
+	//})
+	//t.Log("select nil count =", count, "i = ", i, "err = ", err)
+	//
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{
+	//	Conditions: []*condition{{Param: "TestValueIn.Timestamp", Cond: "gt", Value: 10}},
+	//	Skip:       5,
+	//	Limit:      5,
+	//})
+	//t.Log("select time count =", count, "i = ", i, "err = ", err)
+	//
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{
+	//	Sort:  &sort{Param: "TestValueIn.Timestamp", ASC: true},
+	//	Skip:  1000,
+	//	Limit: 5,
+	//})
+	//t.Log("select time true count =", count, "i =", i, "err = ", err)
+	//
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{
+	//	Sort:  &sort{Param: "TestValueIn.Timestamp", ASC: false},
+	//	Skip:  1000,
+	//	Limit: 5,
+	//})
+	//t.Log("select time false count =", count, "i = ", i, "err = ", err)
+	//
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{
+	//	Conditions: []*condition{
+	//		{Param: "TestValueIn.Age", Cond: "gt", Value: 911},
+	//		{Param: "TestValueIn.ID", Cond: "gt", Value: 888},
+	//		{Param: "TestValueIn.ID", Cond: "lt", Value: 898},
+	//		{Param: "TestValueIn.ID", Cond: "dif", Value: 896},
+	//	},
+	//	Sort:  &sort{Param: "TestValueIn.ID", ASC: true},
+	//	Skip:  1,
+	//	Limit: 5,
+	//})
+	//t.Log("select id true count =", count, "i =", i, "err = ", err)
+	//
+	//count, i, err = l.Select(checkbookName, shopperName, &Selector{
+	//	Conditions: []*condition{{Param: "TestValueIn.ID", Cond: "gt", Value: 999}},
+	//	Sort:       &sort{Param: "TestValueIn.ID", ASC: false},
+	//	Skip:       1,
+	//	Limit:      5,
+	//})
+	//t.Log("select id false count =", count, "i = ", i, "err = ", err)
 
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Conditions: []*condition{{Param: "TestValueIn.Timestamp", Cond: "gt", Value: 10}},
-		Skip:       5,
-		Limit:      5,
-	})
-	t.Log("select time count =", count, "i = ", i, "err = ", err)
-
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Sort:  &sort{Param: "TestValueIn.Timestamp", ASC: true},
-		Skip:  1000,
-		Limit: 5,
-	})
-	t.Log("select time true count =", count, "i =", i, "err = ", err)
-
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Sort:  &sort{Param: "TestValueIn.Timestamp", ASC: false},
-		Skip:  1000,
-		Limit: 5,
-	})
-	t.Log("select time false count =", count, "i = ", i, "err = ", err)
-
-	count, i, err = l.Select(checkbookName, shopperName, &Selector{
-		Conditions: []*condition{
-			{Param: "TestValueIn.Age", Cond: "gt", Value: 911},
-			{Param: "TestValueIn.ID", Cond: "gt", Value: 888},
-			{Param: "TestValueIn.ID", Cond: "lt", Value: 898},
-			{Param: "TestValueIn.ID", Cond: "dif", Value: 896},
-		},
-		Sort:  &sort{Param: "TestValueIn.ID", ASC: true},
-		Skip:  1,
-		Limit: 5,
-	})
-	t.Log("select id true count =", count, "i =", i, "err = ", err)
-
+	// ====================================================================================================
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{
 		Conditions: []*condition{{Param: "TestValueIn.ID", Cond: "gt", Value: 999}},
-		Sort:       &sort{Param: "TestValueIn.ID", ASC: false},
+		Sort:       &sort{Param: "TestValueIn.ID", ASC: true},
 		Skip:       1,
 		Limit:      5,
 	})
-	t.Log("select id false count =", count, "i = ", i, "err = ", err)
+	t.Log("select id true count =", count, "i = ", i, "err = ", err)
+
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{
+		Conditions: []*condition{{Param: "TestValueIn.Age", Cond: "gt", Value: 1018}},
+		Sort:       &sort{Param: "TestValueIn.Age", ASC: true},
+		Skip:       1,
+		Limit:      5,
+	})
+	t.Log("select age true count =", count, "i = ", i, "err = ", err)
 }
 
 func TestQuerySelector3(t *testing.T) {
@@ -329,7 +353,7 @@ func TestQuerySelector3(t *testing.T) {
 	gnomon.Log().Debug("TestQuerySelector2 Select")
 	var (
 		i     interface{}
-		count int
+		count int32
 	)
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{})
 	t.Log("select nil count =", count, "i = ", i, "err = ", err)
@@ -388,7 +412,7 @@ func TestQuerySelector4(t *testing.T) {
 	gnomon.Log().Debug("TestQuerySelector2 Select")
 	var (
 		i     interface{}
-		count int
+		count int32
 	)
 	//count, i, err = l.Select(checkbookName, shopperName, &Selector{Sort: &sort{Param: "IsMarry", ASC: true}})
 	//t.Log("select IsMarry true count =", count, "i =", i, "err = ", err)

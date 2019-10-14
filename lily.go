@@ -265,11 +265,20 @@ func (l *Lily) CreateDatabase(name, comment string) (Database, error) {
 // comment 表描述
 func (l *Lily) CreateForm(databaseName, formName, comment, formType string) error {
 	if database := l.databases[databaseName]; nil != database {
-		if err := database.createForm(formName, comment, formType); nil != err {
-			return err
+		switch formType {
+		default:
+			if err := database.createSQL(formName, comment); nil != err {
+				return err
+			}
+			l.syncRPC2Store()
+			return nil
+		case FormTypeDoc:
+			if err := database.createDoc(formName, comment); nil != err {
+				return err
+			}
+			l.syncRPC2Store()
+			return nil
 		}
-		l.syncRPC2Store()
-		return nil
 	}
 	return ErrDataIsNil
 }
@@ -413,39 +422,14 @@ func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 	return l.databases[databaseName].get(formName, key)
 }
 
-// Insert 新增数据
+// Remove 删除数据
 //
-// 向指定表中新增一条数据，key相同则返回一个Error
-//
-// formName 表名
-//
-// keyStructure 插入数据唯一key
-//
-// value 插入数据对象
-func (l *Lily) Insert(databaseName, formName string, value interface{}) (uint64, error) {
-	// todo 新增数据
+// 向指定表中删除一条数据并返回
+func (l *Lily) Remove(databaseName, formName, key string) (interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, ErrDataIsNil
 	}
-	return l.databases[databaseName].insert(formName, value, false)
-}
-
-// Update 更新数据
-//
-// 向指定表中更新一条数据，key相同则覆盖
-//
-// databaseName 数据库名
-//
-// formName 表名
-//
-// value 插入数据对象
-func (l *Lily) Update(databaseName, formName string, value interface{}) error {
-	// todo 更新数据
-	if nil == l || nil == l.databases[databaseName] {
-		return ErrDataIsNil
-	}
-	_, err := l.databases[databaseName].insert(formName, value, true)
-	return err
+	return l.databases[databaseName].remove(formName, key)
 }
 
 // Select 获取数据
@@ -455,7 +439,7 @@ func (l *Lily) Update(databaseName, formName string, value interface{}) error {
 // formName 表名
 //
 // keyStructure 插入数据唯一key
-func (l *Lily) Select(databaseName, formName string, selector *Selector) (int, interface{}, error) {
+func (l *Lily) Select(databaseName, formName string, selector *Selector) (int32, interface{}, error) {
 	if nil == l || nil == l.databases[databaseName] {
 		return 0, nil, ErrDataIsNil
 	}
@@ -472,12 +456,10 @@ func (l *Lily) Select(databaseName, formName string, selector *Selector) (int, i
 //
 // selector 条件选择器
 func (l *Lily) Delete(databaseName, formName string, selector *Selector) error {
-	// todo 删除数据
 	if nil == l || nil == l.databases[databaseName] {
 		return ErrDataIsNil
 	}
-	_, _, err := l.databases[databaseName].query(formName, selector)
-	return err
+	return l.databases[databaseName].delete(formName, selector)
 }
 
 // name2id 确保数据库唯一ID不重复

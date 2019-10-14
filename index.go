@@ -64,6 +64,10 @@ func (i *index) get(key string, hashKey uint64) (interface{}, error) {
 	return i.node.get(key, hashKey, hashKey)
 }
 
+func (i *index) remove(key string, hashKey uint64) (interface{}, error) {
+	return i.node.remove(key, hashKey, hashKey)
+}
+
 func (i *index) recover() {
 	i.recoverMultiReadFile()
 }

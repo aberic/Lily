@@ -85,10 +85,44 @@ func (n *node) get(key string, hashKey, flexibleKey uint64) (interface{}, error)
 		if realIndex, exist := n.existLink(key); exist {
 			return n.links[realIndex].get()
 		}
-		return nil, errors.New(strings.Join([]string{"box key", key, "is nil"}, " "))
+		return nil, errors.New(strings.Join([]string{"link key", key, "is nil"}, " "))
 	}
 	if realIndex, err := n.existNode(nextDegree); nil == err {
 		return n.nodes[realIndex].get(key, hashKey, nextFlexibleKey)
+	}
+	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
+}
+
+func (n *node) remove(key string, hashKey, flexibleKey uint64) (interface{}, error) {
+	var (
+		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
+		nextFlexibleKey uint64 // 下一级最左最小树所对应真实key
+		distance        uint64 // 指定Level层级节点内各个子节点之前的差
+	)
+	if n.level < 5 {
+		distance = levelDistance(n.level)
+		nextDegree = uint16(flexibleKey / distance)
+		nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
+	} else {
+		//gnomon.Log().Debug("box-get", gnomon.Log().Field("key", key))
+		if realIndex, exist := n.existLink(key); exist {
+			v, err := n.links[realIndex].get()
+			if nil != err {
+				return nil, err
+			}
+			if len(n.links) == 1 {
+				n.links = []Link{}
+			} else if len(n.links) > realIndex {
+				n.links = append(n.links[:realIndex], n.links[realIndex+1:]...)
+			} else {
+				n.links = n.links[:realIndex]
+			}
+			return v, nil
+		}
+		return nil, errors.New(strings.Join([]string{"link key", key, "is nil"}, " "))
+	}
+	if realIndex, err := n.existNode(nextDegree); nil == err {
+		return n.nodes[realIndex].remove(key, hashKey, nextFlexibleKey)
 	}
 	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
 }
@@ -142,13 +176,8 @@ func (n *node) createLeaf(index uint16) Nodal {
 func (n *node) createLink(key string) (Link, bool) {
 	defer n.unLock()
 	n.lock()
-	if n.index.isPrimary() && len(n.links) > 0 {
-		for _, link := range n.links {
-			//gnomon.Log().Debug("createLink", gnomon.Log().Field("exist", true))
-			if strings.EqualFold(link.getMD516Key(), gnomon.CryptoHash().MD516(key)) {
-				return link, true
-			}
-		}
+	if pos, exist := n.existLink(key); exist {
+		return n.links[pos], true
 	}
 	link := &link{preNode: n, seekStartIndex: -1}
 	n.links = append(n.links, link)

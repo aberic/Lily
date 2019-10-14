@@ -49,12 +49,6 @@ service LilyAPI {
     // Get 获取数据
     rpc Get (ReqGet) returns (RespGet) {
     }
-    // Insert 新增数据
-    rpc Insert (ReqInsert) returns (RespInsert) {
-    }
-    // Update 更新数据
-    rpc Update (ReqUpdate) returns (Resp) {
-    }
     // Select 获取数据
     rpc Select (ReqSelect) returns (RespSelect) {
     }

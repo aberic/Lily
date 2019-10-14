@@ -126,30 +126,14 @@ func Get(serverURL, databaseName, formName, key string) (*api.RespGet, error) {
 	return res.(*api.RespGet), err
 }
 
-// Insert 新增数据
-func Insert(serverURL, databaseName, formName string, value interface{}) (*api.RespInsert, error) {
-	// todo 新增数据
-	res, err := insert(serverURL, &api.ReqInsert{})
-	return res.(*api.RespInsert), err
-}
-
-// Update 更新数据
-func Update(serverURL string) (*api.Resp, error) {
-	// todo 更新数据
-	res, err := update(serverURL, &api.ReqUpdate{})
-	return res.(*api.Resp), err
-}
-
 // Select 获取数据
 func Select(serverURL string) (*api.RespSelect, error) {
-	// todo 获取数据
 	res, err := query(serverURL, &api.ReqSelect{})
 	return res.(*api.RespSelect), err
 }
 
 // Delete 删除数据
 func Delete(serverURL string) (*api.Resp, error) {
-	// todo 删除数据
 	res, err := delete(serverURL, &api.ReqDelete{})
 	return res.(*api.Resp), err
 }
@@ -335,40 +319,6 @@ func get(serverURL string, req *api.ReqGet) (interface{}, error) {
 		c := api.NewLilyAPIClient(conn)
 		// 客户端向gRPC服务端发起请求
 		if result, err = c.Get(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
-}
-
-// insert 新增数据
-func insert(serverURL string, req *api.ReqInsert) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespInsert
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Insert(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
-}
-
-// update 更新数据
-func update(serverURL string, req *api.ReqUpdate) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.Resp
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Update(context.Background(), req); nil != err {
 			return nil, err
 		}
 		return result, nil
