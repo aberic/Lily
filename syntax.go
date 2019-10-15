@@ -61,29 +61,29 @@ func (s *sql) first(array []string) error {
 	switch array[0] {
 	default:
 		return syntaxErr(strings.Join(array, " "))
-	case "show":
+	case firstShow:
 		return s.show(array)
-	case "use":
+	case firstUse:
 		return s.use(array)
-	case "create":
+	case firstCreate:
 		return s.create(array)
-	case "putD":
+	case firstPutD:
 		return s.putD(array)
-	case "setD":
+	case firstSetD:
 		return s.setD(array)
-	case "getD":
+	case firstGetD:
 		return s.getD(array)
-	case "put":
+	case firstPut:
 		return s.put(array)
-	case "set":
+	case firstSet:
 		return s.set(array)
-	case "get":
+	case firstGet:
 		return s.get(array)
-	case "select":
+	case firstSelect:
 		return s.query(array)
-	case "remove":
+	case firstRemove:
 		return s.remove(array)
-	case "delete":
+	case firstDelete:
 		return s.delete(array)
 	}
 }
@@ -96,7 +96,7 @@ func (s *sql) show(array []string) error {
 	switch strings.ToLower(array[1]) {
 	default:
 		return sqlSyntaxErr
-	case "conf":
+	case firstShowConf:
 		var configs []*Conf
 		conf, err := GetConf(s.serverURL)
 		if nil != err {
@@ -105,7 +105,7 @@ func (s *sql) show(array []string) error {
 		configs = append(configs, conf)
 		table.Output(configs)
 		return nil
-	case "databases":
+	case firstShowDatabases:
 		dbs, err := ObtainDatabases(s.serverURL)
 		if nil != err {
 			return executeErr(err.Error())
@@ -116,7 +116,7 @@ func (s *sql) show(array []string) error {
 		}
 		table.Output(dbDTO)
 		return nil
-	case "forms":
+	case firstShowForms:
 		if gnomon.String().IsEmpty(s.databaseName) {
 			return sqlDatabaseIsNilErr
 		}
