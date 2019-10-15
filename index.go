@@ -64,10 +64,6 @@ func (i *index) get(key string, hashKey uint64) (interface{}, error) {
 	return i.node.get(key, hashKey, hashKey)
 }
 
-func (i *index) remove(key string, hashKey uint64) (interface{}, error) {
-	return i.node.remove(key, hashKey, hashKey)
-}
-
 func (i *index) recover() {
 	i.recoverMultiReadFile()
 }
@@ -97,7 +93,7 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 	var (
 		inputReader *bufio.Reader
 		data        []byte
-		peekOnce    = 36000
+		peekOnce    = 42000
 		haveNext    = true
 		position    int64
 	)
@@ -112,7 +108,7 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 		if len(data) == 0 {
 			return
 		}
-		if len(data)%36 != 0 {
+		if len(data)%42 != 0 {
 			return errors.New("index lens does't match")
 		}
 	}
@@ -125,12 +121,12 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 			p0 = position
 			p1 = p0 + 11
 			p2 = p1 + 16
-			p3 = p2 + 5
+			p3 = p2 + 11
 			p4 = p3 + 4
 			hashKey := gnomon.Scale().DDuoStringToUint64(indexStr[p0:p1])
 			md516Key := indexStr[p1:p2]
-			seekStart := uint32(gnomon.Scale().DDuoStringToUint64(indexStr[p2:p3])) // value最终存储在文件中的起始位置
-			seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4]))      // value最终存储在文件中的持续长度
+			seekStart := gnomon.Scale().DDuoStringToInt64(indexStr[p2:p3])     // value最终存储在文件中的起始位置
+			seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4])) // value最终存储在文件中的持续长度
 			ib := i.node.put("", hashKey, hashKey, true)
 			ib.getLink().setSeekStartIndex(p0)
 			ib.getLink().setMD5Key(md516Key)

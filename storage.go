@@ -37,9 +37,9 @@ type valueData struct {
 
 // writeResult 数据存储结果
 type writeResult struct {
-	seekStartIndex int64  // 索引最终存储在文件中的起始位置
-	seekStart      uint32 // 16位起始seek
-	seekLast       int    // 8位持续seek
+	seekStartIndex int64 // 索引最终存储在文件中的起始位置
+	seekStart      int64 // 16位起始seek
+	seekLast       int   // 8位持续seek
 	err            error
 }
 
@@ -109,7 +109,7 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	}
 	// 写入11位key及16位md5后key及5位起始seek和4位持续seek
 	if _, err = file.WriteString(strings.Join([]string{appendStr,
-		gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint32ToDDuoString(wf.seekStart), 5),
+		gnomon.String().PrefixSupplementZero(gnomon.Scale().Int64ToDDuoString(wf.seekStart), 11),
 		gnomon.String().PrefixSupplementZero(gnomon.Scale().IntToDDuoString(wf.seekLast), 4)}, "")); nil != err {
 		//gnomon.Log().Error("running", gnomon.Log().Field("seekStartIndex", seekEnd), gnomon.Log().Err(err))
 		return &writeResult{err: err}
@@ -127,6 +127,13 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 		err:            err}
 }
 
+// storeData 存储具体内容
+//
+// path 存储文件路径
+//
+// value 存储具体内容
+//
+// valid 存储有效性，如无效则表示改记录不可用，即删除
 func (s *storage) storeData(path string, value interface{}, valid bool) *writeResult {
 	var (
 		file      *os.File
@@ -160,13 +167,13 @@ func (s *storage) storeData(path string, value interface{}, valid bool) *writeRe
 		return &writeResult{err: err}
 	}
 	return &writeResult{
-		seekStart: uint32(seekStart),
+		seekStart: seekStart,
 		seekLast:  seekLast,
 		err:       err,
 	}
 }
 
-func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan *readResult) {
+func (s *storage) read(filePath string, seekStart int64, seekLast int, rr chan *readResult) {
 	var (
 		file *os.File
 		err  error
@@ -180,26 +187,26 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 	//gnomon.Log().Debug("read", gnomon.Log().Field("filePath", filePath), gnomon.Log().Field("seekStart", seekStart), gnomon.Log().Field("seekLast", seekLast))
 	file, err = s.openFile(filePath, os.O_RDONLY)
 	if err != nil {
-		gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
-	_, err = file.Seek(int64(seekStart), io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
+	_, err = file.Seek(seekStart, io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
-		gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	inputReader := bufio.NewReader(file)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
-		gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}
 	var value interface{}
 	if err = msgpack.Unmarshal(bytes, &value); nil != err {
-		gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//gnomon.Log().Error("read", gnomon.Log().Err(err))
 		rr <- &readResult{err: err}
 		return
 	}

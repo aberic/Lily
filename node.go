@@ -47,7 +47,7 @@ func (n *node) put(key string, hashKey, flexibleKey uint64, update bool) IndexBa
 		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
 		nextFlexibleKey uint64 // 下一级最左最小树所对应真实key
 		distance        uint64 // 指定Level层级节点内各个子节点之前的差
-		data            Nodal
+		nd              Nodal
 	)
 	if n.level < 5 {
 		distance = levelDistance(n.level)
@@ -55,9 +55,9 @@ func (n *node) put(key string, hashKey, flexibleKey uint64, update bool) IndexBa
 		nextDegree = uint16(flexibleKey / distance)
 		nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
 		if n.level == 4 {
-			data = n.createLeaf(nextDegree)
+			nd = n.createLeaf(nextDegree)
 		} else {
-			data = n.createNode(nextDegree)
+			nd = n.createNode(nextDegree)
 		}
 	} else {
 		link, exist := n.createLink(key)
@@ -67,7 +67,7 @@ func (n *node) put(key string, hashKey, flexibleKey uint64, update bool) IndexBa
 		//log.Self.Debug("box", log.Uint32("keyStructure", keyStructure), log.Reflect("value", value))
 		return link.put(key, hashKey)
 	}
-	return data.put(key, hashKey, nextFlexibleKey, update)
+	return nd.put(key, hashKey, nextFlexibleKey, update)
 }
 
 func (n *node) get(key string, hashKey, flexibleKey uint64) (interface{}, error) {
@@ -89,40 +89,6 @@ func (n *node) get(key string, hashKey, flexibleKey uint64) (interface{}, error)
 	}
 	if realIndex, err := n.existNode(nextDegree); nil == err {
 		return n.nodes[realIndex].get(key, hashKey, nextFlexibleKey)
-	}
-	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
-}
-
-func (n *node) remove(key string, hashKey, flexibleKey uint64) (interface{}, error) {
-	var (
-		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
-		nextFlexibleKey uint64 // 下一级最左最小树所对应真实key
-		distance        uint64 // 指定Level层级节点内各个子节点之前的差
-	)
-	if n.level < 5 {
-		distance = levelDistance(n.level)
-		nextDegree = uint16(flexibleKey / distance)
-		nextFlexibleKey = flexibleKey - uint64(nextDegree)*distance
-	} else {
-		//gnomon.Log().Debug("box-get", gnomon.Log().Field("key", key))
-		if realIndex, exist := n.existLink(key); exist {
-			v, err := n.links[realIndex].get()
-			if nil != err {
-				return nil, err
-			}
-			if len(n.links) == 1 {
-				n.links = []Link{}
-			} else if len(n.links) > realIndex {
-				n.links = append(n.links[:realIndex], n.links[realIndex+1:]...)
-			} else {
-				n.links = n.links[:realIndex]
-			}
-			return v, nil
-		}
-		return nil, errors.New(strings.Join([]string{"link key", key, "is nil"}, " "))
-	}
-	if realIndex, err := n.existNode(nextDegree); nil == err {
-		return n.nodes[realIndex].remove(key, hashKey, nextFlexibleKey)
 	}
 	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
 }

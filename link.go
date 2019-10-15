@@ -21,9 +21,9 @@ import (
 type link struct {
 	preNode        Nodal // box 所属 node
 	md516Key       string
-	seekStartIndex int64  // 索引最终存储在文件中的起始位置
-	seekStart      uint32 // value最终存储在文件中的起始位置
-	seekLast       int    // value最终存储在文件中的持续长度
+	seekStartIndex int64 // 索引最终存储在文件中的起始位置
+	seekStart      int64 // value最终存储在文件中的起始位置
+	seekLast       int   // value最终存储在文件中的持续长度
 	tLock          sync.RWMutex
 }
 
@@ -35,7 +35,7 @@ func (l *link) setSeekStartIndex(seek int64) {
 	l.seekStartIndex = seek
 }
 
-func (l *link) setSeekStart(seek uint32) {
+func (l *link) setSeekStart(seek int64) {
 	l.seekStart = seek
 }
 
@@ -55,7 +55,7 @@ func (l *link) getSeekStartIndex() int64 {
 	return l.seekStartIndex
 }
 
-func (l *link) getSeekStart() uint32 {
+func (l *link) getSeekStart() int64 {
 	return l.seekStart
 }
 

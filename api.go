@@ -292,14 +292,6 @@ type Index interface {
 	//
 	// hashKey 索引key，可通过hash转换string生成
 	get(key string, hashKey uint64) (interface{}, error)
-	// remove 删除数据
-	//
-	// 向指定表中删除一条数据并返回
-	//
-	// key 真实key，必须string类型
-	//
-	// hashKey 索引key，可通过hash转换string生成
-	remove(key string, hashKey uint64) (interface{}, error)
 	// recover 重置索引数据
 	recover()
 }
@@ -328,14 +320,6 @@ type Nodal interface {
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
 	get(key string, hashKey, flexibleKey uint64) (interface{}, error)
-	// get 获取数据，返回存储对象
-	//
-	// key 真实key，必须string类型
-	//
-	// hashKey 索引key，可通过hash转换string生成
-	//
-	// flexibleKey 下一级最左最小树所对应真实key
-	remove(key string, hashKey, flexibleKey uint64) (interface{}, error)
 	getDegreeIndex() uint16 // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNode() Nodal      // getPreNode 获取父节点对象
 	getNodes() []Nodal      // getNodes 获取下属节点集合
@@ -352,12 +336,12 @@ type Link interface {
 	WriteLocker                   // WriteLocker 读写锁接口
 	setMD5Key(md5Key string)      // 设置md5Key
 	setSeekStartIndex(seek int64) // 设置索引最终存储在文件中的起始位置
-	setSeekStart(seek uint32)     // 设置value最终存储在文件中的起始位置
+	setSeekStart(seek int64)      // 设置value最终存储在文件中的起始位置
 	setSeekLast(seek int)         // 设置value最终存储在文件中的持续长度
 	getNodal() Nodal              // box 所属 node
 	getMD516Key() string          // 获取md516Key
 	getSeekStartIndex() int64     // 索引最终存储在文件中的起始位置
-	getSeekStart() uint32         // value最终存储在文件中的起始位置
+	getSeekStart() int64          // value最终存储在文件中的起始位置
 	getSeekLast() int             // value最终存储在文件中的持续长度
 	put(key string, hashKey uint64) *indexBack
 	get() (interface{}, error)
