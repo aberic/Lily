@@ -148,6 +148,8 @@ type API interface {
 	// formName 表名
 	//
 	// selector 条件选择器
+	//
+	// int 返回检索条目数量
 	Select(databaseName, formName string, selector *Selector) (int32, interface{}, error)
 	// Delete 删除数据
 	//
@@ -158,7 +160,9 @@ type API interface {
 	// formName 表名
 	//
 	// selector 条件选择器
-	Delete(databaseName, formName string, selector *Selector) error
+	//
+	// int 返回检索条目数量
+	Delete(databaseName, formName string, selector *Selector) (int32, error)
 }
 
 // Database 数据库接口
@@ -230,13 +234,16 @@ type Database interface {
 	// selector 条件选择器
 	//
 	// int 返回检索条目数量
-	query(formName string, selector *Selector) (int32, interface{}, error)
+	query(formName string, selector *Selector) (int32, []interface{}, error)
 	// delete 删除数据
 	//
 	// formName 表名
 	//
 	// selector 条件选择器
-	delete(formName string, selector *Selector) error
+	//
+	// int 返回检索条目数量
+	delete(formName string, selector *Selector) (int32, error)
+	insertDataWithIndexInfo(form Form, key string, indexes map[string]Index, value interface{}, update, valid bool) (uint64, error)
 }
 
 // Form 表接口
@@ -291,7 +298,7 @@ type Index interface {
 	// key 真实key，必须string类型
 	//
 	// hashKey 索引key，可通过hash转换string生成
-	get(key string, hashKey uint64) (interface{}, error)
+	get(key string, hashKey uint64) *readResult
 	// recover 重置索引数据
 	recover()
 }
@@ -319,7 +326,7 @@ type Nodal interface {
 	// hashKey 索引key，可通过hash转换string生成
 	//
 	// flexibleKey 下一级最左最小树所对应真实key
-	get(key string, hashKey, flexibleKey uint64) (interface{}, error)
+	get(key string, hashKey, flexibleKey uint64) *readResult
 	getDegreeIndex() uint16 // getDegreeIndex 获取节点所在树中度集合中的数组下标
 	getPreNode() Nodal      // getPreNode 获取父节点对象
 	getNodes() []Nodal      // getNodes 获取下属节点集合
@@ -344,7 +351,7 @@ type Link interface {
 	getSeekStart() int64          // value最终存储在文件中的起始位置
 	getSeekLast() int             // value最终存储在文件中的持续长度
 	put(key string, hashKey uint64) *indexBack
-	get() (interface{}, error)
+	get() *readResult
 }
 
 // IndexBack 索引检索回调结果接口

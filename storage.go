@@ -31,6 +31,7 @@ var (
 )
 
 type valueData struct {
+	K string      // key
 	I bool        // 是否有效
 	V interface{} // 存储数据
 }
@@ -45,7 +46,8 @@ type writeResult struct {
 
 // readResult 数据读取结果
 type readResult struct {
-	value interface{}
+	key   string      // key
+	value interface{} // value
 	err   error
 }
 
@@ -134,7 +136,7 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 // value 存储具体内容
 //
 // valid 存储有效性，如无效则表示改记录不可用，即删除
-func (s *storage) storeData(path string, value interface{}, valid bool) *writeResult {
+func (s *storage) storeData(key, path string, value interface{}, valid bool) *writeResult {
 	var (
 		file      *os.File
 		seekStart int64
@@ -143,7 +145,7 @@ func (s *storage) storeData(path string, value interface{}, valid bool) *writeRe
 		err       error
 	)
 	// 存储数据外包装数据属性
-	vd := &valueData{I: valid, V: value}
+	vd := &valueData{K: key, I: valid, V: value}
 	if data, err = msgpack.Marshal(vd); nil != err {
 		return &writeResult{err: err}
 	}
@@ -173,7 +175,7 @@ func (s *storage) storeData(path string, value interface{}, valid bool) *writeRe
 	}
 }
 
-func (s *storage) read(filePath string, seekStart int64, seekLast int, rr chan *readResult) {
+func (s *storage) read(filePath string, seekStart int64, seekLast int) *readResult {
 	var (
 		file *os.File
 		err  error
@@ -188,38 +190,33 @@ func (s *storage) read(filePath string, seekStart int64, seekLast int, rr chan *
 	file, err = s.openFile(filePath, os.O_RDONLY)
 	if err != nil {
 		//gnomon.Log().Error("read", gnomon.Log().Err(err))
-		rr <- &readResult{err: err}
-		return
+		return &readResult{err: err}
 	}
 	_, err = file.Seek(seekStart, io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
 		//gnomon.Log().Error("read", gnomon.Log().Err(err))
-		rr <- &readResult{err: err}
-		return
+		return &readResult{err: err}
 	}
 	inputReader := bufio.NewReader(file)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
 		//gnomon.Log().Error("read", gnomon.Log().Err(err))
-		rr <- &readResult{err: err}
-		return
+		return &readResult{err: err}
 	}
 	var value interface{}
 	if err = msgpack.Unmarshal(bytes, &value); nil != err {
 		//gnomon.Log().Error("read", gnomon.Log().Err(err))
-		rr <- &readResult{err: err}
-		return
+		return &readResult{err: err}
 	}
 	switch value.(type) {
 	default:
-		rr <- &readResult{err: valueTypeErr}
+		return &readResult{err: valueTypeErr}
 	case map[string]interface{}:
 		valueMap := value.(map[string]interface{})
 		if valueMap["I"].(bool) {
-			rr <- &readResult{err: err, value: valueMap["V"]}
-		} else {
-			rr <- &readResult{err: valueInvalidErr}
+			return &readResult{key: valueMap["K"].(string), value: valueMap["V"], err: err}
 		}
+		return &readResult{err: valueInvalidErr}
 	}
 }
 

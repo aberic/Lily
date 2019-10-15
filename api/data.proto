@@ -47,9 +47,9 @@ enum FormType {
 // Selector 检索选择器
 message Selector {
     repeated Condition conditions = 1; // conditions 条件查询
-    int32 skip = 2; // skip 结果集跳过数量
+    uint32 skip = 2; // skip 结果集跳过数量
     Sort sort = 3; // sort 排序方式
-    int32 Limit = 4; // Limit 结果集顺序数量
+    uint32 Limit = 4; // Limit 结果集顺序数量
 }
 
 // Condition 条件查询

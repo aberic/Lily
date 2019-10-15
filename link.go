@@ -95,12 +95,9 @@ func (l *link) put(key string, hashKey uint64) *indexBack {
 	}
 }
 
-func (l *link) get() (interface{}, error) {
+func (l *link) get() *readResult {
 	index := l.preNode.getIndex()
-	rrFormBack := make(chan *readResult, 1)
-	go store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID()), l.seekStart, l.seekLast, rrFormBack)
-	rr := <-rrFormBack
-	return rr.value, rr.err
+	return store().read(pathFormDataFile(index.getForm().getDatabase().getID(), index.getForm().getID()), l.seekStart, l.seekLast)
 }
 
 // getFormIndexFilePath 获取表索引文件路径

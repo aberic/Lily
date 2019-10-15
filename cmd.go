@@ -180,7 +180,7 @@ func start() {
 		fmt.Println("lily start")
 	}
 	fmt.Println("初始化数据库…")
-	serverStart(conf)
+	ServerStart(conf)
 }
 
 func loadingFmt(delay time.Duration, loadChan chan struct{}) {

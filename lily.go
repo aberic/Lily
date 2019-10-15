@@ -455,9 +455,9 @@ func (l *Lily) Select(databaseName, formName string, selector *Selector) (int32,
 // formName 表名
 //
 // selector 条件选择器
-func (l *Lily) Delete(databaseName, formName string, selector *Selector) error {
+func (l *Lily) Delete(databaseName, formName string, selector *Selector) (int32, error) {
 	if nil == l || nil == l.databases[databaseName] {
-		return ErrDataIsNil
+		return 0, ErrDataIsNil
 	}
 	return l.databases[databaseName].delete(formName, selector)
 }

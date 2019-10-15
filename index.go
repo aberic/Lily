@@ -60,7 +60,7 @@ func (i *index) put(key string, hashKey uint64, update bool) IndexBack {
 	return i.node.put(key, hashKey, hashKey, update)
 }
 
-func (i *index) get(key string, hashKey uint64) (interface{}, error) {
+func (i *index) get(key string, hashKey uint64) *readResult {
 	return i.node.get(key, hashKey, hashKey)
 }
 

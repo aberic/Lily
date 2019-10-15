@@ -52,7 +52,10 @@ service LilyAPI {
     // Select 获取数据
     rpc Select (ReqSelect) returns (RespSelect) {
     }
+    // Remove 删除数据
+    rpc Remove (ReqRemove) returns (Resp) {
+    }
     // Delete 删除数据
-    rpc Delete (ReqDelete) returns (Resp) {
+    rpc Delete (ReqDelete) returns (RespDelete) {
     }
 }

@@ -32,6 +32,7 @@ type Selector struct {
 	Limit      uint32       `json:"limit"`      // Limit 结果集顺序数量
 	database   Database     // database 数据库对象
 	formName   string       // formName 表名
+	delete     bool         // 是否删除检索结果
 }
 
 // condition 条件查询
@@ -73,7 +74,7 @@ type sort struct {
 	ASC   bool   `json:"asc"` // 是否升序
 }
 
-func (s *Selector) query() (int32, []interface{}, error) {
+func (s *Selector) exec() (int32, []interface{}, error) {
 	var (
 		index     Index
 		leftQuery bool
@@ -260,15 +261,20 @@ func (s *Selector) leftQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeConditio
 					continue
 				}
 			}
-			inter, err := link.get()
-			if nil == err && s.conditionNoIndexLeaf(ns, pcs, inter) {
+			rs := link.get()
+			if nil == rs.err && s.conditionNoIndexLeaf(ns, pcs, rs.value) {
 				count++
 				if skip > 0 {
 					skip--
 					continue
 				}
 				limit++
-				is = append(is, inter)
+				if s.delete {
+					form := leaf.getIndex().getForm()
+					indexes := form.getIndexes() // 获取表索引ID集合
+					_, _ = s.database.insertDataWithIndexInfo(form, rs.key, indexes, rs.value, true, false)
+				}
+				is = append(is, rs.value)
 			}
 		}
 	}
@@ -361,15 +367,20 @@ func (s *Selector) rightQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeConditi
 					continue
 				}
 			}
-			inter, err := links[i].get()
-			if nil == err && s.conditionNoIndexLeaf(ns, pcs, inter) {
+			rs := links[i].get()
+			if nil == rs.err && s.conditionNoIndexLeaf(ns, pcs, rs.value) {
 				count++
 				if skip > 0 {
 					skip--
 					continue
 				}
 				limit++
-				is = append(is, inter)
+				if s.delete {
+					form := leaf.getIndex().getForm()
+					indexes := form.getIndexes() // 获取表索引ID集合
+					_, _ = s.database.insertDataWithIndexInfo(form, rs.key, indexes, rs.value, true, false)
+				}
+				is = append(is, rs.value)
 			}
 		}
 	}
@@ -802,6 +813,27 @@ type nodeSelector struct {
 	cond        *condition
 }
 
-func (s *Selector) formatAPI(apiSelector *api.Selector) {
-
+func (s *Selector) formatAPI(apiSelector *api.Selector) error {
+	if nil == apiSelector {
+		return errors.New("selector is nil")
+	}
+	s.Skip = apiSelector.Skip
+	s.Limit = apiSelector.Limit
+	if nil != apiSelector.Sort {
+		s.Sort = &sort{
+			Param: apiSelector.Sort.Param,
+			ASC:   apiSelector.Sort.Asc,
+		}
+	}
+	if len(apiSelector.Conditions) > 0 {
+		s.Conditions = []*condition{}
+		for _, cond := range apiSelector.Conditions {
+			s.Conditions = append(s.Conditions, &condition{
+				Param: cond.Param,
+				Cond:  cond.Cond,
+				Value: cond.Value,
+			})
+		}
+	}
+	return nil
 }

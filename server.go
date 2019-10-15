@@ -209,7 +209,9 @@ func (l *APIServer) Select(ctx context.Context, req *api.ReqSelect) (*api.RespSe
 		data  []byte
 		err   error
 	)
-	s.formatAPI(req.Selector)
+	if err = s.formatAPI(req.Selector); nil != err {
+		return nil, err
+	}
 	if count, v, err = ObtainLily().Select(req.DatabaseName, req.FormName, s); nil != err {
 		return &api.RespSelect{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}
@@ -219,14 +221,28 @@ func (l *APIServer) Select(ctx context.Context, req *api.ReqSelect) (*api.RespSe
 	return &api.RespSelect{Code: api.Code_Success, Count: count, Value: data}, nil
 }
 
-// Delete 删除数据
-func (l *APIServer) Delete(ctx context.Context, req *api.ReqDelete) (*api.Resp, error) {
-	s := &Selector{}
-	s.formatAPI(req.Selector)
-	if err := ObtainLily().Delete(req.DatabaseName, req.FormName, s); nil != err {
+// Get 获取数据
+func (l *APIServer) Remove(ctx context.Context, req *api.ReqRemove) (*api.Resp, error) {
+	if err := ObtainLily().Remove(req.DatabaseName, req.FormName, req.Key); nil != err {
 		return &api.Resp{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}
 	return &api.Resp{Code: api.Code_Success}, nil
+}
+
+// Delete 删除数据
+func (l *APIServer) Delete(ctx context.Context, req *api.ReqDelete) (*api.RespDelete, error) {
+	var (
+		s     = &Selector{}
+		count int32
+		err   error
+	)
+	if err = s.formatAPI(req.Selector); nil != err {
+		return nil, err
+	}
+	if count, err = ObtainLily().Delete(req.DatabaseName, req.FormName, s); nil != err {
+		return &api.RespDelete{Code: api.Code_Fail, ErrMsg: err.Error()}, err
+	}
+	return &api.RespDelete{Code: api.Code_Success, Count: count}, nil
 }
 
 func (l *APIServer) formatDBs(dbs []Database) []*api.Database {

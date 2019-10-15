@@ -23,8 +23,8 @@ import (
 	"strings"
 )
 
-// serverStart 启动服务
-func serverStart(conf *Conf) {
+// ServerStart 启动服务
+func ServerStart(conf *Conf) {
 	logSet(conf)
 	initLily(conf)
 	rpcListener(conf)

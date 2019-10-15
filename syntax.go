@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/lily/api"
 	"github.com/modood/table"
 	"github.com/vmihailenco/msgpack"
 	"strings"
@@ -78,6 +79,12 @@ func (s *sql) first(array []string) error {
 		return s.set(array)
 	case "get":
 		return s.get(array)
+	case "select":
+		return s.query(array)
+	case "remove":
+		return s.remove(array)
+	case "delete":
+		return s.delete(array)
 	}
 }
 
@@ -295,6 +302,42 @@ func (s *sql) get(array []string) error {
 		fmt.Println(string(data))
 	}
 	return nil
+}
+
+func (s *sql) query(array []string) error {
+	if len(array) < 4 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	selector, err := s.selector(array)
+	if nil != err {
+		return err
+	}
+	_, err = Select(s.serverURL, s.databaseName, array[1], selector)
+	return err
+}
+
+func (s *sql) remove(array []string) error {
+	if len(array) != 3 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	_, err := Remove(s.serverURL, s.databaseName, array[1], array[2])
+	return err
+}
+
+func (s *sql) delete(array []string) error {
+	if len(array) < 4 {
+		return sqlSyntaxParamsCountInvalidErr
+	}
+	selector, err := s.selector(array)
+	if nil != err {
+		return err
+	}
+	_, err = Select(s.serverURL, s.databaseName, array[1], selector)
+	return err
+}
+
+func (s *sql) selector(array []string) (*api.Selector, error) {
+	return nil, nil
 }
 
 //func put(databaseName, formName, key string, value interface{}) error {

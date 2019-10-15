@@ -161,27 +161,6 @@ message RespGet {
     string errMsg = 3; // errMsg 错误信息
 }
 
-// ReqInsert 新增数据
-message ReqInsert {
-    string databaseName = 1; // databaseName 数据库名称
-    string formName = 2; // formName 表名称
-    bytes value = 3; // value 插入数据对象
-}
-
-// RespInsert 响应新增数据
-message RespInsert {
-    Code code = 1; // code 响应结果码
-    uint64 hashKey = 2; // hashKey hashKey
-    string errMsg = 3; // errMsg 错误信息
-}
-
-// ReqUpdate 更新数据
-message ReqUpdate {
-    string databaseName = 1; // databaseName 数据库名称
-    string formName = 2; // formName 表名称
-    bytes value = 3; // value 插入数据对象
-}
-
 // ReqSelect 获取数据
 message ReqSelect {
     string databaseName = 1; // databaseName 数据库名称
@@ -197,11 +176,25 @@ message RespSelect {
     string errMsg = 4; // errMsg 错误信息
 }
 
+// ReqGet 删除数据
+message ReqRemove {
+    string databaseName = 1; // databaseName 数据库名称
+    string formName = 2; // formName 表名称
+    string key = 3; // key 数据库名称
+}
+
 // ReqDelete 删除数据
 message ReqDelete {
     string databaseName = 1; // databaseName 数据库名称
     string formName = 2; // formName 表名称
     Selector Selector = 3; // selector 条件选择器
+}
+
+// RespDelete 响应删除数据
+message RespDelete {
+    Code code = 1; // code 响应结果码
+    int32 count = 2; // count 获取数据总条数
+    string errMsg = 3; // errMsg 错误信息
 }
 
 // Resp 通用响应对象

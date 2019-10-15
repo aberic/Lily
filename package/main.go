@@ -14,10 +14,10 @@
 
 package main
 
-import (
-	"github.com/aberic/lily"
-)
+import "github.com/aberic/lily"
 
+// go build -o ./lily ./main.go
+// go build -o ./runner/lily ./runner/main.go
 func main() {
-	lily.ServerStart(lily.ObtainConf(""))
+	lily.Execute()
 }

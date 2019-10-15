@@ -70,7 +70,7 @@ func (n *node) put(key string, hashKey, flexibleKey uint64, update bool) IndexBa
 	return nd.put(key, hashKey, nextFlexibleKey, update)
 }
 
-func (n *node) get(key string, hashKey, flexibleKey uint64) (interface{}, error) {
+func (n *node) get(key string, hashKey, flexibleKey uint64) *readResult {
 	var (
 		nextDegree      uint16 // 下一节点所在当前节点下度的坐标
 		nextFlexibleKey uint64 // 下一级最左最小树所对应真实key
@@ -85,12 +85,12 @@ func (n *node) get(key string, hashKey, flexibleKey uint64) (interface{}, error)
 		if realIndex, exist := n.existLink(key); exist {
 			return n.links[realIndex].get()
 		}
-		return nil, errors.New(strings.Join([]string{"link key", key, "is nil"}, " "))
+		return &readResult{err: errors.New(strings.Join([]string{"link key", key, "is nil"}, " "))}
 	}
 	if realIndex, err := n.existNode(nextDegree); nil == err {
 		return n.nodes[realIndex].get(key, hashKey, nextFlexibleKey)
 	}
-	return nil, errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))
+	return &readResult{err: errors.New(strings.Join([]string{"node key", key, "is nil"}, " "))}
 }
 
 func (n *node) existNode(index uint16) (realIndex int, err error) {

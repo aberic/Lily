@@ -281,6 +281,22 @@ func TestQuerySelector2(t *testing.T) {
 	})
 	t.Log("select id true count =", count, "i = ", i, "err = ", err)
 
+	count, err = l.Delete(checkbookName, shopperName, &Selector{
+		Conditions: []*condition{{Param: "TestValueIn.ID", Cond: "gt", Value: 999}},
+		Sort:       &sort{Param: "TestValueIn.ID", ASC: true},
+		Skip:       1,
+		Limit:      5,
+	})
+	t.Log("select id true count =", count, "i = ", i, "err = ", err)
+
+	count, i, err = l.Select(checkbookName, shopperName, &Selector{
+		Conditions: []*condition{{Param: "TestValueIn.ID", Cond: "gt", Value: 999}},
+		Sort:       &sort{Param: "TestValueIn.ID", ASC: true},
+		Skip:       1,
+		Limit:      5,
+	})
+	t.Log("select id true count =", count, "i = ", i, "err = ", err)
+
 	count, i, err = l.Select(checkbookName, shopperName, &Selector{
 		Conditions: []*condition{{Param: "TestValueIn.Age", Cond: "gt", Value: 1018}},
 		Sort:       &sort{Param: "TestValueIn.Age", ASC: true},

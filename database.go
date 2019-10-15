@@ -175,15 +175,15 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 	}
 	for _, index := range form.getIndexes() {
 		if index.getKeyStructure() == indexDefaultID {
-			v, err := index.get(key, hash(key))
-			if nil != err {
-				return nil, err
+			rs := index.get(key, hash(key))
+			if nil != rs.err {
+				return nil, rs.err
 			}
-			switch v.(type) {
+			switch rs.value.(type) {
 			default:
-				return index.get(key, hash(key))
+				return rs.value, nil
 			case string:
-				if gnomon.String().IsEmpty(v.(string)) {
+				if gnomon.String().IsEmpty(rs.value.(string)) {
 					return nil, errors.New("value is invalid")
 				}
 			}
@@ -206,18 +206,25 @@ func (d *database) remove(formName string, key string) error {
 	return err
 }
 
-func (d *database) delete(formName string, selector *Selector) error {
-	// todo 删除
-	return nil
+func (d *database) delete(formName string, selector *Selector) (int32, error) {
+	if nil == d {
+		return 0, ErrDataIsNil
+	}
+	selector.formName = formName
+	selector.database = d
+	selector.delete = true
+	c, _, err := selector.exec()
+	return c, err
 }
 
-func (d *database) query(formName string, selector *Selector) (int32, interface{}, error) {
+func (d *database) query(formName string, selector *Selector) (int32, []interface{}, error) {
 	if nil == d {
 		return 0, nil, ErrDataIsNil
 	}
 	selector.formName = formName
 	selector.database = d
-	return selector.query()
+	selector.delete = false
+	return selector.exec()
 }
 
 func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[string]Index, value interface{}, update, valid bool) (uint64, error) {
@@ -232,7 +239,7 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[st
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	ibs = d.rangeIndexes(form, key, indexes, value, update)
 	// 存储数据到表文件
-	dataWriteResult := store().storeData(pathFormDataFile(d.id, form.getID()), value, valid)
+	dataWriteResult := store().storeData(key, pathFormDataFile(d.id, form.getID()), value, valid)
 	if nil != dataWriteResult.err {
 		return 0, dataWriteResult.err
 	}
