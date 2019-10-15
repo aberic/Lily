@@ -60,7 +60,7 @@ type Conf struct {
 	Limit                    bool   `yaml:"Limit"`                    // Limit 是否启用服务限流策略
 	LimitMillisecond         int32  `yaml:"LimitMillisecond"`         // LimitMillisecond 请求限定的时间段（毫秒）
 	LimitCount               int32  `yaml:"LimitCount"`               // LimitCount 请求限定的时间段内允许的请求次数
-	LimitIntervalMillisecond int32  `yaml:"LimitIntervalMillisecond"` // LimitIntervalMillisecond 请求允许的最小间隔时间（毫秒），0表示不限
+	LimitIntervalMicrosecond int32  `yaml:"LimitIntervalMicrosecond"` // LimitIntervalMillisecond 请求允许的最小间隔时间（微秒），0表示不限
 	LilyLockFilePath         string // LilyLockFilePath Lily当前进程地址存储文件地址
 	LilyBootstrapFilePath    string // LilyBootstrapFilePath Lily重启引导文件地址
 }
@@ -153,7 +153,7 @@ func (c *Conf) conf2RPC() *api.Conf {
 		Limit:                    c.Limit,
 		LimitMillisecond:         c.LimitMillisecond,
 		LimitCount:               c.LimitCount,
-		LimitIntervalMillisecond: c.LimitIntervalMillisecond,
+		LimitIntervalMicrosecond: c.LimitIntervalMicrosecond,
 		LilyLockFilePath:         c.LilyLockFilePath,
 		LilyBootstrapFilePath:    c.LilyBootstrapFilePath,
 	}
@@ -172,7 +172,7 @@ func (c *Conf) rpc2Conf(conf *api.Conf) {
 	c.Limit = conf.Limit
 	c.LimitMillisecond = conf.LimitMillisecond
 	c.LimitCount = conf.LimitCount
-	c.LimitIntervalMillisecond = conf.LimitIntervalMillisecond
+	c.LimitIntervalMicrosecond = conf.LimitIntervalMicrosecond
 	c.LilyLockFilePath = conf.LilyLockFilePath
 	c.LilyBootstrapFilePath = conf.LilyBootstrapFilePath
 }

@@ -22,7 +22,7 @@ message Conf {
     bool Limit = 9; // Limit 是否启用服务限流策略
     int32 LimitMillisecond = 10; // LimitMillisecond 请求限定的时间段（毫秒）
     int32 LimitCount = 11; // LimitCount 请求限定的时间段内允许的请求次数
-    int32 LimitIntervalMillisecond = 12; // LimitIntervalMillisecond 请求允许的最小间隔时间（毫秒），0表示不限
+    int32 LimitIntervalMicrosecond = 12; // LimitIntervalMillisecond 请求允许的最小间隔时间（微秒），0表示不限
     string LilyLockFilePath = 13; // LilyLockFilePath Lily当前进程地址存储文件地址
     string LilyBootstrapFilePath = 14; // LilyBootstrapFilePath Lily重启引导文件地址
 }

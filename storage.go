@@ -16,6 +16,7 @@ package lily
 
 import (
 	"bufio"
+	"errors"
 	"github.com/aberic/gnomon"
 	"github.com/vmihailenco/msgpack"
 	"io"
@@ -23,6 +24,16 @@ import (
 	"strings"
 	"sync"
 )
+
+var (
+	valueTypeErr    = errors.New("value type error")
+	valueInvalidErr = errors.New("value is invalid")
+)
+
+type valueData struct {
+	I bool        // 是否有效
+	V interface{} // 存储数据
+}
 
 // writeResult 数据存储结果
 type writeResult struct {
@@ -116,7 +127,7 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 		err:            err}
 }
 
-func (s *storage) storeData(path string, value interface{}) *writeResult {
+func (s *storage) storeData(path string, value interface{}, valid bool) *writeResult {
 	var (
 		file      *os.File
 		seekStart int64
@@ -124,7 +135,9 @@ func (s *storage) storeData(path string, value interface{}) *writeResult {
 		data      []byte
 		err       error
 	)
-	if data, err = msgpack.Marshal(value); nil != err {
+	// 存储数据外包装数据属性
+	vd := &valueData{I: valid, V: value}
+	if data, err = msgpack.Marshal(vd); nil != err {
 		return &writeResult{err: err}
 	}
 	defer func() {
@@ -190,7 +203,17 @@ func (s *storage) read(filePath string, seekStart uint32, seekLast int, rr chan 
 		rr <- &readResult{err: err}
 		return
 	}
-	rr <- &readResult{err: err, value: value}
+	switch value.(type) {
+	default:
+		rr <- &readResult{err: valueTypeErr}
+	case map[string]interface{}:
+		valueMap := value.(map[string]interface{})
+		if valueMap["I"].(bool) {
+			rr <- &readResult{err: err, value: valueMap["V"]}
+		} else {
+			rr <- &readResult{err: valueInvalidErr}
+		}
+	}
 }
 
 func (s *storage) openFile(filePath string, flag int) (*os.File, error) {

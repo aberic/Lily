@@ -425,9 +425,9 @@ func (l *Lily) Get(databaseName, formName, key string) (interface{}, error) {
 // Remove 删除数据
 //
 // 向指定表中删除一条数据并返回
-func (l *Lily) Remove(databaseName, formName, key string) (interface{}, error) {
+func (l *Lily) Remove(databaseName, formName, key string) error {
 	if nil == l || nil == l.databases[databaseName] {
-		return 0, ErrDataIsNil
+		return ErrDataIsNil
 	}
 	return l.databases[databaseName].remove(formName, key)
 }

@@ -9,4 +9,4 @@ conf:
   Limit: false # 是否启用服务限流策略
   LimitMillisecond: 3 # 请求限定的时间段（毫秒）
   LimitCount: 3 # 请求限定的时间段内允许的请求次数
-  LimitIntervalMillisecond: 150 # 请求允许的最小间隔时间（毫秒），0表示不限
+  LimitIntervalMicrosecond: 150 # 请求允许的最小间隔时间（微秒），0表示不限

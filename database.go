@@ -164,11 +164,8 @@ func (d *database) put(formName string, key string, value interface{}, update bo
 	if nil == form {
 		return 0, formIsInvalid(formName)
 	}
-	if form.getFormType() != FormTypeDoc {
-		return 0, errors.New("put method only support doc")
-	}
 	indexes := form.getIndexes() // 获取表索引ID集合
-	return d.insertDataWithIndexInfo(form, key, indexes, value, update)
+	return d.insertDataWithIndexInfo(form, key, indexes, value, update, true)
 }
 
 func (d *database) get(formName string, key string) (interface{}, error) {
@@ -178,25 +175,35 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 	}
 	for _, index := range form.getIndexes() {
 		if index.getKeyStructure() == indexDefaultID {
-			return index.get(key, hash(key))
+			v, err := index.get(key, hash(key))
+			if nil != err {
+				return nil, err
+			}
+			switch v.(type) {
+			default:
+				return index.get(key, hash(key))
+			case string:
+				if gnomon.String().IsEmpty(v.(string)) {
+					return nil, errors.New("value is invalid")
+				}
+			}
 		}
 	}
 	return nil, errors.New("no key for custom id index")
 }
 
-func (d *database) remove(formName string, key string) (interface{}, error) {
-	v, err := d.get(formName, key)
+func (d *database) remove(formName string, key string) error {
+	value, err := d.get(formName, key)
 	if nil != err {
-		return nil, err
+		return err
 	}
-	form := d.forms[formName]
+	form := d.forms[formName] // 获取待操作表
+	if nil == form {
+		return formIsInvalid(formName)
+	}
 	indexes := form.getIndexes() // 获取表索引ID集合
-	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
-	ibs := d.rangeIndexes(form, key, indexes, v, true)
-	for _, ib := range ibs {
-		_, _ = ib.getLink().getNodal().getIndex().remove(ib.getKey(), ib.getHashKey())
-	}
-	return v, nil
+	_, err = d.insertDataWithIndexInfo(form, key, indexes, value, true, false)
+	return err
 }
 
 func (d *database) delete(formName string, selector *Selector) error {
@@ -213,7 +220,7 @@ func (d *database) query(formName string, selector *Selector) (int32, interface{
 	return selector.query()
 }
 
-func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[string]Index, value interface{}, update bool) (uint64, error) {
+func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[string]Index, value interface{}, update, valid bool) (uint64, error) {
 	var (
 		ibs []IndexBack
 		wg  sync.WaitGroup
@@ -225,7 +232,7 @@ func (d *database) insertDataWithIndexInfo(form Form, key string, indexes map[st
 	// 遍历表索引ID集合，检索并计算当前索引所在文件位置
 	ibs = d.rangeIndexes(form, key, indexes, value, update)
 	// 存储数据到表文件
-	dataWriteResult := store().storeData(pathFormDataFile(d.id, form.getID()), value)
+	dataWriteResult := store().storeData(pathFormDataFile(d.id, form.getID()), value, valid)
 	if nil != dataWriteResult.err {
 		return 0, dataWriteResult.err
 	}

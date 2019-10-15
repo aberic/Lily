@@ -214,7 +214,7 @@ func TestQuerySelector2(t *testing.T) {
 	execI := 1003
 	j, err := l.Get(checkbookName, shopperName, strconv.Itoa(execI))
 	t.Log("get ", execI, " = ", j, "err = ", err)
-	j, err = l.Remove(checkbookName, shopperName, strconv.Itoa(execI))
+	err = l.Remove(checkbookName, shopperName, strconv.Itoa(execI))
 	t.Log("remove ", execI, " = ", j, "err = ", err)
 	j, err = l.Get(checkbookName, shopperName, strconv.Itoa(execI))
 	t.Log("get ", execI, " = ", j, "err = ", err)

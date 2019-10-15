@@ -138,7 +138,7 @@ type API interface {
 	// Remove 删除数据
 	//
 	// 向指定表中删除一条数据并返回
-	Remove(databaseName, formName, key string) (interface{}, error)
+	Remove(databaseName, formName, key string) error
 	// Select 获取数据
 	//
 	// 向指定表中查询一条数据并返回
@@ -222,7 +222,7 @@ type Database interface {
 	// remove 删除数据
 	//
 	// 向指定表中删除一条数据并返回
-	remove(formName, key string) (interface{}, error)
+	remove(formName, key string) error
 	// querySelector 根据条件检索
 	//
 	// formName 表名
