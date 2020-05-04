@@ -6,7 +6,7 @@ require (
 	github.com/aberic/gnomon v0.0.0-20200503093554-f4c947c7b98c
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/getwe/figlet4go v0.0.0-20160909034824-bc879344e874
-	github.com/golang/protobuf v1.3.3
+	github.com/golang/protobuf v1.3.4
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/modood/table v0.0.0-20181112072225-499dc7fba710
