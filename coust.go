@@ -38,8 +38,8 @@ const (
 )
 
 // Create 语句解析内容
-const (
-	firstCreateDatabase = "database"
-	firstCreateTable    = "table"
-	firstCreateDoc      = "doc"
-)
+//const (
+//	firstCreateDatabase = "database"
+//	firstCreateTable    = "table"
+//	firstCreateDoc      = "doc"
+//)

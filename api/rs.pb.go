@@ -24,8 +24,10 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type Code int32
 
 const (
+	// Success 成功
 	Code_Success Code = 0
-	Code_Fail    Code = 1
+	// Fail 失败
+	Code_Fail Code = 1
 )
 
 var Code_name = map[int32]string{
@@ -80,9 +82,12 @@ var xxx_messageInfo_ReqConf proto.InternalMessageInfo
 
 // RespConf 响应获取数据库引擎对象
 type RespConf struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Conf                 *Conf    `protobuf:"bytes,2,opt,name=conf,proto3" json:"conf,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Conf 数据库引擎对象
+	Conf *Conf `protobuf:"bytes,2,opt,name=Conf,proto3" json:"Conf,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -168,12 +173,15 @@ var xxx_messageInfo_ReqDatabases proto.InternalMessageInfo
 
 // RespDatabases 响应获取数据库集合
 type RespDatabases struct {
-	Code                 Code        `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Databases            []*Database `protobuf:"bytes,2,rep,name=databases,proto3" json:"databases,omitempty"`
-	ErrMsg               string      `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
-	XXX_unrecognized     []byte      `json:"-"`
-	XXX_sizecache        int32       `json:"-"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Databases 数据库对象集合
+	Databases []*Database `protobuf:"bytes,2,rep,name=Databases,proto3" json:"Databases,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RespDatabases) Reset()         { *m = RespDatabases{} }
@@ -224,7 +232,8 @@ func (m *RespDatabases) GetErrMsg() string {
 
 // ReqForms 请求获取数据库表集合
 type ReqForms struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName         string   `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -264,9 +273,12 @@ func (m *ReqForms) GetDatabaseName() string {
 
 // RespForms 响应获取数据库表集合
 type RespForms struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Forms                []*Form  `protobuf:"bytes,2,rep,name=forms,proto3" json:"forms,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Forms 数据库表对象集合
+	Forms []*Form `protobuf:"bytes,2,rep,name=Forms,proto3" json:"Forms,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -320,8 +332,10 @@ func (m *RespForms) GetErrMsg() string {
 
 // ReqCreateDatabase 请求新建数据库
 type ReqCreateDatabase struct {
-	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Comment              string   `protobuf:"bytes,2,opt,name=comment,proto3" json:"comment,omitempty"`
+	// Name 数据库名称，根据需求可以随时变化
+	Name string `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
+	// Comment 数据库描述
+	Comment              string   `protobuf:"bytes,2,opt,name=Comment,proto3" json:"Comment,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -368,12 +382,15 @@ func (m *ReqCreateDatabase) GetComment() string {
 
 // RespDatabase 响应新建数据库
 type RespDatabase struct {
-	Code                 Code      `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Database             *Database `protobuf:"bytes,2,opt,name=database,proto3" json:"database,omitempty"`
-	ErrMsg               string    `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
-	XXX_unrecognized     []byte    `json:"-"`
-	XXX_sizecache        int32     `json:"-"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// database 数据库对象
+	Database *Database `protobuf:"bytes,2,opt,name=Database,proto3" json:"Database,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RespDatabase) Reset()         { *m = RespDatabase{} }
@@ -424,10 +441,14 @@ func (m *RespDatabase) GetErrMsg() string {
 
 // ReqCreateForm 请求创建表
 type ReqCreateForm struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	Name                 string   `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Comment              string   `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
-	FormType             FormType `protobuf:"varint,4,opt,name=formType,proto3,enum=api.FormType" json:"formType,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// Name 表名称
+	Name string `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
+	// Comment 表描述
+	Comment string `protobuf:"bytes,3,opt,name=Comment,proto3" json:"Comment,omitempty"`
+	// FormType 表类型
+	FormType             FormType `protobuf:"varint,4,opt,name=FormType,proto3,enum=api.FormType" json:"FormType,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -488,9 +509,12 @@ func (m *ReqCreateForm) GetFormType() FormType {
 
 // ReqKey 请求新建主键
 type ReqCreateKey struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string   `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
-	KeyStructure         string   `protobuf:"bytes,3,opt,name=keyStructure,proto3" json:"keyStructure,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// Comment 主键结构名，按照规范结构组成的主键字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	KeyStructure         string   `protobuf:"bytes,3,opt,name=KeyStructure,proto3" json:"KeyStructure,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -544,9 +568,12 @@ func (m *ReqCreateKey) GetKeyStructure() string {
 
 // ReqIndex 请求新建索引
 type ReqCreateIndex struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string   `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
-	KeyStructure         string   `protobuf:"bytes,3,opt,name=keyStructure,proto3" json:"keyStructure,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// Comment 主键结构名，按照规范结构组成的主键字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+	KeyStructure         string   `protobuf:"bytes,3,opt,name=KeyStructure,proto3" json:"KeyStructure,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -600,8 +627,10 @@ func (m *ReqCreateIndex) GetKeyStructure() string {
 
 // ReqPutD 新增数据
 type ReqPutD struct {
-	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value                []byte   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// Key 数据库名称
+	Key string `protobuf:"bytes,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	// Value 插入数据对象
+	Value                []byte   `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -648,9 +677,12 @@ func (m *ReqPutD) GetValue() []byte {
 
 // RespPutD 响应新增数据
 type RespPutD struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	HashKey              uint64   `protobuf:"varint,2,opt,name=hashKey,proto3" json:"hashKey,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// HashKey HashKey
+	HashKey uint64 `protobuf:"varint,2,opt,name=HashKey,proto3" json:"HashKey,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -704,8 +736,10 @@ func (m *RespPutD) GetErrMsg() string {
 
 // ReqSetD 新增数据
 type ReqSetD struct {
-	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value                []byte   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// Key 数据库名称
+	Key string `protobuf:"bytes,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	// Value 插入数据对象
+	Value                []byte   `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -752,9 +786,12 @@ func (m *ReqSetD) GetValue() []byte {
 
 // RespSetD 响应新增数据
 type RespSetD struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	HashKey              uint64   `protobuf:"varint,2,opt,name=hashKey,proto3" json:"hashKey,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// HashKey HashKey
+	HashKey uint64 `protobuf:"varint,2,opt,name=HashKey,proto3" json:"HashKey,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -808,7 +845,8 @@ func (m *RespSetD) GetErrMsg() string {
 
 // ReqGetD 获取数据
 type ReqGetD struct {
-	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	// Key 数据库名称
+	Key                  string   `protobuf:"bytes,1,opt,name=Key,proto3" json:"Key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -848,9 +886,12 @@ func (m *ReqGetD) GetKey() string {
 
 // RespGetD 响应获取数据
 type RespGetD struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Value                []byte   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Value Value
+	Value []byte `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -904,10 +945,14 @@ func (m *RespGetD) GetErrMsg() string {
 
 // ReqPut 新增数据
 type ReqPut struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string   `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
-	Key                  string   `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Value                []byte   `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// Key 数据库名称
+	Key string `protobuf:"bytes,3,opt,name=Key,proto3" json:"Key,omitempty"`
+	// Value 插入数据对象
+	Value                []byte   `protobuf:"bytes,4,opt,name=Value,proto3" json:"Value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -968,9 +1013,12 @@ func (m *ReqPut) GetValue() []byte {
 
 // RespPut 响应新增数据
 type RespPut struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	HashKey              uint64   `protobuf:"varint,2,opt,name=hashKey,proto3" json:"hashKey,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// HashKey HashKey
+	HashKey uint64 `protobuf:"varint,2,opt,name=HashKey,proto3" json:"HashKey,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1024,10 +1072,14 @@ func (m *RespPut) GetErrMsg() string {
 
 // ReqSet 新增数据
 type ReqSet struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string   `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
-	Key                  string   `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Value                []byte   `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// Key 数据库名称
+	Key string `protobuf:"bytes,3,opt,name=Key,proto3" json:"Key,omitempty"`
+	// Value 插入数据对象
+	Value                []byte   `protobuf:"bytes,4,opt,name=Value,proto3" json:"Value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1088,9 +1140,12 @@ func (m *ReqSet) GetValue() []byte {
 
 // RespSet 响应新增数据
 type RespSet struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	HashKey              uint64   `protobuf:"varint,2,opt,name=hashKey,proto3" json:"hashKey,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// HashKey HashKey
+	HashKey uint64 `protobuf:"varint,2,opt,name=HashKey,proto3" json:"HashKey,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1144,9 +1199,12 @@ func (m *RespSet) GetErrMsg() string {
 
 // ReqGet 获取数据
 type ReqGet struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string   `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
-	Key                  string   `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// Key 数据库名称
+	Key                  string   `protobuf:"bytes,3,opt,name=Key,proto3" json:"Key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1200,9 +1258,12 @@ func (m *ReqGet) GetKey() string {
 
 // RespGet 响应获取数据
 type RespGet struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Value                []byte   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Value Value
+	Value []byte `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1256,8 +1317,11 @@ func (m *RespGet) GetErrMsg() string {
 
 // ReqSelect 获取数据
 type ReqSelect struct {
-	DatabaseName         string    `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string    `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// selector 条件选择器
 	Selector             *Selector `protobuf:"bytes,3,opt,name=Selector,proto3" json:"Selector,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
 	XXX_unrecognized     []byte    `json:"-"`
@@ -1312,10 +1376,14 @@ func (m *ReqSelect) GetSelector() *Selector {
 
 // RespSelect 响应获取数据
 type RespSelect struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Count                int32    `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	Value                []byte   `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,4,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Count 获取数据总条数
+	Count int32 `protobuf:"varint,2,opt,name=Count,proto3" json:"Count,omitempty"`
+	// Value 获取数据结果
+	Value []byte `protobuf:"bytes,3,opt,name=Value,proto3" json:"Value,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,4,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1376,9 +1444,12 @@ func (m *RespSelect) GetErrMsg() string {
 
 // ReqGet 删除数据
 type ReqRemove struct {
-	DatabaseName         string   `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string   `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
-	Key                  string   `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// Key 数据库名称
+	Key                  string   `protobuf:"bytes,3,opt,name=Key,proto3" json:"Key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1432,8 +1503,11 @@ func (m *ReqRemove) GetKey() string {
 
 // ReqDelete 删除数据
 type ReqDelete struct {
-	DatabaseName         string    `protobuf:"bytes,1,opt,name=databaseName,proto3" json:"databaseName,omitempty"`
-	FormName             string    `protobuf:"bytes,2,opt,name=formName,proto3" json:"formName,omitempty"`
+	// DatabaseName 数据库名称
+	DatabaseName string `protobuf:"bytes,1,opt,name=DatabaseName,proto3" json:"DatabaseName,omitempty"`
+	// FormName 表名称
+	FormName string `protobuf:"bytes,2,opt,name=FormName,proto3" json:"FormName,omitempty"`
+	// selector 条件选择器
 	Selector             *Selector `protobuf:"bytes,3,opt,name=Selector,proto3" json:"Selector,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
 	XXX_unrecognized     []byte    `json:"-"`
@@ -1488,9 +1562,12 @@ func (m *ReqDelete) GetSelector() *Selector {
 
 // RespDelete 响应删除数据
 type RespDelete struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	Count                int32    `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,3,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// Count 获取数据总条数
+	Count int32 `protobuf:"varint,2,opt,name=Count,proto3" json:"Count,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,3,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1544,8 +1621,10 @@ func (m *RespDelete) GetErrMsg() string {
 
 // Resp 通用响应对象
 type Resp struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=code,proto3,enum=api.Code" json:"code,omitempty"`
-	ErrMsg               string   `protobuf:"bytes,2,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	// Code 响应结果码
+	Code Code `protobuf:"varint,1,opt,name=Code,proto3,enum=api.Code" json:"Code,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg               string   `protobuf:"bytes,2,opt,name=ErrMsg,proto3" json:"ErrMsg,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -1626,46 +1705,46 @@ func init() {
 func init() { proto.RegisterFile("api/rs.proto", fileDescriptor_ae6ce81ad544face) }
 
 var fileDescriptor_ae6ce81ad544face = []byte{
-	// 656 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x4b, 0x6f, 0xd3, 0x40,
-	0x10, 0x26, 0xb1, 0xdb, 0xc4, 0xd3, 0x34, 0x2a, 0x2b, 0x84, 0xac, 0xa2, 0x8a, 0x68, 0x4f, 0x29,
-	0x48, 0x46, 0x94, 0x33, 0x07, 0xda, 0xaa, 0x11, 0xaa, 0xa8, 0xaa, 0x35, 0x02, 0x51, 0x84, 0xc4,
-	0xd6, 0x99, 0x50, 0xab, 0x8e, 0xd7, 0xf1, 0xa3, 0xc2, 0xff, 0x81, 0x1f, 0x8d, 0x76, 0xd7, 0x8f,
-	0x06, 0xc5, 0x72, 0x4b, 0x1f, 0x37, 0xcf, 0xcc, 0xce, 0x7c, 0x8f, 0xd9, 0xc4, 0x86, 0x01, 0x8f,
-	0xfc, 0x37, 0x71, 0xe2, 0x44, 0xb1, 0x48, 0x05, 0x31, 0x78, 0xe4, 0x6f, 0x0f, 0x65, 0x6a, 0xca,
-	0x53, 0xae, 0x93, 0x3a, 0xf6, 0x44, 0x38, 0xd3, 0x31, 0xb5, 0xa0, 0xc7, 0x70, 0x71, 0x20, 0xc2,
-	0x19, 0xfd, 0x09, 0x7d, 0x86, 0x49, 0x24, 0x9f, 0xc9, 0x0e, 0x98, 0x9e, 0x98, 0xa2, 0xdd, 0x19,
-	0x75, 0xc6, 0xc3, 0x3d, 0xcb, 0xe1, 0x91, 0xef, 0x1c, 0x88, 0x29, 0x32, 0x95, 0xd6, 0xe5, 0x70,
-	0x66, 0x77, 0x47, 0x9d, 0xf1, 0x46, 0x55, 0x0e, 0x67, 0x4c, 0xa5, 0xc9, 0x73, 0x58, 0xc7, 0x38,
-	0xfe, 0x94, 0xfc, 0xb2, 0x8d, 0x51, 0x67, 0x6c, 0xb1, 0x22, 0xa2, 0x43, 0x18, 0x30, 0x5c, 0x1c,
-	0xf2, 0x94, 0x9f, 0xf3, 0x04, 0x13, 0x9a, 0xc0, 0xa6, 0x44, 0xac, 0x12, 0x6d, 0xb0, 0xaf, 0xc1,
-	0x9a, 0x96, 0x67, 0xed, 0xee, 0xc8, 0x18, 0x6f, 0xec, 0x6d, 0xaa, 0x33, 0xe5, 0x04, 0x56, 0xd7,
-	0x1b, 0x49, 0x38, 0x52, 0xe6, 0xe2, 0x48, 0xc4, 0xf3, 0x84, 0x50, 0x18, 0x94, 0x0d, 0x27, 0x7c,
-	0xae, 0x71, 0x2d, 0xb6, 0x94, 0xa3, 0x1e, 0x58, 0x92, 0xa4, 0x6e, 0x68, 0x21, 0xf8, 0x12, 0xd6,
-	0x66, 0xf2, 0x5c, 0x41, 0x4e, 0xd7, 0x65, 0x27, 0xd3, 0xf9, 0x46, 0x52, 0x1f, 0xe0, 0xa9, 0x5c,
-	0x43, 0x8c, 0x3c, 0xc5, 0x52, 0x0c, 0x21, 0x60, 0x86, 0x35, 0x2b, 0xf5, 0x4c, 0x6c, 0xe8, 0x79,
-	0x62, 0x3e, 0xc7, 0x30, 0x55, 0xe6, 0x5b, 0xac, 0x0c, 0x69, 0x24, 0xcd, 0xad, 0xcd, 0x6c, 0xa3,
-	0xba, 0x0b, 0xfd, 0x52, 0x66, 0xb1, 0xc6, 0x7f, 0xac, 0xac, 0xca, 0x8d, 0xa4, 0xff, 0x74, 0xe4,
-	0xfe, 0x0a, 0xd6, 0x52, 0xe5, 0x4d, 0xfc, 0xac, 0x54, 0x75, 0x57, 0xab, 0x32, 0x96, 0x54, 0x49,
-	0x9a, 0xd2, 0xb9, 0xcf, 0x79, 0x84, 0xb6, 0xa9, 0x94, 0x6c, 0x56, 0xa6, 0xca, 0x24, 0xab, 0xca,
-	0x34, 0x56, 0xb7, 0x4b, 0xb3, 0x39, 0xc6, 0xfc, 0x46, 0x64, 0xb6, 0xf5, 0xf8, 0x93, 0x9a, 0x50,
-	0x15, 0xcb, 0xfe, 0x4b, 0xcc, 0xdd, 0x34, 0xce, 0xbc, 0x34, 0x8b, 0xb1, 0x60, 0xb6, 0x94, 0xa3,
-	0x29, 0x0c, 0x2b, 0xcc, 0x8f, 0xe1, 0x14, 0x7f, 0x3f, 0x0a, 0xea, 0x5b, 0xf5, 0xa3, 0x3d, 0xcd,
-	0xd2, 0x43, 0xb2, 0x05, 0xc6, 0x25, 0xe6, 0x05, 0x8a, 0x7c, 0x24, 0xcf, 0x60, 0xed, 0x8a, 0x07,
-	0x99, 0x9e, 0x3c, 0x60, 0x3a, 0xa0, 0xdf, 0xf5, 0x8f, 0x5b, 0xf5, 0xb4, 0xdc, 0x0c, 0x1b, 0x7a,
-	0x17, 0x3c, 0xb9, 0x38, 0xc6, 0x5c, 0x8d, 0x30, 0x59, 0x19, 0x36, 0x5e, 0x04, 0xcd, 0xc7, 0xc5,
-	0xdb, 0xf3, 0x51, 0x3d, 0xf7, 0xce, 0xe7, 0x85, 0xe2, 0x33, 0x59, 0xc9, 0x87, 0x7e, 0xd5, 0xc8,
-	0x93, 0x1b, 0x20, 0xaf, 0xa4, 0xde, 0x88, 0x1a, 0xc1, 0xba, 0xde, 0xca, 0x9d, 0xef, 0x40, 0x41,
-	0xda, 0x58, 0x61, 0xa2, 0x79, 0xdd, 0xc4, 0x33, 0xa9, 0x53, 0x2d, 0xf5, 0xfe, 0x3d, 0xd4, 0x6a,
-	0x5c, 0x7c, 0x74, 0x35, 0x12, 0xf2, 0xde, 0xd5, 0x9c, 0x29, 0x35, 0x93, 0x87, 0x50, 0x43, 0xbf,
-	0x68, 0xde, 0x93, 0x76, 0xde, 0xb7, 0xbb, 0x4f, 0x57, 0xf2, 0xc5, 0xb3, 0x70, 0x31, 0x40, 0xef,
-	0xee, 0xb4, 0x77, 0xa1, 0xaf, 0x27, 0x89, 0x58, 0xc1, 0x94, 0x7f, 0xf7, 0x65, 0x92, 0x55, 0x65,
-	0x2a, 0x00, 0xf4, 0x1e, 0x14, 0x70, 0xbb, 0x24, 0x4f, 0x64, 0xc5, 0xdb, 0x68, 0x8d, 0xe9, 0xa0,
-	0x16, 0x6a, 0xac, 0x16, 0x6a, 0x2e, 0x09, 0xfd, 0xa1, 0x84, 0x32, 0x9c, 0x8b, 0x2b, 0x7c, 0x80,
-	0xfd, 0x68, 0x1f, 0x0f, 0x31, 0xc0, 0x14, 0x1f, 0xd3, 0xc7, 0x6f, 0xda, 0xc7, 0x02, 0xf8, 0xbf,
-	0x7c, 0x6c, 0xba, 0x1a, 0xef, 0xc1, 0x94, 0xa3, 0xdb, 0x86, 0xd6, 0xed, 0xdd, 0xeb, 0xed, 0xaf,
-	0x76, 0xc0, 0x94, 0xa7, 0xc8, 0x06, 0xf4, 0xdc, 0xcc, 0xf3, 0x30, 0x49, 0xb6, 0x9e, 0x90, 0x3e,
-	0x98, 0x47, 0xdc, 0x0f, 0xb6, 0x3a, 0xfb, 0x3b, 0x40, 0xbc, 0xd0, 0xe1, 0xe7, 0x18, 0xfb, 0x9e,
-	0x13, 0xf8, 0x41, 0x2e, 0xe7, 0xee, 0xf7, 0x98, 0x7b, 0x2a, 0x3f, 0x19, 0xcf, 0xd7, 0xd5, 0x97,
-	0xe3, 0xbb, 0xbf, 0x01, 0x00, 0x00, 0xff, 0xff, 0x8b, 0x04, 0x19, 0xfe, 0x6e, 0x0a, 0x00, 0x00,
+	// 650 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0xdb, 0x6e, 0xd3, 0x4c,
+	0x10, 0xfe, 0x13, 0xbb, 0x4d, 0x3c, 0x4d, 0xa3, 0xfe, 0x2b, 0x84, 0xac, 0xa2, 0x8a, 0x68, 0xaf,
+	0x52, 0x90, 0x8c, 0x28, 0xd7, 0x5c, 0xd0, 0x94, 0x06, 0x54, 0x81, 0xaa, 0x35, 0x2a, 0xa2, 0x08,
+	0x89, 0xad, 0x3b, 0x01, 0x4b, 0x8e, 0xed, 0xf8, 0x50, 0x91, 0x77, 0xe0, 0xa1, 0xd1, 0xec, 0xda,
+	0x4e, 0x82, 0x62, 0xb9, 0xa5, 0x87, 0x3b, 0xcf, 0xcc, 0xce, 0x7c, 0x87, 0xd9, 0xc4, 0x86, 0x9e,
+	0x8c, 0xfd, 0x17, 0x49, 0xea, 0xc4, 0x49, 0x94, 0x45, 0xcc, 0x90, 0xb1, 0xbf, 0xdb, 0xa7, 0xd4,
+	0xa5, 0xcc, 0xa4, 0x4e, 0xea, 0xd8, 0x8b, 0xc2, 0x89, 0x8e, 0xb9, 0x05, 0x1d, 0x81, 0xb3, 0x51,
+	0x14, 0x4e, 0xf8, 0x77, 0xe8, 0x0a, 0x4c, 0x63, 0x7a, 0x66, 0x7b, 0x60, 0x8e, 0xa2, 0x4b, 0xb4,
+	0x5b, 0x83, 0xd6, 0xb0, 0x7f, 0x60, 0x39, 0x32, 0xf6, 0x1d, 0x4a, 0x08, 0x95, 0xd6, 0xe5, 0x70,
+	0x62, 0xb7, 0x07, 0xad, 0xe1, 0x56, 0x55, 0x0e, 0x27, 0x42, 0xa5, 0xd9, 0x63, 0xd8, 0x7c, 0x9b,
+	0x24, 0x1f, 0xd2, 0x1f, 0xb6, 0x31, 0x68, 0x0d, 0x2d, 0x51, 0x44, 0xbc, 0x0f, 0x3d, 0x81, 0xb3,
+	0x23, 0x99, 0xc9, 0x0b, 0x99, 0x62, 0xca, 0x53, 0xd8, 0x26, 0xc4, 0x2a, 0xd1, 0x04, 0xfb, 0x1c,
+	0xac, 0xea, 0xac, 0xdd, 0x1e, 0x18, 0xc3, 0xad, 0x83, 0x6d, 0x75, 0xa6, 0xcc, 0x8a, 0x45, 0xbd,
+	0x96, 0x84, 0x43, 0x32, 0x67, 0xc7, 0x51, 0x32, 0x4d, 0x19, 0x87, 0x5e, 0xd9, 0xf0, 0x51, 0x4e,
+	0x35, 0xae, 0x25, 0x56, 0x72, 0xdc, 0x03, 0x8b, 0x48, 0xea, 0x86, 0x06, 0x82, 0x4f, 0x61, 0x43,
+	0x9d, 0x2b, 0xc8, 0xe9, 0x3a, 0x65, 0x84, 0xce, 0xd7, 0x92, 0x7a, 0x03, 0xff, 0xd3, 0x1a, 0x12,
+	0x94, 0x19, 0x96, 0xe8, 0x8c, 0x81, 0xb9, 0xc4, 0x4a, 0x3d, 0x33, 0x1b, 0x3a, 0xa3, 0x68, 0x3a,
+	0xc5, 0x30, 0x53, 0xe6, 0x5b, 0xa2, 0x0c, 0x79, 0x4c, 0xe6, 0x2e, 0xcc, 0x6c, 0xa2, 0xba, 0x0f,
+	0xdd, 0xf2, 0x68, 0xb1, 0xc6, 0xbf, 0xac, 0xac, 0xca, 0xb5, 0xa4, 0x7f, 0xb7, 0x68, 0x7f, 0x05,
+	0x6b, 0xd2, 0x77, 0x1d, 0x3f, 0x2b, 0x55, 0xed, 0xf5, 0xaa, 0x8c, 0x15, 0x55, 0x44, 0x93, 0x26,
+	0x7f, 0x9a, 0xc7, 0x68, 0x9b, 0x4a, 0xc9, 0x76, 0x65, 0x2a, 0x25, 0x45, 0x55, 0xe6, 0x89, 0xba,
+	0x5d, 0x9a, 0xcd, 0x09, 0xce, 0xaf, 0x45, 0x66, 0x57, 0x8f, 0x5f, 0x22, 0x54, 0xc5, 0xd4, 0x7f,
+	0x82, 0x73, 0x37, 0x4b, 0x72, 0x2f, 0xcb, 0x13, 0x2c, 0x98, 0xad, 0xe4, 0x78, 0x06, 0xfd, 0x0a,
+	0xf3, 0x7d, 0x78, 0x89, 0xbf, 0x1e, 0x04, 0xf5, 0xa5, 0xfa, 0xd1, 0x9e, 0xe6, 0xd9, 0x11, 0xdb,
+	0x01, 0xe3, 0x04, 0xe7, 0x05, 0x0a, 0x3d, 0xb2, 0x47, 0xb0, 0x71, 0x26, 0x83, 0x5c, 0x4f, 0xee,
+	0x09, 0x1d, 0xf0, 0xaf, 0xfa, 0xc7, 0xad, 0x7a, 0x1a, 0x6e, 0x86, 0x0d, 0x9d, 0x77, 0x32, 0xfd,
+	0x49, 0x63, 0x69, 0x84, 0x29, 0xca, 0xb0, 0xf6, 0x22, 0x68, 0x3e, 0x2e, 0xde, 0x9c, 0x8f, 0xea,
+	0xb9, 0x73, 0x3e, 0x4f, 0x14, 0x9f, 0xf1, 0x5a, 0x3e, 0xfc, 0xb3, 0x46, 0x1e, 0x5f, 0x03, 0x79,
+	0x2d, 0xf5, 0x5a, 0xd4, 0x18, 0x36, 0xf5, 0x56, 0x6e, 0x7d, 0x07, 0x0a, 0xd2, 0xc6, 0x1a, 0x13,
+	0xcd, 0x65, 0x13, 0xcf, 0x49, 0xa7, 0x5a, 0xea, 0xdd, 0x7b, 0xa8, 0xd5, 0xb8, 0xf8, 0xe0, 0x6a,
+	0x08, 0xf2, 0xce, 0xd5, 0x9c, 0x2b, 0x35, 0xe3, 0xfb, 0x50, 0xc3, 0xcf, 0x34, 0xef, 0x71, 0x33,
+	0xef, 0x9b, 0xdd, 0xa7, 0x2b, 0x7a, 0xf1, 0xcc, 0x5c, 0x0c, 0xd0, 0xbb, 0x3d, 0xed, 0x7d, 0xe8,
+	0xea, 0x49, 0x51, 0xa2, 0x60, 0xca, 0xbf, 0xfb, 0x32, 0x29, 0xaa, 0x32, 0x8f, 0x00, 0xf4, 0x1e,
+	0x14, 0x70, 0xb3, 0xa4, 0x51, 0x94, 0x17, 0x6f, 0xa3, 0x0d, 0xa1, 0x83, 0x85, 0x50, 0x63, 0xbd,
+	0x50, 0x73, 0x45, 0xe8, 0x37, 0x25, 0x54, 0xe0, 0x34, 0xba, 0xc2, 0x7b, 0xd8, 0x8f, 0xf6, 0xf1,
+	0x08, 0x03, 0xcc, 0xf0, 0x21, 0x7d, 0xfc, 0xa2, 0x7d, 0x2c, 0x80, 0xff, 0xc9, 0xc7, 0xba, 0xab,
+	0xf1, 0x1a, 0x4c, 0x1a, 0xdd, 0x34, 0x74, 0xd1, 0xde, 0x5e, 0x6e, 0x7f, 0x56, 0xb4, 0xb1, 0x2d,
+	0xe8, 0xb8, 0xb9, 0xe7, 0x61, 0x9a, 0xee, 0xfc, 0xc7, 0xba, 0x60, 0x1e, 0x4b, 0x3f, 0xd8, 0x69,
+	0x1d, 0xee, 0x01, 0xf3, 0x42, 0x47, 0x5e, 0x60, 0xe2, 0x7b, 0x4e, 0xe0, 0x07, 0x73, 0x9a, 0x7b,
+	0xd8, 0x11, 0xee, 0x29, 0x7d, 0x32, 0x5e, 0x6c, 0xaa, 0x2f, 0xc7, 0x57, 0x7f, 0x02, 0x00, 0x00,
+	0xff, 0xff, 0xf8, 0xb7, 0xbd, 0xfd, 0x6e, 0x0a, 0x00, 0x00,
 }

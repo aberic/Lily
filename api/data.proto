@@ -11,50 +11,69 @@ package api;
 
 // Lily 数据库引擎对象
 message Lily {
-    map<string, Database> databases = 1; // databases 数据库集合
+    // databases 数据库集合
+    map<string, Database> databases = 1;
 }
 
 // Database 数据库对象
 message Database {
-    string id = 1; // id 数据库唯一ID，不能改变
-    string name = 2; // name 数据库名称，根据需求可以随时变化
-    string comment = 3; // comment 数据库描述
-    map<string, Form> forms = 4; // forms 数据库表集合
+    // ID 数据库唯一ID，不能改变
+    string ID = 1;
+    // Name 数据库名称，根据需求可以随时变化
+    string Name = 2;
+    // Comment 数据库描述
+    string Comment = 3;
+    // Forms 数据库表集合
+    map<string, Form> Forms = 4;
 }
 
 // Form 数据库表对象
 message Form {
-    string id = 1; // id 表唯一ID，不能改变
-    string name = 2; // name 表名，根据需求可以随时变化
-    string comment = 3; // comment 表描述
-    FormType formType = 4; // formType 表类型 SQL/Doc
-    map<string, Index> indexes = 5; // indexes 索引ID集合
+    // ID 表唯一ID，不能改变
+    string ID = 1;
+    // Name 表名，根据需求可以随时变化
+    string Name = 2;
+    // Comment 表描述
+    string Comment = 3;
+    // FormType 表类型 SQL/Doc
+    FormType FormType = 4;
+    // Indexes 索引ID集合
+    map<string, Index> Indexes = 5;
 }
 
 // Index 索引对象
 message Index {
-    string id = 1; // id 索引唯一ID
-    bool primary = 2; // primary 是否主键
-    string keyStructure = 3; // keyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+    // ID 索引唯一ID
+    string ID = 1;
+    // Primary 是否主键
+    bool Primary = 2;
+    // KeyStructure 按照规范结构组成的索引字段名称，由对象结构层级字段通过'.'组成，如'i','in.s'
+    string KeyStructure = 3;
 }
 
 // FormType 表类型
 enum FormType {
-    SQL = 0; // SQL 关联数据库类型
-    Doc = 1; // Doc 文档数据库类型
+    // SQL 关联数据库类型
+    SQL = 0;
+    // Doc 文档数据库类型
+    Doc = 1;
 }
 
 // Selector 检索选择器
 message Selector {
-    repeated Condition conditions = 1; // conditions 条件查询
-    uint32 skip = 2; // skip 结果集跳过数量
-    Sort sort = 3; // sort 排序方式
-    uint32 Limit = 4; // Limit 结果集顺序数量
+    // Conditions 条件查询
+    repeated Condition Conditions = 1;
+    // Skip 结果集跳过数量
+    uint32 Skip = 2;
+    // Sort 排序方式
+    Sort Sort = 3;
+    // Limit 结果集顺序数量
+    uint32 Limit = 4;
 }
 
 // Condition 条件查询
 message Condition {
-    // param 参数名，由对象结构层级字段通过'.'组成，如
+    // Param 参数名，由对象结构层级字段通过'.'组成，如
     //
     // ref := &ref{
     //		i: 1,
@@ -66,14 +85,16 @@ message Condition {
     //	}
     //
     // key可取'i','in.s'
-    string param = 1;
-    string cond = 2; // cond 条件 gt/lt/eq/dif 大于/小于/等于/不等
-    bytes value = 3; // value 比较对象，支持int、string、float和bool
+    string Param = 1;
+    // Cond 条件 gt/lt/eq/dif 大于/小于/等于/不等
+    string Cond = 2;
+    // Value 比较对象，支持int、string、float和bool
+    bytes Value = 3;
 }
 
 // Sort 排序方式
 message Sort {
-    // param 参数名，由对象结构层级字段通过'.'组成，如
+    // Param 参数名，由对象结构层级字段通过'.'组成，如
     //
     // ref := &ref{
     //		i: 1,
@@ -85,6 +106,7 @@ message Sort {
     //	}
     //
     // key可取'i','in.s'
-    string param = 1;
-    bool asc = 2; // asc 是否升序
+    string Param = 1;
+    // ASC 是否升序
+    bool ASC = 2;
 }

@@ -49,7 +49,7 @@ func executeErr(errStr string) error {
 }
 
 func (s *sql) analysis(sql string) error {
-	sql = gnomon.String().SingleSpace(sql)
+	sql = gnomon.StringSingleSpace(sql)
 	array := strings.Split(sql, " ")
 	if len(array) < 1 {
 		return sqlSyntaxParamsCountInvalidErr
@@ -117,7 +117,7 @@ func (s *sql) show(array []string) error {
 		table.Output(dbDTO)
 		return nil
 	case firstShowForms:
-		if gnomon.String().IsEmpty(s.databaseName) {
+		if gnomon.StringIsEmpty(s.databaseName) {
 			return sqlDatabaseIsNilErr
 		}
 		fms, err := ObtainForms(s.serverURL, s.databaseName)

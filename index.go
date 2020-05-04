@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/gnomon/log"
 	"io"
 	"os"
 	"sync"
@@ -70,21 +71,21 @@ func (i *index) recover() {
 
 func (i *index) recoverMultiReadFile() {
 	indexFilePath := pathFormIndexFile(i.form.getDatabase().getID(), i.form.getID(), i.id)
-	if gnomon.File().PathExists(indexFilePath) { // 索引文件存在才继续恢复
+	if gnomon.FilePathExists(indexFilePath) { // 索引文件存在才继续恢复
 		var (
 			file *os.File
 			err  error
 		)
 		defer func() { _ = file.Close() }()
 		if file, err = os.OpenFile(indexFilePath, os.O_RDONLY, 0644); nil != err {
-			gnomon.Log().Panic("index recover multi read failed", gnomon.Log().Err(err))
+			log.Panic("index recover multi read failed", log.Err(err))
 		}
 		_, err = file.Seek(0, io.SeekStart) // 文件下标置为文件的起始位置
 		if err != nil {
-			gnomon.Log().Panic("index recover multi read failed", gnomon.Log().Err(err))
+			log.Panic("index recover multi read failed", log.Err(err))
 		}
 		if err = i.read(file, 0); nil != err && io.EOF != err {
-			gnomon.Log().Panic("index recover multi read failed", gnomon.Log().Err(err))
+			log.Panic("index recover multi read failed", log.Err(err))
 		}
 	}
 }
@@ -123,10 +124,10 @@ func (i *index) read(file *os.File, offset int64) (err error) {
 			p2 = p1 + 16
 			p3 = p2 + 11
 			p4 = p3 + 4
-			hashKey := gnomon.Scale().DDuoStringToUint64(indexStr[p0:p1])
+			hashKey := gnomon.ScaleDDuoStringToUint64(indexStr[p0:p1])
 			md516Key := indexStr[p1:p2]
-			seekStart := gnomon.Scale().DDuoStringToInt64(indexStr[p2:p3])     // value最终存储在文件中的起始位置
-			seekLast := int(gnomon.Scale().DDuoStringToInt64(indexStr[p3:p4])) // value最终存储在文件中的持续长度
+			seekStart := gnomon.ScaleDDuoStringToInt64(indexStr[p2:p3])     // value最终存储在文件中的起始位置
+			seekLast := int(gnomon.ScaleDDuoStringToInt64(indexStr[p3:p4])) // value最终存储在文件中的持续长度
 			ib := i.node.put("", hashKey, hashKey, true)
 			ib.getLink().setSeekStartIndex(p0)
 			ib.getLink().setMD5Key(md516Key)

@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/gnomon/log"
 	"github.com/aberic/lily/api"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
@@ -95,14 +96,14 @@ func (l *Lily) syncRPC2Store() {
 	if nil != err {
 		return
 	}
-	_, _ = gnomon.File().Append(obtainConf().LilyBootstrapFilePath, data, true)
+	_, _ = gnomon.FileAppend(obtainConf().LilyBootstrapFilePath, data, true)
 }
 
 // Start 启动lily
 //
 // 调用后执行 initialize() 初始化方法
 func (l *Lily) Start() {
-	gnomon.Log().Info("lily service starting")
+	log.Info("lily service starting")
 	l.initialize()
 }
 
@@ -117,17 +118,17 @@ func (l *Lily) Stop() {
 func (l *Lily) Restart() {
 	defer l.lock.Unlock()
 	l.lock.Lock()
-	if gnomon.File().PathExists(obtainConf().LilyBootstrapFilePath) {
+	if gnomon.FilePathExists(obtainConf().LilyBootstrapFilePath) {
 		var (
 			data []byte
 			lily api.Lily
 			err  error
 		)
 		if data, err = ioutil.ReadFile(obtainConf().LilyBootstrapFilePath); nil != err {
-			gnomon.Log().Panic("restart failed, file read error", gnomon.Log().Err(err))
+			log.Panic("restart failed, file read error", log.Err(err))
 		}
 		if err = proto.Unmarshal(data, &lily); nil != err {
-			gnomon.Log().Panic("restart failed, proto unmarshal error", gnomon.Log().Err(err))
+			log.Panic("restart failed, proto unmarshal error", log.Err(err))
 		}
 		l.lilyData = &lily
 		l.recover()
@@ -142,7 +143,7 @@ func (l *Lily) recover() {
 	l.databases = map[string]Database{}
 	for dk, dv := range l.lilyData.Databases {
 		l.databases[dk] = &database{
-			id:      dv.Id,
+			id:      dv.ID,
 			name:    dv.Name,
 			comment: dv.Comment,
 			forms:   map[string]Form{},
@@ -157,7 +158,7 @@ func (l *Lily) recover() {
 				formType = FormTypeDoc
 			}
 			l.databases[dk].getForms()[fk] = &form{
-				id:       fv.Id,
+				id:       fv.ID,
 				name:     fv.Name,
 				autoID:   0,
 				comment:  fv.Comment,
@@ -166,7 +167,7 @@ func (l *Lily) recover() {
 				indexes:  map[string]Index{},
 			}
 			for ik, iv := range fv.Indexes {
-				index := &index{id: iv.Id, primary: iv.Primary, keyStructure: iv.KeyStructure, form: l.databases[dk].getForms()[fk]}
+				index := &index{id: iv.ID, primary: iv.Primary, keyStructure: iv.KeyStructure, form: l.databases[dk].getForms()[fk]}
 				node := &node{level: 1, degreeIndex: 0, preNode: nil, nodes: []Nodal{}, index: index}
 				index.node = node
 				l.databases[dk].getForms()[fk].getIndexes()[ik] = index
@@ -184,8 +185,8 @@ func (l *Lily) recover() {
 // initialize 初始化默认库及默认表
 func (l *Lily) initialize() {
 	l.once.Do(func() {
-		gnomon.Log().Info("lily service is initializing")
-		gnomon.Log().Info("lily service is creating default database")
+		log.Info("lily service is initializing")
+		log.Info("lily service is creating default database")
 		data, err := l.CreateDatabase(sysDatabase, "跟随‘Lily’创建的默认库")
 		if nil != err {
 			if err == ErrDatabaseExist {
@@ -194,19 +195,19 @@ func (l *Lily) initialize() {
 			}
 			panic(err)
 		}
-		gnomon.Log().Info(strings.Join([]string{"lily service have been created default database ", sysDatabase}, ""))
-		gnomon.Log().Info(strings.Join([]string{"lily service is creating default form ", userForm}, ""))
+		log.Info(strings.Join([]string{"lily service have been created default database ", sysDatabase}, ""))
+		log.Info(strings.Join([]string{"lily service is creating default form ", userForm}, ""))
 		if err = l.CreateForm(sysDatabase, userForm, "default user form", FormTypeSQL); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		gnomon.Log().Info(strings.Join([]string{"lily service have been created ", userForm}, ""))
-		gnomon.Log().Info(strings.Join([]string{"lily service is creating default form ", defaultForm}, ""))
+		log.Info(strings.Join([]string{"lily service have been created ", userForm}, ""))
+		log.Info(strings.Join([]string{"lily service is creating default form ", defaultForm}, ""))
 		if err = l.CreateForm(sysDatabase, defaultForm, "default Data form", FormTypeDoc); nil != err {
 			_ = rmDataDir(sysDatabase)
 			return
 		}
-		gnomon.Log().Info(strings.Join([]string{"lily service have been created ", defaultForm}, ""))
+		log.Info(strings.Join([]string{"lily service have been created ", defaultForm}, ""))
 		l.databases[sysDatabase] = data
 	})
 }
@@ -251,7 +252,7 @@ func (l *Lily) CreateDatabase(name, comment string) (Database, error) {
 	}
 	l.databases[name] = &database{name: name, id: id, comment: comment, forms: map[string]Form{}, lily: l}
 	// 同步数据到 pb.Lily
-	l.lilyData.Databases[name] = &api.Database{Id: id, Name: name, Comment: comment, Forms: map[string]*api.Form{}}
+	l.lilyData.Databases[name] = &api.Database{ID: id, Name: name, Comment: comment, Forms: map[string]*api.Form{}}
 	l.syncRPC2Store()
 	return l.databases[name], nil
 }
@@ -329,7 +330,7 @@ func (l *Lily) CreateIndex(databaseName, formName string, keyStructure string) e
 //
 // 返回 hashKey
 func (l *Lily) PutD(key string, value interface{}) (uint64, error) {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
 	return l.databases[sysDatabase].put(defaultForm, key, value, false)
@@ -345,7 +346,7 @@ func (l *Lily) PutD(key string, value interface{}) (uint64, error) {
 //
 // 返回 hashKey
 func (l *Lily) SetD(key string, value interface{}) (uint64, error) {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
 	return l.databases[sysDatabase].put(defaultForm, key, value, true)
@@ -374,7 +375,7 @@ func (l *Lily) GetD(key string) (interface{}, error) {
 //
 // 返回 hashKey
 func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint64, error) {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
 	if nil == l || nil == l.databases[databaseName] {
@@ -397,7 +398,7 @@ func (l *Lily) Put(databaseName, formName, key string, value interface{}) (uint6
 //
 // 返回 hashKey
 func (l *Lily) Set(databaseName, formName, key string, value interface{}) (uint64, error) {
-	if gnomon.String().IsEmpty(key) {
+	if gnomon.StringIsEmpty(key) {
 		return 0, ErrKeyIsNil
 	}
 	if nil == l || nil == l.databases[databaseName] {
@@ -464,14 +465,14 @@ func (l *Lily) Delete(databaseName, formName string, selector *Selector) (int32,
 
 // name2id 确保数据库唯一ID不重复
 func (l *Lily) name2id(name string) string {
-	id := gnomon.CryptoHash().MD516(name)
+	id := gnomon.HashMD516(name)
 	have := true
 	for have {
 		have = false
 		for _, v := range l.databases {
 			if v.getID() == id {
 				have = true
-				id = gnomon.CryptoHash().MD516(strings.Join([]string{id, gnomon.String().RandSeq(3)}, ""))
+				id = gnomon.HashMD516(strings.Join([]string{id, gnomon.StringRandSeq(3)}, ""))
 				break
 			}
 		}

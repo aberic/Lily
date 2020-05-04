@@ -132,7 +132,7 @@ func binaryMatchData(matchIndex uint16, node Nodal) (realIndex int, err error) {
 // mkDataDir 创建库存储目录
 func mkDataDir(dataName string) (err error) {
 	dataPath := filepath.Join(obtainConf().DataDir, dataName)
-	if gnomon.File().PathExists(dataPath) {
+	if gnomon.FilePathExists(dataPath) {
 		return ErrDatabaseExist
 	}
 	return os.MkdirAll(dataPath, os.ModePerm)
@@ -141,7 +141,7 @@ func mkDataDir(dataName string) (err error) {
 // rmDataDir 删除库存储目录
 func rmDataDir(dataName string) (err error) {
 	dataPath := filepath.Join(obtainConf().DataDir, dataName)
-	if gnomon.File().PathExists(dataPath) {
+	if gnomon.FilePathExists(dataPath) {
 		return os.Remove(dataPath)
 	}
 	return nil
@@ -170,7 +170,7 @@ func mkFormResource(dataID, formID string) (err error) {
 // formID 表唯一id
 func mkFormDir(dataID, formID string) (err error) {
 	dataPath := pathFormDir(dataID, formID)
-	if gnomon.File().PathExists(dataPath) {
+	if gnomon.FilePathExists(dataPath) {
 		return ErrFormExist
 	}
 	return os.MkdirAll(dataPath, os.ModePerm)
@@ -183,7 +183,7 @@ func mkFormDir(dataID, formID string) (err error) {
 // formID 表唯一id
 func rmFormDir(dataID, formID string) (err error) {
 	formPath := pathFormDir(dataID, formID)
-	if gnomon.File().PathExists(formPath) {
+	if gnomon.FilePathExists(formPath) {
 		return os.Remove(formPath)
 	}
 	return nil
@@ -250,7 +250,7 @@ func type2index(value interface{}) (key string, hashKey uint64, support bool) {
 		}
 		hashKey = ui64 + 9223372036854775807 + 1
 	case float32, float64:
-		i64 := gnomon.Scale().Float64toInt64(value.(float64), 4)
+		i64 := gnomon.ScaleFloat64toInt64(value.(float64), 4)
 		key = strconv.FormatInt(i64, 10)
 		hashKey = uint64(i64 + 9223372036854775807 + 1)
 	case string:
@@ -284,7 +284,7 @@ func valueType2index(value *reflect.Value) (key string, hashKey uint64, support 
 		}
 		hashKey = ui64 + 9223372036854775807 + 1
 	case reflect.Float32, reflect.Float64:
-		i64 := gnomon.Scale().Float64toInt64(value.Float(), 4)
+		i64 := gnomon.ScaleFloat64toInt64(value.Float(), 4)
 		key = strconv.FormatInt(i64, 10)
 		hashKey = uint64(i64 + 9223372036854775807 + 1)
 	case reflect.String:
@@ -317,7 +317,7 @@ func value2hashKey(value *reflect.Value) (hashKey uint64, support bool) {
 		}
 		hashKey = ui64 + 9223372036854775807 + 1
 	case reflect.Float32, reflect.Float64:
-		hashKey = uint64(gnomon.Scale().Float64toInt64(value.Float(), 4) + 9223372036854775807 + 1)
+		hashKey = uint64(gnomon.ScaleFloat64toInt64(value.Float(), 4) + 9223372036854775807 + 1)
 	case reflect.String:
 		hashKey = hash(value.String())
 	case reflect.Bool:

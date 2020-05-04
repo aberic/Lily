@@ -25,23 +25,37 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // Conf 数据库引擎对象
 type Conf struct {
-	Port                     string   `protobuf:"bytes,1,opt,name=Port,proto3" json:"Port,omitempty"`
-	RootDir                  string   `protobuf:"bytes,2,opt,name=RootDir,proto3" json:"RootDir,omitempty"`
-	DataDir                  string   `protobuf:"bytes,3,opt,name=DataDir,proto3" json:"DataDir,omitempty"`
-	LogDir                   string   `protobuf:"bytes,4,opt,name=LogDir,proto3" json:"LogDir,omitempty"`
-	LimitOpenFile            int32    `protobuf:"varint,5,opt,name=LimitOpenFile,proto3" json:"LimitOpenFile,omitempty"`
-	TLS                      bool     `protobuf:"varint,6,opt,name=TLS,proto3" json:"TLS,omitempty"`
-	TLSServerKeyFile         string   `protobuf:"bytes,7,opt,name=TLSServerKeyFile,proto3" json:"TLSServerKeyFile,omitempty"`
-	TLSServerCertFile        string   `protobuf:"bytes,8,opt,name=TLSServerCertFile,proto3" json:"TLSServerCertFile,omitempty"`
-	Limit                    bool     `protobuf:"varint,9,opt,name=Limit,proto3" json:"Limit,omitempty"`
-	LimitMillisecond         int32    `protobuf:"varint,10,opt,name=LimitMillisecond,proto3" json:"LimitMillisecond,omitempty"`
-	LimitCount               int32    `protobuf:"varint,11,opt,name=LimitCount,proto3" json:"LimitCount,omitempty"`
-	LimitIntervalMicrosecond int32    `protobuf:"varint,12,opt,name=LimitIntervalMicrosecond,proto3" json:"LimitIntervalMicrosecond,omitempty"`
-	LilyLockFilePath         string   `protobuf:"bytes,13,opt,name=LilyLockFilePath,proto3" json:"LilyLockFilePath,omitempty"`
-	LilyBootstrapFilePath    string   `protobuf:"bytes,14,opt,name=LilyBootstrapFilePath,proto3" json:"LilyBootstrapFilePath,omitempty"`
-	XXX_NoUnkeyedLiteral     struct{} `json:"-"`
-	XXX_unrecognized         []byte   `json:"-"`
-	XXX_sizecache            int32    `json:"-"`
+	// Port 开放端口，便于其它应用访问
+	Port string `protobuf:"bytes,1,opt,name=Port,proto3" json:"Port,omitempty"`
+	// RootDir Lily服务默认存储路径
+	RootDir string `protobuf:"bytes,2,opt,name=RootDir,proto3" json:"RootDir,omitempty"`
+	// DataDir Lily服务数据默认存储路径
+	DataDir string `protobuf:"bytes,3,opt,name=DataDir,proto3" json:"DataDir,omitempty"`
+	// LogDir Lily服务默认日志存储路径
+	LogDir string `protobuf:"bytes,4,opt,name=LogDir,proto3" json:"LogDir,omitempty"`
+	// LimitOpenFile 限制打开文件描述符次数
+	LimitOpenFile int32 `protobuf:"varint,5,opt,name=LimitOpenFile,proto3" json:"LimitOpenFile,omitempty"`
+	// TLS 是否开启 TLS
+	TLS bool `protobuf:"varint,6,opt,name=TLS,proto3" json:"TLS,omitempty"`
+	// TLSServerKeyFile lily服务私钥
+	TLSServerKeyFile string `protobuf:"bytes,7,opt,name=TLSServerKeyFile,proto3" json:"TLSServerKeyFile,omitempty"`
+	// TLSServerCertFile lily服务数字证书
+	TLSServerCertFile string `protobuf:"bytes,8,opt,name=TLSServerCertFile,proto3" json:"TLSServerCertFile,omitempty"`
+	// Limit 是否启用服务限流策略
+	Limit bool `protobuf:"varint,9,opt,name=Limit,proto3" json:"Limit,omitempty"`
+	// LimitMillisecond 请求限定的时间段（毫秒）
+	LimitMillisecond int32 `protobuf:"varint,10,opt,name=LimitMillisecond,proto3" json:"LimitMillisecond,omitempty"`
+	// LimitCount 请求限定的时间段内允许的请求次数
+	LimitCount int32 `protobuf:"varint,11,opt,name=LimitCount,proto3" json:"LimitCount,omitempty"`
+	// LimitIntervalMillisecond 请求允许的最小间隔时间（微秒），0表示不限
+	LimitIntervalMicrosecond int32 `protobuf:"varint,12,opt,name=LimitIntervalMicrosecond,proto3" json:"LimitIntervalMicrosecond,omitempty"`
+	// LilyLockFilePath Lily当前进程地址存储文件地址
+	LilyLockFilePath string `protobuf:"bytes,13,opt,name=LilyLockFilePath,proto3" json:"LilyLockFilePath,omitempty"`
+	// LilyBootstrapFilePath Lily重启引导文件地址
+	LilyBootstrapFilePath string   `protobuf:"bytes,14,opt,name=LilyBootstrapFilePath,proto3" json:"LilyBootstrapFilePath,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{} `json:"-"`
+	XXX_unrecognized      []byte   `json:"-"`
+	XXX_sizecache         int32    `json:"-"`
 }
 
 func (m *Conf) Reset()         { *m = Conf{} }
