@@ -17,6 +17,7 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/gnomon/log"
 	"github.com/aberic/lily/api"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -52,7 +53,6 @@ type Conf struct {
 	Port                     string `yaml:"Port"`                     // Port 开放端口，便于其它应用访问
 	RootDir                  string `yaml:"RootDir"`                  // RootDir Lily服务默认存储路径
 	DataDir                  string `yaml:"DataDir"`                  // DataDir Lily服务数据默认存储路径
-	LogDir                   string `yaml:"LogDir"`                   // LogDir Lily服务默认日志存储路径
 	LimitOpenFile            int32  `yaml:"LimitOpenFile"`            // LimitOpenFile 限制打开文件描述符次数
 	TLS                      bool   `yaml:"TLS"`                      // TLS 是否开启 TLS
 	TLSServerKeyFile         string `yaml:"TLSServerKeyFile"`         // TLSServerKeyFile lily服务私钥
@@ -61,15 +61,21 @@ type Conf struct {
 	LimitMillisecond         int32  `yaml:"LimitMillisecond"`         // LimitMillisecond 请求限定的时间段（毫秒）
 	LimitCount               int32  `yaml:"LimitCount"`               // LimitCount 请求限定的时间段内允许的请求次数
 	LimitIntervalMicrosecond int32  `yaml:"LimitIntervalMicrosecond"` // LimitIntervalMillisecond 请求允许的最小间隔时间（微秒），0表示不限
-	LilyLockFilePath         string // LilyLockFilePath Lily当前进程地址存储文件地址
-	LilyBootstrapFilePath    string // LilyBootstrapFilePath Lily重启引导文件地址
+	LogDir                   string `yaml:"LogDir"`                   // LogDir Lily服务默认日志存储路径
+	LogLevel                 string `yaml:"LogLevel"`                 // LogLevel 日志级别(debug/info/warn/Error/panic/fatal)
+	LogFileMaxSize           int    `yaml:"LogFileMaxSize"`           // LogFileMaxSize 每个日志文件保存的最大尺寸 单位：M
+	LogFileMaxAge            int    `yaml:"LogFileMaxAge"`            // LogFileMaxAge 文件最多保存多少天
+	LogUtc                   bool   `yaml:"LogUtc"`                   // LogUtc CST & UTC 时间
+	Production               bool   `yaml:"Production"`               // Production 是否生产环境，在生产环境下控制台不会输出任何日志
+	LilyLockFilePath         string `yaml:"lily_lock_file_path"`      // LilyLockFilePath Lily当前进程地址存储文件地址
+	LilyBootstrapFilePath    string `yaml:"lily_bootstrap_file_path"` // LilyBootstrapFilePath Lily重启引导文件地址
 }
 
 // ObtainConf 根据文件地址获取Config对象
 func ObtainConf(filePath string) *Conf {
 	onceConf.Do(func() {
 		confInstance = &Conf{}
-		if gnomon.String().IsNotEmpty(filePath) {
+		if gnomon.StringIsNotEmpty(filePath) {
 			if err := confInstance.yaml2Conf(filePath); nil != err {
 				panic(err)
 			}
@@ -77,6 +83,14 @@ func ObtainConf(filePath string) *Conf {
 		if _, err := confInstance.scanDefault(); nil != err {
 			panic(err)
 		}
+		log.Fit(
+			confInstance.LogLevel,
+			confInstance.LogDir,
+			confInstance.LogFileMaxSize,
+			confInstance.LogFileMaxAge,
+			confInstance.LogUtc,
+			confInstance.Production,
+		)
 	})
 	return confInstance
 }
@@ -86,7 +100,7 @@ func obtainConf() *Conf {
 	onceConf.Do(func() {
 		confInstance = &Conf{}
 		if _, err := confInstance.scanDefault(); nil != err {
-			gnomon.Log().Panic("obtainConf", gnomon.Log().Err(err))
+			log.Panic("obtainConf", log.Err(err))
 		}
 	})
 	return confInstance
@@ -94,25 +108,32 @@ func obtainConf() *Conf {
 
 // scanDefault 扫描填充默认值
 func (c *Conf) scanDefault() (*Conf, error) {
-	if gnomon.String().IsEmpty(c.Port) {
+	if gnomon.StringIsEmpty(c.Port) {
 		c.Port = "19877"
 	}
-	if gnomon.String().IsEmpty(c.RootDir) {
+	if gnomon.StringIsEmpty(c.RootDir) {
 		c.RootDir = "lilyDB"
 	}
-	if gnomon.String().IsEmpty(c.DataDir) {
+	if gnomon.StringIsEmpty(c.DataDir) {
 		c.DataDir = filepath.Join(c.RootDir, "data")
 	}
-	if gnomon.String().IsEmpty(c.LogDir) {
+	if gnomon.StringIsEmpty(c.LogDir) {
 		c.LogDir = filepath.Join(c.RootDir, "log")
 	}
-	c.LilyLockFilePath = filepath.Join(c.RootDir, "lily.lock")
-	c.LilyBootstrapFilePath = filepath.Join(c.DataDir, "lily.sync")
+	if gnomon.StringIsEmpty(c.LogLevel) {
+		c.LogLevel = "debug"
+	}
+	if c.LogFileMaxSize < 1 {
+		c.LogFileMaxSize = 64
+	}
+	if c.LogFileMaxAge < 1 {
+		c.LogFileMaxAge = 3
+	}
 	if c.LimitOpenFile < 1000 {
 		c.LimitOpenFile = 10000
 	}
 	if c.TLS {
-		if gnomon.String().IsEmpty(c.TLSServerKeyFile) || gnomon.String().IsEmpty(c.TLSServerCertFile) {
+		if gnomon.StringIsEmpty(c.TLSServerKeyFile) || gnomon.StringIsEmpty(c.TLSServerCertFile) {
 			return nil, errors.New("tls server key file or cert file is nil")
 		}
 	}
@@ -121,6 +142,8 @@ func (c *Conf) scanDefault() (*Conf, error) {
 			return nil, errors.New("limit count or millisecond can not be zero")
 		}
 	}
+	c.LilyLockFilePath = filepath.Join(c.RootDir, "lily.lock")
+	c.LilyBootstrapFilePath = filepath.Join(c.DataDir, "lily.sync")
 	return c, nil
 }
 

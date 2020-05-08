@@ -15,7 +15,6 @@
 package lily
 
 import (
-	"github.com/aberic/gnomon"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -26,7 +25,6 @@ import (
 )
 
 func BenchmarkInsert(b *testing.B) {
-	gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
 	l := ObtainLily()
 	l.Start()
 	have := false

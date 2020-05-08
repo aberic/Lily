@@ -16,7 +16,7 @@ package lily
 
 import (
 	"errors"
-	"github.com/aberic/gnomon"
+	"github.com/aberic/gnomon/log"
 	"github.com/aberic/lily/api"
 	"reflect"
 	"strings"
@@ -87,8 +87,8 @@ func (s *Selector) exec() (int32, []interface{}, error) {
 	if index, leftQuery, nc, pcs, err = s.getIndex(); nil != err {
 		return 0, nil, err
 	}
-	gnomon.Log().Debug("query", gnomon.Log().Field("index", index.getKeyStructure()))
-	if s.Limit <= 0 {
+	log.Debug("query", log.Field("index", index.getKeyStructure()))
+	if s.Limit == 0 {
 		s.Limit = 1000
 	}
 	if leftQuery {
@@ -120,7 +120,7 @@ func (s *Selector) getIndex() (index Index, leftQuery bool, nc *nodeCondition, p
 	}
 	// 取值默认索引来进行查询操作
 	for _, idx := range s.database.getForms()[s.formName].getIndexes() {
-		gnomon.Log().Debug("getIndex", gnomon.Log().Field("index", index))
+		log.Debug("getIndex", log.Field("index", index))
 		return idx, true, nc, pcs, nil
 	}
 	return nil, false, nc, pcs, errors.New("index not found")
@@ -179,9 +179,9 @@ func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition, pcs map[string
 	var (
 		count, nc int32
 		nis       []interface{}
-		is               = make([]interface{}, 0)
-		skipIn           = s.Skip
-		limitIn   uint32 = 0
+		is        = make([]interface{}, 0)
+		skipIn    = s.Skip
+		limitIn   uint32
 	)
 	for _, node := range index.getNode().getNodes() {
 		if nil == ns {
@@ -209,10 +209,10 @@ func (s *Selector) leftQueryIndex(index Index, ns *nodeCondition, pcs map[string
 // limitIn 传入limit表示已经命中的数量，返回limit表示已经命中的数量
 func (s *Selector) leftQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
 	var (
-		skip        = skipIn
-		limit       = limitIn
-		count int32 = 0
-		is          = make([]interface{}, 0)
+		skip  = skipIn
+		limit = limitIn
+		count int32
+		is    = make([]interface{}, 0)
 	)
 	if nodes := node.getNodes(); nil != nodes {
 		for _, nd := range nodes {
@@ -247,8 +247,8 @@ func (s *Selector) leftQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCon
 // limit 传入limit表示已经命中的数量，返回limit表示已经命中的数量
 func (s *Selector) leftQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
 	var (
-		count int32 = 0
-		is          = make([]interface{}, 0)
+		count int32
+		is    = make([]interface{}, 0)
 	)
 	if (nil != ns && s.leafConditions(leaf, ns.nss)) || nil == ns { // 满足等于与不等于条件
 		if limit >= s.Limit {
@@ -288,9 +288,9 @@ func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition, pcs map[strin
 	var (
 		count, nc int32
 		nis       []interface{}
-		is               = make([]interface{}, 0)
-		skipIn           = s.Skip
-		limitIn   uint32 = 0
+		is        = make([]interface{}, 0)
+		skipIn    = s.Skip
+		limitIn   uint32
 	)
 	lenNode := len(index.getNode().getNodes())
 	for i := lenNode - 1; i >= 0; i-- {
@@ -315,10 +315,10 @@ func (s *Selector) rightQueryIndex(index Index, ns *nodeCondition, pcs map[strin
 // limit 传入limit表示已经命中的数量，返回limit表示已经命中的数量
 func (s *Selector) rightQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
 	var (
-		skip        = skipIn
-		limit       = limitIn
-		count int32 = 0
-		is          = make([]interface{}, 0)
+		skip  = skipIn
+		limit = limitIn
+		count int32
+		is    = make([]interface{}, 0)
 	)
 	if nodes := node.getNodes(); nil != nodes {
 		lenNode := len(nodes)
@@ -351,8 +351,8 @@ func (s *Selector) rightQueryNode(skipIn, limitIn uint32, node Nodal, ns *nodeCo
 // limit 传入limit表示已经命中的数量，返回limit表示已经命中的数量
 func (s *Selector) rightQueryLeaf(skip, limit uint32, leaf Leaf, ns *nodeCondition, pcs map[string]*paramCondition) (uint32, uint32, int32, []interface{}) {
 	var (
-		count int32 = 0
-		is          = make([]interface{}, 0)
+		count int32
+		is    = make([]interface{}, 0)
 	)
 	links := leaf.getLinks()
 	lenLink := len(links)
@@ -636,12 +636,12 @@ func (s *Selector) conditionValueBool(cond string, param, value bool) bool {
 
 // shellSort 希尔排序
 func (s *Selector) shellSort(is []interface{}) []interface{} {
-	gnomon.Log().Debug("shellSort 希尔排序", gnomon.Log().Field("s.Sort", s.Sort))
+	log.Debug("shellSort 希尔排序", log.Field("s.Sort", s.Sort))
 	if s.Sort.ASC {
-		gnomon.Log().Debug("shellAsc 希尔顺序排序")
+		log.Debug("shellAsc 希尔顺序排序")
 		return s.shellAsc(is)
 	}
-	gnomon.Log().Debug("shellDesc 希尔倒序排序")
+	log.Debug("shellDesc 希尔倒序排序")
 	return s.shellDesc(is)
 }
 
@@ -710,11 +710,11 @@ func (s *Selector) getInterValue(params []string, value interface{}) (hashKey ui
 			}
 			interMap = interMap[param].(map[string]interface{})
 		}
-		//gnomon.Log().Debug("getInterValue", gnomon.Log().Field("valueResult", valueResult))
+		//log.Debug("getInterValue", log.Field("valueResult", valueResult))
 		checkValue := reflect.ValueOf(valueResult)
 		return value2hashKey(&checkValue)
 	}
-	gnomon.Log().Debug("getInterValue", gnomon.Log().Field("kind", reflectObj.Kind()), gnomon.Log().Field("support", false))
+	log.Debug("getInterValue", log.Field("kind", reflectObj.Kind()), log.Field("support", false))
 	return 0, false
 }
 
@@ -734,7 +734,7 @@ func (s *Selector) getValueFromParams(params []string, value interface{}) interf
 		}
 		return valueResult
 	}
-	gnomon.Log().Debug("getValueFromParams", gnomon.Log().Field("kind", reflectObj.Kind()), gnomon.Log().Field("support", false))
+	log.Debug("getValueFromParams", log.Field("kind", reflectObj.Kind()), log.Field("support", false))
 	return nil
 }
 
@@ -822,7 +822,7 @@ func (s *Selector) formatAPI(apiSelector *api.Selector) error {
 	if nil != apiSelector.Sort {
 		s.Sort = &sort{
 			Param: apiSelector.Sort.Param,
-			ASC:   apiSelector.Sort.Asc,
+			ASC:   apiSelector.Sort.ASC,
 		}
 	}
 	if len(apiSelector.Conditions) > 0 {

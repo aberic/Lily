@@ -103,7 +103,7 @@ func (d *database) createForm(formName, comment, formType string) error {
 	d.forms[formName] = form
 	// 同步数据到 pb.Lily
 	d.lily.lilyData.Databases[d.name].Forms[formName] = &api.Form{
-		Id:      formID,
+		ID:      formID,
 		Name:    formName,
 		Comment: comment,
 		Indexes: map[string]*api.Index{},
@@ -128,7 +128,7 @@ func (d *database) createKey(formName string, keyStructure string) error {
 	form.getIndexes()[customID] = index
 	// 同步数据到 pb.Lily
 	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &api.Index{
-		Id:           customID,
+		ID:           customID,
 		Primary:      true,
 		KeyStructure: keyStructure,
 	}
@@ -152,7 +152,7 @@ func (d *database) createIndex(formName string, keyStructure string) error {
 	form.getIndexes()[customID] = index
 	// 同步数据到 pb.Lily
 	d.lily.lilyData.Databases[d.name].Forms[formName].Indexes[customID] = &api.Index{
-		Id:           customID,
+		ID:           customID,
 		Primary:      false,
 		KeyStructure: keyStructure,
 	}
@@ -183,7 +183,7 @@ func (d *database) get(formName string, key string) (interface{}, error) {
 			default:
 				return rs.value, nil
 			case string:
-				if gnomon.String().IsEmpty(rs.value.(string)) {
+				if gnomon.StringIsEmpty(rs.value.(string)) {
 					return nil, errors.New("value is invalid")
 				}
 			}
@@ -355,14 +355,14 @@ func formIsInvalid(formName string) error {
 
 // name2id 确保数据库唯一ID不重复
 func (d *database) name2id(name string) string {
-	id := gnomon.CryptoHash().MD516(name)
+	id := gnomon.HashMD516(name)
 	have := true
 	for have {
 		have = false
 		for _, v := range d.forms {
 			if v.getID() == id {
 				have = true
-				id = gnomon.CryptoHash().MD516(strings.Join([]string{id, gnomon.String().RandSeq(3)}, ""))
+				id = gnomon.HashMD516(strings.Join([]string{id, gnomon.StringRandSeq(3)}, ""))
 				break
 			}
 		}

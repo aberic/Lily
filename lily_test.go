@@ -16,7 +16,6 @@ package lily
 
 import (
 	"encoding/json"
-	"github.com/aberic/gnomon"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -161,7 +160,7 @@ type TestValueIn struct {
 
 func TestQuerySelector2(t *testing.T) {
 	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
-	gnomon.Log().Debug("TestQuerySelector2 Start")
+	t.Log("TestQuerySelector2 Start")
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName, "数据库描述")
@@ -180,7 +179,7 @@ func TestQuerySelector2(t *testing.T) {
 	if err = l.CreateIndex(checkbookName, shopperName, "TestValueIn.Age"); nil != err {
 		t.Log(err)
 	}
-	gnomon.Log().Debug("TestQuerySelector2 Put")
+	t.Log("TestQuerySelector2 Put")
 	var wg sync.WaitGroup
 	for i := 1007; i > 0; i-- {
 		wg.Add(1)
@@ -202,7 +201,7 @@ func TestQuerySelector2(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	gnomon.Log().Debug("TestQuerySelector2 Get")
+	t.Log("TestQuerySelector2 Get")
 	for i := 807; i > 800; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		if nil != err {
@@ -218,7 +217,7 @@ func TestQuerySelector2(t *testing.T) {
 	t.Log("remove ", execI, " = ", j, "err = ", err)
 	j, err = l.Get(checkbookName, shopperName, strconv.Itoa(execI))
 	t.Log("get ", execI, " = ", j, "err = ", err)
-	gnomon.Log().Debug("TestQuerySelector2 Select")
+	t.Log("TestQuerySelector2 Select")
 	var (
 		i     interface{}
 		count int32
@@ -308,7 +307,7 @@ func TestQuerySelector2(t *testing.T) {
 
 func TestQuerySelector3(t *testing.T) {
 	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
-	gnomon.Log().Debug("TestQuerySelector2 Start")
+	t.Log("TestQuerySelector2 Start")
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName, "数据库描述")
@@ -327,7 +326,7 @@ func TestQuerySelector3(t *testing.T) {
 	if err = l.CreateIndex(checkbookName, shopperName, "TestValueIn.Age"); nil != err {
 		t.Error(err)
 	}
-	gnomon.Log().Debug("TestQuerySelector2 Put")
+	t.Log("TestQuerySelector2 Put")
 	var wg sync.WaitGroup
 	for i := 1007; i > 0; i-- {
 		wg.Add(1)
@@ -357,7 +356,7 @@ func TestQuerySelector3(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	gnomon.Log().Debug("TestQuerySelector2 Get")
+	t.Log("TestQuerySelector2 Get")
 	for i := 807; i > 800; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		if nil != err {
@@ -366,7 +365,7 @@ func TestQuerySelector3(t *testing.T) {
 			t.Log("get ", i, " = ", j)
 		}
 	}
-	gnomon.Log().Debug("TestQuerySelector2 Select")
+	t.Log("TestQuerySelector2 Select")
 	var (
 		i     interface{}
 		count int32
@@ -387,7 +386,7 @@ func TestQuerySelector3(t *testing.T) {
 
 func TestQuerySelector4(t *testing.T) {
 	//gnomon.Log().Set(gnomon.Log().ErrorLevel(), false)
-	gnomon.Log().Debug("TestQuerySelector3 Start")
+	t.Log("TestQuerySelector3 Start")
 	l := ObtainLily()
 	l.Start()
 	_, err := l.CreateDatabase(checkbookName, "数据库描述")
@@ -407,7 +406,7 @@ func TestQuerySelector4(t *testing.T) {
 	if err = l.CreateIndex(checkbookName, shopperName, "IsMarry"); nil != err {
 		t.Error(err)
 	}
-	gnomon.Log().Debug("TestQuerySelector3 Put")
+	t.Log("TestQuerySelector3 Put")
 	for i := 17; i > 0; i-- {
 		go func(i int) {
 			if _, err := l.Put(checkbookName, shopperName, strconv.Itoa(i), &TestValue{ID: i, Age: rand.Intn(17) + 1, IsMarry: i%2 == 0, Timestamp: time.Now().Local().UnixNano()}); nil != err {
@@ -416,7 +415,7 @@ func TestQuerySelector4(t *testing.T) {
 		}(i)
 	}
 	time.Sleep(1 * time.Second)
-	gnomon.Log().Debug("TestQuerySelector3 Get")
+	t.Log("TestQuerySelector3 Get")
 	for i := 17; i > 0; i-- {
 		j, err := l.Get(checkbookName, shopperName, strconv.Itoa(i))
 		if nil != err {
@@ -425,7 +424,7 @@ func TestQuerySelector4(t *testing.T) {
 			t.Log("get ", i, " = ", j)
 		}
 	}
-	gnomon.Log().Debug("TestQuerySelector2 Select")
+	t.Log("TestQuerySelector2 Select")
 	var (
 		i     interface{}
 		count int32

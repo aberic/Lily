@@ -10,3 +10,9 @@ conf:
   LimitMillisecond: 3 # 请求限定的时间段（毫秒）
   LimitCount: 3 # 请求限定的时间段内允许的请求次数
   LimitIntervalMicrosecond: 150 # 请求允许的最小间隔时间（微秒），0表示不限
+  LogDir: lily/log # LogDir 日志文件目录
+  LogFileMaxSize: 1024 # LogFileMaxSize 每个日志文件保存的最大尺寸 单位：M
+  LogFileMaxAge: 7 # LogFileMaxAge 文件最多保存多少天
+  LogUtc: false # LogUtc CST & UTC 时间
+  LogLevel: debug # LogLevel 日志级别(debugLevel/infoLevel/warnLevel/ErrorLevel/panicLevel/fatalLevel)
+  Production: false # Production 是否生产环境，在生产环境下控制台不会输出任何日志

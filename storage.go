@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"errors"
 	"github.com/aberic/gnomon"
+	"github.com/aberic/gnomon/log"
 	"github.com/vmihailenco/msgpack"
 	"io"
 	"os"
@@ -26,8 +27,10 @@ import (
 )
 
 var (
-	valueTypeErr    = errors.New("value type error")
-	valueInvalidErr = errors.New("value is invalid")
+	// ErrValueType value type error
+	ErrValueType = errors.New("value type error")
+	// ErrValueInvalid value is invalid
+	ErrValueInvalid = errors.New("value is invalid")
 )
 
 type valueData struct {
@@ -76,13 +79,13 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	)
 	defer ib.getLocker().unLock()
 	ib.getLocker().lock()
-	md5Key := gnomon.CryptoHash().MD516(ib.getKey()) // hash(keyStructure) 会发生碰撞，因此这里存储md5结果进行反向验证
+	md5Key := gnomon.HashMD516(ib.getKey()) // hash(keyStructure) 会发生碰撞，因此这里存储md5结果进行反向验证
 	// 写入11位key及16位md5后key
-	appendStr := strings.Join([]string{gnomon.String().PrefixSupplementZero(gnomon.Scale().Uint64ToDDuoString(ib.getHashKey()), 11), md5Key}, "")
-	//gnomon.Log().Debug("storeIndex",
-	//	gnomon.Log().Field("appendStr", appendStr),
-	//	gnomon.Log().Field("formIndexFilePath", ib.getFormIndexFilePath()),
-	//	gnomon.Log().Field("seekStartIndex", ib.getLink().getSeekStartIndex()))
+	appendStr := strings.Join([]string{gnomon.StringPrefixSupplementZero(gnomon.ScaleUint64ToDDuoString(ib.getHashKey()), 11), md5Key}, "")
+	//log.Debug("storeIndex",
+	//	log.Field("appendStr", appendStr),
+	//	log.Field("formIndexFilePath", ib.getFormIndexFilePath()),
+	//	log.Field("seekStartIndex", ib.getLink().getSeekStartIndex()))
 	defer func() {
 		if nil != file {
 			<-s.limitOpenFileChan
@@ -91,37 +94,37 @@ func (s *storage) storeIndex(ib IndexBack, wf *writeResult) *writeResult {
 	}()
 	// 将获取到的索引存储位置传入。如果为0，则表示没有存储过；如果不为0，则覆盖旧的存储记录
 	if file, err = s.openFile(ib.getFormIndexFilePath(), os.O_CREATE|os.O_RDWR); nil != err {
-		gnomon.Log().Error("storeIndex", gnomon.Log().Err(err))
+		log.Error("storeIndex", log.Err(err))
 		return &writeResult{err: err}
 	}
 	var seekEnd int64
-	//gnomon.Log().Debug("running", gnomon.Log().Field("type", "moldIndex"), gnomon.Log().Field("seekStartIndex", it.link.getSeekStartIndex()))
+	//log.Debug("running", log.Field("type", "moldIndex"), log.Field("seekStartIndex", it.link.getSeekStartIndex()))
 	if ib.getLink().getSeekStartIndex() == -1 {
 		if seekEnd, err = file.Seek(0, io.SeekEnd); nil != err {
-			gnomon.Log().Error("storeIndex", gnomon.Log().Err(err))
+			log.Error("storeIndex", log.Err(err))
 			return &writeResult{err: err}
 		}
-		//gnomon.Log().Debug("running", gnomon.Log().Field("it.link.seekStartIndex == -1", seekEnd))
+		//log.Debug("running", log.Field("it.link.seekStartIndex == -1", seekEnd))
 	} else {
 		if seekEnd, err = file.Seek(ib.getLink().getSeekStartIndex(), io.SeekStart); nil != err { // 寻址到原索引起始位置
-			gnomon.Log().Error("storeIndex", gnomon.Log().Err(err))
+			log.Error("storeIndex", log.Err(err))
 			return &writeResult{err: err}
 		}
-		//gnomon.Log().Debug("running", gnomon.Log().Field("seekStartIndex", it.link.getSeekStartIndex()), gnomon.Log().Field("it.link.seekStartIndex != -1", seekEnd))
+		//log.Debug("running", log.Field("seekStartIndex", it.link.getSeekStartIndex()), log.Field("it.link.seekStartIndex != -1", seekEnd))
 	}
 	// 写入11位key及16位md5后key及5位起始seek和4位持续seek
 	if _, err = file.WriteString(strings.Join([]string{appendStr,
-		gnomon.String().PrefixSupplementZero(gnomon.Scale().Int64ToDDuoString(wf.seekStart), 11),
-		gnomon.String().PrefixSupplementZero(gnomon.Scale().IntToDDuoString(wf.seekLast), 4)}, "")); nil != err {
-		//gnomon.Log().Error("running", gnomon.Log().Field("seekStartIndex", seekEnd), gnomon.Log().Err(err))
+		gnomon.StringPrefixSupplementZero(gnomon.ScaleInt64ToDDuoString(wf.seekStart), 11),
+		gnomon.StringPrefixSupplementZero(gnomon.ScaleIntToDDuoString(wf.seekLast), 4)}, "")); nil != err {
+		//log.Error("running", log.Field("seekStartIndex", seekEnd), log.Err(err))
 		return &writeResult{err: err}
 	}
-	//gnomon.Log().Debug("storeIndex", gnomon.Log().Field("ib.getKey()", ib.getKey()), gnomon.Log().Field("md516Key", md516Key), gnomon.Log().Field("seekStartIndex", wf.seekStartIndex))
+	//log.Debug("storeIndex", log.Field("ib.getKey()", ib.getKey()), log.Field("md516Key", md516Key), log.Field("seekStartIndex", wf.seekStartIndex))
 	ib.getLink().setSeekStartIndex(seekEnd)
 	ib.getLink().setMD5Key(md5Key)
 	ib.getLink().setSeekStart(wf.seekStart)
 	ib.getLink().setSeekLast(wf.seekLast)
-	//gnomon.Log().Debug("running", gnomon.Log().Field("it.link.seekStartIndex", seekEnd), gnomon.Log().Err(err))
+	//log.Debug("running", log.Field("it.link.seekStartIndex", seekEnd), log.Err(err))
 	return &writeResult{
 		seekStartIndex: seekEnd,
 		seekStart:      wf.seekStart,
@@ -156,16 +159,16 @@ func (s *storage) storeData(key, path string, value interface{}, valid bool) *wr
 		}
 	}()
 	if file, err = s.openFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND); nil != err {
-		gnomon.Log().Error("storeData", gnomon.Log().Err(err))
+		log.Error("storeData", log.Err(err))
 		return &writeResult{err: err}
 	}
 	seekStart, err = file.Seek(0, io.SeekEnd)
 	if err != nil {
-		gnomon.Log().Debug("storeData", gnomon.Log().Err(err))
+		log.Debug("storeData", log.Err(err))
 		return &writeResult{err: err}
 	}
 	if seekLast, err = file.Write(data); nil != err {
-		gnomon.Log().Debug("storeData", gnomon.Log().Err(err))
+		log.Debug("storeData", log.Err(err))
 		return &writeResult{err: err}
 	}
 	return &writeResult{
@@ -186,37 +189,37 @@ func (s *storage) read(filePath string, seekStart int64, seekLast int) *readResu
 			_ = file.Close()
 		}
 	}()
-	//gnomon.Log().Debug("read", gnomon.Log().Field("filePath", filePath), gnomon.Log().Field("seekStart", seekStart), gnomon.Log().Field("seekLast", seekLast))
+	//log.Debug("read", log.Field("filePath", filePath), log.Field("seekStart", seekStart), log.Field("seekLast", seekLast))
 	file, err = s.openFile(filePath, os.O_RDONLY)
 	if err != nil {
-		//gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//log.Error("read", log.Err(err))
 		return &readResult{err: err}
 	}
 	_, err = file.Seek(seekStart, io.SeekStart) //表示文件的起始位置，从第seekStart个字符往后读取
 	if err != nil {
-		//gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//log.Error("read", log.Err(err))
 		return &readResult{err: err}
 	}
 	inputReader := bufio.NewReader(file)
 	var bytes []byte
 	if bytes, err = inputReader.Peek(seekLast); nil != err {
-		//gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//log.Error("read", log.Err(err))
 		return &readResult{err: err}
 	}
 	var value interface{}
 	if err = msgpack.Unmarshal(bytes, &value); nil != err {
-		//gnomon.Log().Error("read", gnomon.Log().Err(err))
+		//log.Error("read", log.Err(err))
 		return &readResult{err: err}
 	}
 	switch value.(type) {
 	default:
-		return &readResult{err: valueTypeErr}
+		return &readResult{err: ErrValueType}
 	case map[string]interface{}:
 		valueMap := value.(map[string]interface{})
 		if valueMap["I"].(bool) {
 			return &readResult{key: valueMap["K"].(string), value: valueMap["V"], err: err}
 		}
-		return &readResult{err: valueInvalidErr}
+		return &readResult{err: ErrValueInvalid}
 	}
 }
 

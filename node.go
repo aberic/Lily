@@ -153,7 +153,7 @@ func (n *node) createLink(key string) (Link, bool) {
 func (n *node) existLink(key string) (int, bool) {
 	for index, link := range n.links {
 		//gnomon.Log().Debug("existLink", gnomon.Log().Field("link.md516Key", link.getMD516Key()), gnomon.Log().Field("md516", gnomon.CryptoHash().MD516(key)))
-		if strings.EqualFold(link.getMD516Key(), gnomon.CryptoHash().MD516(key)) {
+		if strings.EqualFold(link.getMD516Key(), gnomon.HashMD516(key)) {
 			return index, true
 		}
 	}

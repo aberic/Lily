@@ -52,7 +52,7 @@ func (l *APIServer) CreateDatabase(ctx context.Context, req *api.ReqCreateDataba
 		return &api.RespDatabase{Code: api.Code_Fail, ErrMsg: err.Error()}, err
 	}
 	apiDB := &api.Database{
-		Id:      db.getID(),
+		ID:      db.getID(),
 		Name:    db.getName(),
 		Comment: db.getComment(),
 		Forms:   l.formatForms(db),
@@ -221,7 +221,7 @@ func (l *APIServer) Select(ctx context.Context, req *api.ReqSelect) (*api.RespSe
 	return &api.RespSelect{Code: api.Code_Success, Count: count, Value: data}, nil
 }
 
-// Get 获取数据
+// Remove 删除数据
 func (l *APIServer) Remove(ctx context.Context, req *api.ReqRemove) (*api.Resp, error) {
 	if err := ObtainLily().Remove(req.DatabaseName, req.FormName, req.Key); nil != err {
 		return &api.Resp{Code: api.Code_Fail, ErrMsg: err.Error()}, err
@@ -248,7 +248,7 @@ func (l *APIServer) Delete(ctx context.Context, req *api.ReqDelete) (*api.RespDe
 func (l *APIServer) formatDBs(dbs []Database) []*api.Database {
 	var respDBs []*api.Database
 	for _, db := range dbs {
-		respDBs = append(respDBs, &api.Database{Id: db.getID(), Name: db.getName(), Comment: db.getComment(), Forms: l.formatForms(db)})
+		respDBs = append(respDBs, &api.Database{ID: db.getID(), Name: db.getName(), Comment: db.getComment(), Forms: l.formatForms(db)})
 	}
 	return respDBs
 }
@@ -257,7 +257,7 @@ func (l *APIServer) formatForms(db Database) map[string]*api.Form {
 	var fms = make(map[string]*api.Form)
 	for _, form := range db.getForms() {
 		fms[form.getID()] = &api.Form{
-			Id:       form.getID(),
+			ID:       form.getID(),
 			Name:     form.getName(),
 			Comment:  form.getComment(),
 			FormType: FormatFormType2API(form.getFormType()),
@@ -271,7 +271,7 @@ func (l *APIServer) formatFormArr(db Database) []*api.Form {
 	var fms []*api.Form
 	for _, form := range db.getForms() {
 		fms = append(fms, &api.Form{
-			Id:       form.getID(),
+			ID:       form.getID(),
 			Name:     form.getName(),
 			Comment:  form.getComment(),
 			FormType: FormatFormType2API(form.getFormType()),
@@ -304,7 +304,7 @@ func FormatFormType2API(ft string) api.FormType {
 func (l *APIServer) formatIndexes(fm Form) map[string]*api.Index {
 	var idx = make(map[string]*api.Index)
 	for _, index := range fm.getIndexes() {
-		idx[index.getID()] = &api.Index{Id: index.getID(), Primary: index.isPrimary(), KeyStructure: index.getKeyStructure()}
+		idx[index.getID()] = &api.Index{ID: index.getID(), Primary: index.isPrimary(), KeyStructure: index.getKeyStructure()}
 	}
 	return idx
 }

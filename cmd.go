@@ -58,7 +58,7 @@ var startCmd = &cobra.Command{
 		} else {
 			fmt.Println("前端启动...")
 		}
-		if gnomon.String().IsEmpty(confYmlPath) {
+		if gnomon.StringIsEmpty(confYmlPath) {
 			fmt.Println("lily 数据库将使用默认配置策略")
 		}
 		return nil
@@ -122,12 +122,11 @@ var rootCmd = &cobra.Command{
 }
 
 func start() {
-	if gnomon.File().PathExists("lock") {
+	if gnomon.FilePathExists("lock") {
 		fmt.Println("lily is start already")
 		return
 	}
 	conf := ObtainConf(confYmlPath)
-	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
 	//fmt.Println("start daemon", daemon)
 	if daemon {
 		var (
@@ -135,7 +134,7 @@ func start() {
 			pid     int
 		)
 		fmt.Println("启动中...")
-		if gnomon.String().IsEmpty(confYmlPath) {
+		if gnomon.StringIsEmpty(confYmlPath) {
 			command = exec.Command("./lily", "start")
 		} else {
 			command = exec.Command("./lily", "start", "-p", confYmlPath)
@@ -152,11 +151,11 @@ func start() {
 		loadChan := make(chan struct{})
 		go loadingFmt(time.Second, loadChan)
 		for !running {
-			if _, _, arr, err = gnomon.Command().ExecCommandSilent("lsof", "-i"); nil != err {
+			if _, _, arr, err = gnomon.CommandExecSilent("lsof", "-i"); nil != err {
 				panic(err)
 			}
 			for _, str := range arr {
-				str = gnomon.String().SingleSpace(str)
+				str = gnomon.StringSingleSpace(str)
 				strs := strings.Split(str, " ")
 				if strs[0] == "lily" && strs[1] == strconv.Itoa(pid) {
 					loadChan <- struct{}{}
@@ -210,12 +209,11 @@ func loadingFmt(delay time.Duration, loadChan chan struct{}) {
 }
 
 func stop() {
-	gnomon.Log().Set(gnomon.Log().WarnLevel(), true)
 	data, err := ioutil.ReadFile("lily.lock")
 	if nil != err {
 		panic(errors.New("lily haven not been started or no such file or directory with name lock"))
 	}
-	_, _, _, err = gnomon.Command().ExecCommandTail("kill", string(data))
+	_, _, _, err = gnomon.CommandExecTail("kill", string(data))
 	if nil != err {
 		panic(err)
 	}
@@ -230,7 +228,7 @@ func conn() {
 		s          *sql
 		err        error
 	)
-	if gnomon.String().IsEmpty(address) {
+	if gnomon.StringIsEmpty(address) {
 		fmt.Println("connection to default gRPC server 'localhost:19877'")
 		s = &sql{serverURL: "localhost:19877"}
 	} else {
@@ -240,11 +238,11 @@ func conn() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		sqlContent = scanner.Text()
-		if gnomon.String().TrimN(sqlContent) == "" {
+		if gnomon.StringTrimN(sqlContent) == "" {
 			fmt.Print("lily->: ")
 			continue
 		}
-		if gnomon.String().Trim(sqlContent) == "exit" {
+		if gnomon.StringTrim(sqlContent) == "exit" {
 			fmt.Println("Bye!")
 			os.Exit(0)
 		}
