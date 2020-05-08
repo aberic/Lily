@@ -139,7 +139,7 @@ func Remove(serverURL, databaseName, formName, key string) (*api.Resp, error) {
 
 // Delete 删除数据
 func Delete(serverURL, databaseName, formName string, selector *api.Selector) (*api.Resp, error) {
-	res, err := delete(serverURL, &api.ReqDelete{DatabaseName: databaseName, FormName: formName, Selector: selector})
+	res, err := del(serverURL, &api.ReqDelete{DatabaseName: databaseName, FormName: formName, Selector: selector})
 	return res.(*api.Resp), err
 }
 
@@ -208,7 +208,7 @@ func remove(serverURL string, req *api.ReqRemove) (interface{}, error) {
 	return getClient(serverURL).Remove(context.Background(), req)
 }
 
-// delete 删除数据
-func delete(serverURL string, req *api.ReqDelete) (interface{}, error) {
+// del 删除数据
+func del(serverURL string, req *api.ReqDelete) (interface{}, error) {
 	return getClient(serverURL).Delete(context.Background(), req)
 }

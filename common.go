@@ -17,7 +17,6 @@ package lily
 import (
 	"errors"
 	"github.com/aberic/gnomon"
-	"google.golang.org/grpc"
 	"hash/crc32"
 	"os"
 	"path/filepath"
@@ -328,27 +327,6 @@ func value2hashKey(value *reflect.Value) (hashKey uint64, support bool) {
 		}
 	}
 	return
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// rpc 通过rpc进行通信
-//
-// go:   protoc --go_out=plugins=grpc:. grpc/proto/*.proto
-//
-// java: protoc -I=/Users/aberic/Documents/path/go/src/viewhigh.com/hbaas/bean/proto/chain --java_out=/Users/aberic/Documents/code/vh/chain/baas/src/main/java init.proto
-func rpc(url string, business func(conn *grpc.ClientConn) (interface{}, error)) (interface{}, error) {
-	var (
-		conn *grpc.ClientConn
-		err  error
-	)
-	// 创建一个grpc连接器
-	if conn, err = grpc.Dial(url, grpc.WithInsecure()); nil != err {
-		return nil, err
-	}
-	// 当请求完毕后记得关闭连接,否则大量连接会占用资源
-	defer func() { _ = conn.Close() }()
-	return business(conn)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
