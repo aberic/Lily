@@ -17,7 +17,6 @@ package lily
 import (
 	"context"
 	"github.com/aberic/lily/api"
-	"google.golang.org/grpc"
 )
 
 //var ServerURL = "localhost:19877"
@@ -146,238 +145,70 @@ func Delete(serverURL, databaseName, formName string, selector *api.Selector) (*
 
 // getConf 获取数据库引擎对象
 func getConf(serverURL string, req *api.ReqConf) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespConf
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.GetConf(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).GetConf(context.Background(), req)
 }
 
 // obtainDatabases 获取数据库集合
 func obtainDatabases(serverURL string, req *api.ReqDatabases) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespDatabases
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.ObtainDatabases(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).ObtainDatabases(context.Background(), req)
 }
 
 // obtainForms 获取数据库表集合
 func obtainForms(serverURL string, req *api.ReqForms) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespForms
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.ObtainForms(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).ObtainForms(context.Background(), req)
 }
 
 // createDatabase 创建数据库
 func createDatabase(serverURL string, req *api.ReqCreateDatabase) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespDatabase
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.CreateDatabase(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).CreateDatabase(context.Background(), req)
 }
 
 // createForm 创建表
 func createForm(serverURL string, req *api.ReqCreateForm) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.Resp
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.CreateForm(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).CreateForm(context.Background(), req)
 }
 
 // putD 新增数据
 func putD(serverURL string, req *api.ReqPutD) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespPutD
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.PutD(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).PutD(context.Background(), req)
 }
 
 // setD 新增数据
 func setD(serverURL string, req *api.ReqSetD) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespSetD
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.SetD(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).SetD(context.Background(), req)
 }
 
 // getD 获取数据
 func getD(serverURL string, req *api.ReqGetD) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespGetD
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.GetD(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).GetD(context.Background(), req)
 }
 
 // put 新增数据
 func put(serverURL string, req *api.ReqPut) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespPut
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Put(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).Put(context.Background(), req)
 }
 
 // set 新增数据
 func set(serverURL string, req *api.ReqSet) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespSet
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Set(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).Set(context.Background(), req)
 }
 
 // get 获取数据
 func get(serverURL string, req *api.ReqGet) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespGet
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Get(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).Get(context.Background(), req)
 }
 
 // query 获取数据
 func query(serverURL string, req *api.ReqSelect) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespSelect
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Select(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).Select(context.Background(), req)
 }
 
 // remove 删除数据
 func remove(serverURL string, req *api.ReqRemove) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.Resp
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Remove(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).Remove(context.Background(), req)
 }
 
 // delete 删除数据
 func delete(serverURL string, req *api.ReqDelete) (interface{}, error) {
-	return rpc(serverURL, func(conn *grpc.ClientConn) (interface{}, error) {
-		var (
-			result *api.RespDelete
-			err    error
-		)
-		// 创建gRPC客户端
-		c := api.NewLilyAPIClient(conn)
-		// 客户端向gRPC服务端发起请求
-		if result, err = c.Delete(context.Background(), req); nil != err {
-			return nil, err
-		}
-		return result, nil
-	})
+	return getClient(serverURL).Delete(context.Background(), req)
 }
