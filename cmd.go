@@ -271,7 +271,6 @@ func init() {
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
-		//zap.S().Debug(err)
 		os.Exit(1)
 	}
 }

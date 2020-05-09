@@ -250,7 +250,7 @@ type Database interface {
 //
 // 提供表基本操作方法
 type Form interface {
-	WriteLocker
+	WriteLocker                   // WriteLocker 读写锁接口
 	getAutoID() *uint64           // getAutoID 返回表当前自增ID值
 	getID() string                // getID 返回表唯一ID
 	getName() string              // getName 返回表名称
@@ -262,7 +262,7 @@ type Form interface {
 
 // Index 索引接口
 type Index interface {
-	WriteLocker
+	WriteLocker // WriteLocker 读写锁接口
 	// getID 索引唯一ID
 	getID() string
 	// isPrimary 是否主键
